@@ -51,3 +51,7 @@ Assets/ProjectEta/
 ## 데이터 값 관리 원칙
 
 [확정] 규칙만 코드 상수로 두고, 테스트 값·미정 값은 `Assets/ProjectEta/Data`에 `ScriptableObject`로 분리한다. 자세한 확정/테스트/미정 구분은 [CoreRules_Checklist.md](CoreRules_Checklist.md) 참고.
+
+## 네임스페이스 규칙 (2일차 확정)
+
+네임스페이스는 `Scripts/` 아래 폴더 구조와 1:1로 대응한다 — 예: `Scripts/Board` → `ProjectEta.Board`, `Scripts/Pieces` → `ProjectEta.Pieces`. 새 폴더를 만들 때는 같은 규칙으로 네임스페이스도 함께 정한다. 클래스 책임과 참조 관계의 자세한 내용은 [DataArchitecture.md](DataArchitecture.md) 참고.
