@@ -1,4 +1,5 @@
 using UnityEngine; // Vector2Int를 사용하기 위한 네임스페이스
+using ProjectEta.Pieces; // PieceRuntimeState를 사용하기 위한 네임스페이스
 
 namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페이스
 {
@@ -33,6 +34,53 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         public TileState GetTile(Vector2Int position) // 좌표에 해당하는 타일 상태를 가져오는 메서드
         {
             return IsInsideBoard(position) ? _tiles[position.x, position.y] : null; // 범위 안이면 타일 반환, 아니면 null 반환
+        }
+
+        public bool TryOccupyArea(Vector2Int anchor, Vector2Int size, PieceRuntimeState piece) // 2x2 이상 대형 기물을 위한 사각 영역 점유를 시도하는 메서드
+        {
+            for (int x = 0; x < size.x; x++) // 영역 가로 방향으로 순회하며 사전 검사
+            {
+                for (int y = 0; y < size.y; y++) // 영역 세로 방향으로 순회하며 사전 검사
+                {
+                    var position = anchor + new Vector2Int(x, y); // 검사할 칸 좌표 계산
+                    if (!IsInsideBoard(position)) // 보드 범위를 벗어나면
+                    {
+                        return false; // 점유 실패
+                    }
+
+                    var tile = GetTile(position); // 검사할 타일 조회
+                    if (tile.IsOccupied || tile.IsBlockedByObstacle) // 이미 점유돼 있거나 장애물이 있으면
+                    {
+                        return false; // 점유 실패
+                    }
+                }
+            }
+
+            for (int x = 0; x < size.x; x++) // 영역 가로 방향으로 순회하며 실제 점유 처리
+            {
+                for (int y = 0; y < size.y; y++) // 영역 세로 방향으로 순회하며 실제 점유 처리
+                {
+                    var position = anchor + new Vector2Int(x, y); // 점유할 칸 좌표 계산
+                    GetTile(position).OccupyingPiece = piece; // 모든 칸에 같은 기물 참조를 점유 기물로 지정
+                }
+            }
+
+            return true; // 점유 성공
+        }
+
+        public void ClearArea(Vector2Int anchor, Vector2Int size) // TryOccupyArea로 점유했던 영역을 비우는 메서드
+        {
+            for (int x = 0; x < size.x; x++) // 영역 가로 방향으로 순회
+            {
+                for (int y = 0; y < size.y; y++) // 영역 세로 방향으로 순회
+                {
+                    var tile = GetTile(anchor + new Vector2Int(x, y)); // 비울 칸의 타일 조회
+                    if (tile != null) // 보드 범위 안이면
+                    {
+                        tile.OccupyingPiece = null; // 점유 기물 해제
+                    }
+                }
+            }
         }
     }
 }
