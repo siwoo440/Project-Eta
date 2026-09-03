@@ -254,6 +254,91 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
             }
         }
 
+        [Test] // 20일차: 적도 플레이어와 동일한 보유 풀→드로우 더미→손패 구조로 시작 덱이 구성되는지 검증
+        public void EnsurePrototypeEnemyStartingHand_BuildsDeckAndInitialHand()
+        {
+            var context = CreateBoundContext(); // 시작 배치 턴 상태 생성
+
+            try // 테스트 자원 정리를 보장
+            {
+                context.BoardInput.EnsurePrototypeEnemyStartingHand(); // 적 시작 덱·손패 구성
+
+                Assert.AreEqual(5, context.BoardInput.EnemyDeck.OwnedCardPool.Count); // 폰/나이트/비숍/룩/퀸 5종이 보유 풀에 등록돼야 함
+                Assert.AreEqual(3, context.BoardInput.EnemyHandState.Hand.Count); // 초기 손패는 3장만 뽑아야 함
+                Assert.AreEqual(2, context.BoardInput.EnemyDeck.DrawPile.Count); // 나머지 2장은 드로우 더미에 남아야 함
+            }
+            finally // 성공/실패와 무관하게 정리
+            {
+                context.Dispose(); // 테스트 객체 제거
+            }
+        }
+
+        [Test] // 20일차: 적 손패가 비면 드로우 더미에서 자동으로 다시 채워 계속 소환할 수 있는지 검증
+        public void TryEnemySummonOneCard_RefillsHandFromDrawPile_WhenHandEmpty()
+        {
+            var context = CreateStartedBattleContext(); // 킹 배치 후 1턴 PlayerTurn까지 진행한 컨텍스트 생성
+
+            try // 테스트 자원 정리를 보장
+            {
+                context.BoardInput.EnsurePrototypeEnemyStartingHand(); // 적 시작 덱·손패 구성(손패 3장, 드로우 더미 2장)
+
+                for (int i = 0; i < 3; i++) // 초기 손패 3장을 모두 소환으로 소비
+                {
+                    Assert.IsTrue(context.TurnManager.TryCompletePlayerAction()); // 플레이어 행동 완료 -> 적 턴
+                    Assert.IsTrue(context.BoardInput.TryEnemySummonOneCard()); // 적이 손패 카드로 소환
+                }
+
+                Assert.AreEqual(0, context.BoardInput.EnemyHandState.Hand.Count); // 초기 손패 3장을 모두 사용해 손패가 비어야 함
+                Assert.AreEqual(2, context.BoardInput.EnemyDeck.DrawPile.Count); // 아직 드로우 더미는 그대로 남아 있어야 함
+
+                Assert.IsTrue(context.TurnManager.TryCompletePlayerAction()); // 다음 적 턴 진입
+                bool summonedAfterRefill = context.BoardInput.TryEnemySummonOneCard(); // 손패가 비어도 자동으로 드로우 더미에서 채워 소환 시도
+
+                Assert.IsTrue(summonedAfterRefill); // 드로우 더미가 남아 있으므로 소환이 성공해야 함
+                Assert.AreEqual(1, context.BoardInput.EnemyDeck.DrawPile.Count); // 드로우 더미에서 1장을 손패로 옮겨 바로 소환에 사용해야 함
+                Assert.AreEqual(4, context.RunState.Board.CountPieces(isPlayerPiece: false)); // 지금까지 적이 총 4기를 소환했어야 함
+            }
+            finally // 성공/실패와 무관하게 정리
+            {
+                context.Dispose(); // 테스트 객체 제거
+            }
+        }
+
+        [Test] // 20일차: 적 기물이 죽으면 카드가 적의 죽은 카드 더미로 이동하는지 검증
+        public void EnemyPieceDeath_MovesCardToEnemyDeadPile()
+        {
+            var context = CreateStartedBattleContext(); // 킹 배치 후 1턴 PlayerTurn까지 진행한 컨텍스트 생성
+            PieceDefinition enemyDefinition = null; // finally에서 정리할 별도 생성 정의 참조
+
+            try // 테스트 자원 정리를 보장
+            {
+                var attackerDefinition = context.Definitions[1]; // 테스트용 폰 정의를 공격자로 사용
+                SetPrivateField(attackerDefinition, "_baseAtk", 5); // 한 방에 처치 가능한 공격력 부여
+                enemyDefinition = ScriptableObject.CreateInstance<PieceDefinition>(); // 별도의 적 전용 기물 정의 생성
+                SetPrivateField(enemyDefinition, "_baseHp", 1); // 공격 한 번에 사망하도록 HP 1 부여
+                SetPrivateField(enemyDefinition, "_movementType", PieceMovementType.Pawn); // 폰의 전방 공격 범위로 검증
+
+                var attackerPosition = new Vector2Int(4, 1); // 공격자 좌표(아군 영역)
+                var enemyPosition = new Vector2Int(4, 2); // 대상 좌표(공격자 바로 앞)
+                var attacker = new PieceRuntimeState(attackerDefinition, attackerPosition, isPlayerPiece: true); // 아군 공격자 생성
+                var enemy = new PieceRuntimeState(enemyDefinition, enemyPosition, isPlayerPiece: false); // 적 대상 생성
+                context.RunState.Board.GetTile(attackerPosition).OccupyingPiece = attacker; // 보드에 공격자 배치
+                context.RunState.Board.GetTile(enemyPosition).OccupyingPiece = enemy; // 보드에 적 배치
+
+                Assert.IsTrue(context.BoardInput.TrySelectPieceAt(attackerPosition)); // 공격자 선택
+                Assert.IsTrue(context.BoardInput.TryAttackSelectedPieceTarget(enemyPosition)); // 적 처치
+
+                Assert.AreEqual(1, context.BoardInput.EnemyDeck.DeadCardPile.Count); // 적 죽은 카드 더미에 1장이 들어가야 함
+                Assert.AreSame(enemyDefinition, context.BoardInput.EnemyDeck.DeadCardPile[0]); // 처치된 카드와 정확히 같은 정의여야 함
+                Assert.AreEqual(0, context.RunState.Deck.DeadCardPile.Count); // 아군 죽은 카드 더미는 영향받지 않아야 함
+            }
+            finally // 성공/실패와 무관하게 정리
+            {
+                context.Dispose(); // 테스트 객체 제거
+                if (enemyDefinition != null) Object.DestroyImmediate(enemyDefinition); // 별도로 생성한 적 정의도 정리
+            }
+        }
+
         private static TestContext CreateStartedBattleContext() // 킹을 놓고 시작 배치 턴까지 종료한 컨텍스트 생성
         {
             var context = CreateBoundContext(); // 시작 배치 상태 생성

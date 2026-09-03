@@ -26,6 +26,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         public RunState RunState => _runState; // 현재 입력이 변경하는 실제 런 상태
         public HandState HandState => _handState; // 현재 입력이 변경하는 실제 플레이어 손패 상태
         public HandState EnemyHandState => _enemyHandState; // 17일차 추가: 적 턴 자동 소환에 사용하는 프로토타입 적 손패
+        public DeckState EnemyDeck => _enemyDeck; // 20일차 추가: 플레이어와 동일한 구조의 적 보유 풀·드로우·죽은 카드 더미
         public TurnManager TurnManager => _turnManager; // 현재 입력 권한을 판단하는 실제 턴 매니저
         public bool IsBound => _runState != null && _handState != null && _boardView != null && _boardView.IsBound; // 전투 상태 연결 여부
         public bool CanReceivePlayerInput => IsBound && (_turnManager == null || _turnManager.CanPlayerInput); // 일반 턴 또는 배치 턴에서 플레이어 입력을 받을 수 있는지 여부
@@ -44,9 +45,12 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         public event Action DeckChanged; // 19일차: 보유 풀·드로우 더미·죽은 카드 더미 구성이 바뀔 때 덱/무덤 패널 UI에 알리는 이벤트
 
         private const int PrototypeInitialHandSize = 5; // 기본 6종 중 5장을 초기 손패로 뽑는 테스트 값
+        private const int EnemyInitialHandSize = 3; // 20일차: 적 카드 5종 중 3장만 먼저 손패로 뽑고 나머지는 드로우 더미에 남겨 이후 다시 뽑히게 하는 테스트 값
         private RunState _runState; // BattleController가 소유하는 실제 런 상태
         private HandState _handState; // RunState.Hand 참조
-        private readonly HandState _enemyHandState = new HandState(); // 적 AI가 자기 턴에 1장씩 소비해 소환할 프로토타입 손패
+        private readonly HandState _enemyHandState = new HandState(); // 적 AI가 자기 턴에 소비해 소환할 프로토타입 손패
+        private readonly DeckState _enemyDeck = new DeckState(); // 20일차: 플레이어와 동일한 구조로 적의 보유 풀·드로우·죽은 카드 더미를 관리
+        private readonly List<TileState> _freeEnemyTileBuffer = new List<TileState>(); // 20일차: 적 무작위 소환 위치를 고를 때 재사용하는 빈 칸 후보 목록
         private TurnManager _turnManager; // BattleController가 소유하는 실제 턴 매니저
         private Vector2Int? _selectedCell; // 현재 선택된 칸 좌표
         private PieceDefinition _selectedCard; // 현재 선택된 손패 카드
@@ -155,9 +159,9 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             DeckChanged?.Invoke(); // 19일차: 드로우 더미가 처음 구성됐음을 덱/무덤 패널 UI에 알림
         }
 
-        public void EnsurePrototypeEnemyStartingHand() // 적이 자기 턴에 카드 1장을 실제 소비해 소환할 수 있도록 프로토타입 적 손패를 구성하는 메서드
+        public void EnsurePrototypeEnemyStartingHand() // 20일차: 플레이어와 동일하게 보유 풀→드로우 더미→손패 구조로 적 시작 손패를 구성하는 메서드
         {
-            if (_enemyHandState.Hand.Count > 0) // 이미 적 손패가 구성돼 있으면
+            if (_enemyDeck.OwnedCardPool.Count > 0 || _enemyHandState.Hand.Count > 0) // 이미 적 덱·손패가 구성돼 있으면
             {
                 return; // 중복 카드 추가를 방지하고 종료
             }
@@ -175,11 +179,18 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             {
                 if (card != null) // 실제 PieceDefinition이 연결된 카드만
                 {
-                    _enemyHandState.TryAddCard(card); // 적 손패에 1장씩 추가
+                    _enemyDeck.AddToOwnedPool(card); // 손패가 아니라 먼저 적의 보유 카드 풀에 등록
                 }
             }
 
-            Debug.Log($"적 시작 손패 구성: EnemyHand={_enemyHandState.Hand.Count}장"); // 적 카드 준비 상태를 개발 로그로 출력
+            _enemyDeck.RebuildDrawPileFromOwnedPool(); // 보유 카드 풀 전체를 복사하고 실제 드로우 순서로 셔플
+
+            while (_enemyHandState.Hand.Count < EnemyInitialHandSize && _enemyDeck.TryDrawToHand(_enemyHandState)) // 적 시작 손패를 정해진 장수만큼 채움(나머지는 드로우 더미에 남아 이후 다시 뽑힘)
+            {
+                // TryDrawToHand가 실제 카드 이동을 수행하므로 반복문 본문에서 추가 처리하지 않음
+            }
+
+            Debug.Log($"적 시작 덱 구성: Owned={_enemyDeck.OwnedCardPool.Count}, Hand={_enemyHandState.Hand.Count}, Draw={_enemyDeck.DrawPile.Count}"); // 적 카드 준비 상태를 개발 로그로 출력
         }
 
         private PieceDefinition[] GetPrototypeStartingCards() // 프로토타입 시작 풀 6종을 한 곳에서 반환하는 메서드
@@ -698,10 +709,14 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
             _pieceViews.Remove(piece); // 화면 연결 정보 정리
 
-            if (piece.IsPlayerPiece && _runState != null) // 19일차: 아군 기물이 죽었으면(적은 아직 별도 덱 생명주기가 없음)
+            if (piece.IsPlayerPiece && _runState != null) // 19일차: 아군 기물이 죽었으면
             {
                 _runState.Deck.MoveToDeadPile(piece.Definition); // 해당 카드를 죽은 카드 더미로 이동해 같은 전투에서 재사용 차단
                 DeckChanged?.Invoke(); // 죽은 카드 더미 구성 변경을 덱/무덤 패널 UI에 알림
+            }
+            else if (!piece.IsPlayerPiece) // 20일차: 적 기물이 죽었으면
+            {
+                _enemyDeck.MoveToDeadPile(piece.Definition); // 플레이어와 동일하게 적 죽은 카드 더미로 이동
             }
         }
 
@@ -769,12 +784,17 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 return false; // 적 소환을 실행하지 않음
             }
 
-            if (_enemyHandState.Hand.Count == 0) // 적이 사용할 카드가 남아 있지 않으면
+            if (_enemyHandState.Hand.Count == 0) // 적이 사용할 카드가 손패에 없으면
+            {
+                _enemyDeck.TryDrawToHand(_enemyHandState); // 20일차: 플레이어처럼 드로우 더미에서 카드 1장을 다시 채워봄
+            }
+
+            if (_enemyHandState.Hand.Count == 0) // 드로우 더미까지 비어 더 이상 뽑을 카드가 없으면
             {
                 return false; // 이번 적 턴에는 소환 행동을 할 수 없음
             }
 
-            var targetTile = FindFirstFreeEnemyPlacementTile(); // 적 진영 10×5에서 비어 있는 소환 칸 탐색
+            var targetTile = FindRandomFreeEnemyPlacementTile(); // 20일차: 적 진영 10×5의 빈 칸 중 하나를 무작위로 선택
             if (targetTile == null) // 적 진영에 빈 칸이 하나도 없으면
             {
                 return false; // 소환할 공간이 없으므로 실패 반환
@@ -784,26 +804,33 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             var runtimeState = SpawnPiece(card, targetTile, isPlayerPiece: false, objectName: "Piece(EnemySummoned)"); // 적 기물로 실제 소환
             _enemyHandState.RemoveCard(card); // 사용한 적 카드 1장을 실제 손패에서 소비
 
-            Debug.Log($"적 카드 소환: {runtimeState.Definition.DisplayName} @ {targetTile.BoardPosition} / EnemyHand={_enemyHandState.Hand.Count}장"); // 적 소환 결과 출력
+            Debug.Log($"적 카드 소환: {runtimeState.Definition.DisplayName} @ {targetTile.BoardPosition} / EnemyHand={_enemyHandState.Hand.Count}, EnemyDraw={_enemyDeck.DrawPile.Count}"); // 적 소환 결과 출력
             _turnManager.CompleteEnemyTurn(); // 소환 1회를 적 턴의 행동으로 간주하고 즉시 다음 상태로 진행
             return true; // 적 카드 소환 성공 반환
         }
 
-        private TileState FindFirstFreeEnemyPlacementTile() // 적 진영에서 자동 소환에 사용할 첫 빈 칸을 찾는 메서드
+        private TileState FindRandomFreeEnemyPlacementTile() // 20일차: 적 진영에서 자동 소환에 사용할 빈 칸 하나를 무작위로 고르는 메서드
         {
-            for (int y = BoardState.Height - 1; y >= BoardState.Height / 2; y--) // 적 후방부터 중앙 방향으로 탐색하며
+            _freeEnemyTileBuffer.Clear(); // 이전 호출에서 남은 목록 초기화(매 호출마다 새 GC 할당을 피하기 위해 필드 재사용)
+
+            for (int y = BoardState.Height - 1; y >= BoardState.Height / 2; y--) // 적 진영 전체 행을 순회하며
             {
-                for (int x = 0; x < BoardState.Width; x++) // 같은 줄에서는 왼쪽부터 오른쪽으로 탐색
+                for (int x = 0; x < BoardState.Width; x++) // 각 행의 모든 칸을 순회하며
                 {
                     var tile = _boardView.GetTile(new Vector2Int(x, y)); // 현재 적 진영 칸 조회
                     if (tile != null && tile.IsEnemyPlacementArea && !tile.IsOccupied) // 적 배치 영역의 빈 칸이면
                     {
-                        return tile; // 첫 사용 가능한 소환 칸 반환
+                        _freeEnemyTileBuffer.Add(tile); // 무작위 선택 후보 목록에 추가
                     }
                 }
             }
 
-            return null; // 모든 적 진영 칸이 점유돼 있으면 소환 불가
+            if (_freeEnemyTileBuffer.Count == 0) // 모든 적 진영 칸이 점유돼 있으면
+            {
+                return null; // 소환 불가 반환
+            }
+
+            return _freeEnemyTileBuffer[UnityEngine.Random.Range(0, _freeEnemyTileBuffer.Count)]; // 빈 칸 후보 중 하나를 무작위로 선택해 반환
         }
 
         public void SpawnTestEnemySquad(Vector2Int anchor) // 폰+룩 2종으로 테스트 적을 배치하는 편의 진입점
@@ -896,7 +923,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 return; // 추가 디버그 UI는 그리지 않음
             }
 
-            GUI.Label(new Rect(10, 10, 820, 20), $"Debug | PlayerHand {_handState.Hand.Count}/{HandState.MaxHandSize} | Draw {_runState.Deck.DrawPile.Count} | EnemyHand {_enemyHandState.Hand.Count}"); // 카드 상태 한 줄 요약
+            GUI.Label(new Rect(10, 10, 960, 20), $"Debug | PlayerHand {_handState.Hand.Count}/{HandState.MaxHandSize} | Draw {_runState.Deck.DrawPile.Count} | Dead {_runState.Deck.DeadCardPile.Count} | EnemyHand {_enemyHandState.Hand.Count} | EnemyDraw {_enemyDeck.DrawPile.Count} | EnemyDead {_enemyDeck.DeadCardPile.Count}"); // 카드 상태 한 줄 요약(20일차: 적 덱 정보 추가)
             GUI.Label(new Rect(10, 30, 920, 20), BuildTurnInputLabel()); // 현재 턴 조작 안내 표시
             GUI.Label(new Rect(10, 50, 920, 20), BuildSelectedPieceLabel()); // 선택 기물 디버그 상태 표시
         }
