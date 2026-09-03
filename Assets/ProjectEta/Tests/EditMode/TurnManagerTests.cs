@@ -3,95 +3,119 @@ using ProjectEta.Battle; // TurnManager와 TurnState를 사용하기 위한 네�
 
 namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임스페이스
 {
-    public class TurnManagerTests // 10일차 턴 흐름과 행동 권한을 검증하는 테스트 모음
+    public class TurnManagerTests // 초기 배치·자유 배치·일반 턴 흐름을 검증하는 테스트 모음
     {
-        [Test] // 새 전투가 1턴 플레이어 턴으로 시작하는지 검증
-        public void NewTurnManager_StartsAtPlayerTurnOne()
+        [Test] // 새 전투가 초기 배치 턴으로 시작하는지 검증
+        public void NewTurnManager_StartsAtInitialDeploymentTurn()
         {
             var turnManager = new TurnManager(); // 새 턴 매니저 생성
 
-            Assert.That(turnManager.CurrentState, Is.EqualTo(TurnState.PlayerTurn)); // 시작 상태가 플레이어 턴인지 검증
-            Assert.That(turnManager.TurnNumber, Is.EqualTo(1)); // 시작 턴 번호가 1인지 검증
-            Assert.That(turnManager.CanPlayerAct, Is.True); // 첫 플레이어 행동이 가능한지 검증
-            Assert.That(turnManager.HasPlayerActed, Is.False); // 아직 행동하지 않은 상태인지 검증
+            Assert.That(turnManager.CurrentState, Is.EqualTo(TurnState.DeploymentTurn)); // 전투 시작 즉시 배치 턴
+            Assert.That(turnManager.TurnNumber, Is.EqualTo(1)); // 첫 일반 턴 번호는 1로 대기
+            Assert.That(turnManager.IsInitialDeployment, Is.True); // 시작 배치 상태
+            Assert.That(turnManager.CanDeploy, Is.True); // 자유 배치 가능
         }
 
-        [Test] // 플레이어 행동 1회가 적 턴으로 전환되고 중복 행동을 막는지 검증
-        public void TryCompletePlayerAction_AllowsOnlyOneActionAndChangesToEnemyTurn()
+        [Test] // 시작 배치는 킹을 놓기 전에는 종료할 수 없는지 검증
+        public void InitialDeployment_CannotEndBeforeKingPlacement()
         {
-            var turnManager = new TurnManager(); // 새 턴 매니저 생성
+            var turnManager = new TurnManager(); // 시작 배치 상태 생성
 
-            bool firstResult = turnManager.TryCompletePlayerAction(); // 첫 플레이어 행동 완료 처리
-            bool secondResult = turnManager.TryCompletePlayerAction(); // 같은 턴에 두 번째 행동 완료를 다시 시도
+            bool result = turnManager.TryEndDeploymentTurn(); // 킹 없이 배치 턴 종료 시도
 
-            Assert.That(firstResult, Is.True); // 첫 행동 완료는 성공해야 함
-            Assert.That(secondResult, Is.False); // 같은 턴의 두 번째 행동은 실패해야 함
-            Assert.That(turnManager.CurrentState, Is.EqualTo(TurnState.EnemyTurn)); // 첫 행동 후 적 턴이어야 함
-            Assert.That(turnManager.HasPlayerActed, Is.True); // 이번 턴에 행동했음을 기억해야 함
-            Assert.That(turnManager.CanPlayerAct, Is.False); // 적 턴에는 플레이어 행동이 불가능해야 함
+            Assert.That(result, Is.False); // 종료 실패
+            Assert.That(turnManager.CurrentState, Is.EqualTo(TurnState.DeploymentTurn)); // 배치 턴 유지
+            Assert.That(turnManager.IsInitialKingPlaced, Is.False); // 킹 미배치 상태
         }
 
-        [Test] // 적 턴 종료 후 다음 플레이어 턴으로 돌아오며 턴 번호가 증가하는지 검증
-        public void CompleteEnemyTurn_ReturnsToPlayerAndIncrementsTurnNumber()
+        [Test] // 시작 배치에서 킹을 등록해도 즉시 일반 턴으로 넘어가지 않는지 검증
+        public void InitialKingPlacement_DoesNotAutoEndDeploymentTurn()
         {
-            var turnManager = new TurnManager(); // 새 턴 매니저 생성
-            turnManager.TryCompletePlayerAction(); // 플레이어 행동을 끝내 적 턴으로 전환
+            var turnManager = new TurnManager(); // 시작 배치 상태 생성
 
-            bool result = turnManager.CompleteEnemyTurn(); // 적 턴 종료 처리
+            turnManager.MarkInitialKingPlaced(); // 킹 배치 완료 등록
 
-            Assert.That(result, Is.True); // 정상적인 적 턴 종료는 성공해야 함
-            Assert.That(turnManager.CurrentState, Is.EqualTo(TurnState.PlayerTurn)); // 다음 플레이어 턴으로 돌아와야 함
-            Assert.That(turnManager.TurnNumber, Is.EqualTo(2)); // 턴 번호가 2로 증가해야 함
-            Assert.That(turnManager.HasPlayerActed, Is.False); // 새 플레이어 턴에서는 행동 여부가 초기화돼야 함
-            Assert.That(turnManager.CanPlayerAct, Is.True); // 새 플레이어 턴에서 다시 행동할 수 있어야 함
+            Assert.That(turnManager.CurrentState, Is.EqualTo(TurnState.DeploymentTurn)); // 여전히 배치 턴
+            Assert.That(turnManager.CanDeploy, Is.True); // 추가 카드도 자유롭게 배치 가능
+            Assert.That(turnManager.IsInitialKingPlaced, Is.True); // 킹 배치 완료 상태
         }
 
-        [Test] // 전투 종료 상태에서는 더 이상 어느 쪽 턴도 진행되지 않는지 검증
-        public void EndBattle_BlocksFurtherTurnProgress()
+        [Test] // 킹 배치 후 사용자가 턴 종료하면 1턴 PlayerTurn이 시작되는지 검증
+        public void InitialDeployment_AfterKingPlacement_EndTurnStartsPlayerTurnOne()
         {
-            var turnManager = new TurnManager(); // 새 턴 매니저 생성
-            turnManager.EndBattle(); // 전투 종료 처리(기본값 Defeat)
+            var turnManager = new TurnManager(); // 시작 배치 상태 생성
+            turnManager.MarkInitialKingPlaced(); // 킹 배치 완료 등록
 
-            bool playerResult = turnManager.TryCompletePlayerAction(); // 종료 후 플레이어 행동을 시도
-            bool enemyResult = turnManager.CompleteEnemyTurn(); // 종료 후 적 턴 완료를 시도
+            bool result = turnManager.TryEndDeploymentTurn(); // 배치 턴 종료
 
-            Assert.That(turnManager.CurrentState, Is.EqualTo(TurnState.BattleEnded)); // 상태가 전투 종료로 유지돼야 함
-            Assert.That(playerResult, Is.False); // 종료 후 플레이어 행동은 실패해야 함
-            Assert.That(enemyResult, Is.False); // 종료 후 적 턴 진행도 실패해야 함
-            Assert.That(turnManager.CanPlayerAct, Is.False); // 종료 상태에서는 플레이어 행동이 불가능해야 함
+            Assert.That(result, Is.True); // 종료 성공
+            Assert.That(turnManager.CurrentState, Is.EqualTo(TurnState.PlayerTurn)); // 첫 일반 턴 시작
+            Assert.That(turnManager.TurnNumber, Is.EqualTo(1)); // 초기 배치는 턴을 소비하지 않음
+            Assert.That(turnManager.IsInitialDeployment, Is.False); // 시작 배치 종료
         }
 
-        [Test] // 13일차: EndBattle에 전달한 결과(승리/패배)가 그대로 기록되는지 검증
-        public void EndBattle_RecordsGivenOutcome()
+        [Test] // 5턴 종료 후 주기 배치에서도 여러 장을 배치할 수 있도록 배치 가능 상태가 유지되는지 검증
+        public void PeriodicDeployment_RemainsOpenUntilExplicitEnd()
         {
-            var victoryManager = new TurnManager(); // 승리 시나리오용 턴 매니저
-            victoryManager.EndBattle(BattleOutcome.Victory); // 승리로 전투 종료
+            var turnManager = CreateStartedBattle(); // 1턴 PlayerTurn 상태 생성
+            AdvanceToPlayerTurn(turnManager, 5); // 5턴까지 진행
+            Assert.That(turnManager.TryCompletePlayerAction(), Is.True); // 5턴 플레이어 행동 완료
+            Assert.That(turnManager.CompleteEnemyTurn(), Is.True); // 주기 배치 턴 진입
 
-            var defeatManager = new TurnManager(); // 패배 시나리오용 턴 매니저
-            defeatManager.EndBattle(BattleOutcome.Defeat); // 패배로 전투 종료
+            turnManager.RegisterDeployment(); // 첫 카드 배치 등록
+            turnManager.RegisterDeployment(); // 두 번째 카드 배치 등록
 
-            Assert.That(victoryManager.Outcome, Is.EqualTo(BattleOutcome.Victory)); // 승리 결과가 정확히 기록돼야 함
-            Assert.That(defeatManager.Outcome, Is.EqualTo(BattleOutcome.Defeat)); // 패배 결과가 정확히 기록돼야 함
+            Assert.That(turnManager.CurrentState, Is.EqualTo(TurnState.DeploymentTurn)); // 여러 장 배치해도 계속 배치 턴
+            Assert.That(turnManager.CanDeploy, Is.True); // 계속 추가 배치 가능
+            Assert.That(turnManager.DeployedCardCount, Is.EqualTo(2)); // 배치 카드 수 누적
         }
 
-        [Test] // 13일차: 기본 EndBattle() 호출은 기존 호출부와의 호환을 위해 패배로 기록되는지 검증
-        public void EndBattle_WithNoArguments_DefaultsToDefeat()
+        [Test] // 주기 배치 턴은 사용자가 명시적으로 종료해야 다음 턴으로 넘어가는지 검증
+        public void PeriodicDeployment_ExplicitEndStartsNextPlayerTurn()
         {
-            var turnManager = new TurnManager(); // 새 턴 매니저 생성
-            turnManager.EndBattle(); // 인자 없이 전투 종료 처리
+            var turnManager = CreatePeriodicDeploymentTurn(); // 5턴 종료 후 주기 배치 상태 생성
+            turnManager.RegisterDeployment(); // 카드 1장 배치
 
-            Assert.That(turnManager.Outcome, Is.EqualTo(BattleOutcome.Defeat)); // 기본값이 패배여야 함
+            Assert.That(turnManager.TryEndDeploymentTurn(), Is.True); // 명시적 배치 턴 종료
+            Assert.That(turnManager.CurrentState, Is.EqualTo(TurnState.PlayerTurn)); // 다음 일반 턴
+            Assert.That(turnManager.TurnNumber, Is.EqualTo(6)); // 6턴 시작
         }
 
-        [Test] // 13일차: 이미 종료된 전투는 다시 EndBattle을 호출해도 결과가 바뀌지 않는지 검증
-        public void EndBattle_DoesNotOverwriteOutcome_WhenAlreadyEnded()
+        [Test] // 주기 배치에서는 한 장도 배치하지 않고 턴 종료할 수 있는지 검증
+        public void PeriodicDeployment_CanEndWithoutPlacement()
         {
-            var turnManager = new TurnManager(); // 새 턴 매니저 생성
-            turnManager.EndBattle(BattleOutcome.Victory); // 먼저 승리로 종료
+            var turnManager = CreatePeriodicDeploymentTurn(); // 주기 배치 상태 생성
 
-            turnManager.EndBattle(BattleOutcome.Defeat); // 이미 끝난 전투를 다시 패배로 종료 시도
+            Assert.That(turnManager.TryEndDeploymentTurn(), Is.True); // 바로 턴 종료 가능
+            Assert.That(turnManager.CurrentState, Is.EqualTo(TurnState.PlayerTurn)); // 다음 일반 턴
+            Assert.That(turnManager.TurnNumber, Is.EqualTo(6)); // 6턴 시작
+        }
 
-            Assert.That(turnManager.Outcome, Is.EqualTo(BattleOutcome.Victory)); // 처음 기록된 승리 결과가 그대로 유지돼야 함
+        private static TurnManager CreateStartedBattle() // 초기 킹 배치 후 1턴 PlayerTurn 상태를 만드는 보조 메서드
+        {
+            var turnManager = new TurnManager(); // 시작 배치 상태
+            turnManager.MarkInitialKingPlaced(); // 킹 배치 완료 등록
+            Assert.That(turnManager.TryEndDeploymentTurn(), Is.True); // 사용자가 배치 턴 종료
+            return turnManager; // 1턴 PlayerTurn 반환
+        }
+
+        private static TurnManager CreatePeriodicDeploymentTurn() // 첫 주기 배치 턴 상태를 만드는 보조 메서드
+        {
+            var turnManager = CreateStartedBattle(); // 1턴 PlayerTurn부터 시작
+            AdvanceToPlayerTurn(turnManager, 5); // 5턴까지 진행
+            Assert.That(turnManager.TryCompletePlayerAction(), Is.True); // 5턴 플레이어 행동 완료
+            Assert.That(turnManager.CompleteEnemyTurn(), Is.True); // 5턴 적 행동 완료 후 배치 턴
+            return turnManager; // 주기 배치 상태 반환
+        }
+
+        private static void AdvanceToPlayerTurn(TurnManager turnManager, int targetTurn) // 지정한 일반 턴까지 진행하는 보조 메서드
+        {
+            while (turnManager.TurnNumber < targetTurn) // 목표 턴까지 반복
+            {
+                Assert.That(turnManager.TryCompletePlayerAction(), Is.True); // 플레이어 행동 완료
+                Assert.That(turnManager.CompleteEnemyTurn(), Is.True); // 적 행동 완료
+                Assert.That(turnManager.CurrentState, Is.EqualTo(TurnState.PlayerTurn)); // 다음 플레이어 턴 확인
+            }
         }
     }
 }

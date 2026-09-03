@@ -79,9 +79,31 @@ namespace ProjectEta.Cards // 카드 관련 타입을 모아두는 네임스페�
             return true; // 덱→손패 이동 성공 반환
         }
 
+        public bool TryMoveSpecificToHand(PieceDefinition card, HandState hand) // 초기 킹처럼 특정 카드를 손패에 반드시 포함할 때 사용하는 안전한 이동 메서드
+        {
+            if (card == null || hand == null || hand.IsFull) // 카드·손패가 없거나 손패가 가득 찼으면
+            {
+                return false; // 상태를 바꾸지 않고 실패 반환
+            }
+
+            int cardIndex = _drawPile.LastIndexOf(card); // 현재 DrawPile에서 해당 카드의 실제 위치 탐색
+            if (cardIndex < 0) // 드로우 더미에 해당 카드가 없으면
+            {
+                return false; // 중복 생성하지 않고 실패 반환
+            }
+
+            if (!hand.TryAddCard(card)) // 손패 추가에 실패하면
+            {
+                return false; // DrawPile을 건드리지 않아 카드 유실 방지
+            }
+
+            _drawPile.RemoveAt(cardIndex); // 손패 추가 성공 후에만 DrawPile에서 해당 카드 제거
+            return true; // 특정 카드 이동 성공 반환
+        }
+
         public void ReturnDeadPileToOwnedPool() // 죽은 카드 더미를 보유 카드 풀로 되돌리는 기존 메서드
         {
-            _ownedCardPool.AddRange(_deadCardPile); // 기존 규칙을 유지해 죽은 카드 더미의 카드를 보유 풀에 합침
+            _ownedCardPool.AddRange(_deadCardPile); // 죽은 카드 더미의 카드를 보유 풀에 합침
             _deadCardPile.Clear(); // 죽은 카드 더미 비우기
         }
     }

@@ -1,6 +1,6 @@
 using System.Collections; // Coroutine과 IEnumerator를 사용하기 위한 네임스페이스
 using UnityEngine; // MonoBehaviour, GameObject, Debug 등을 사용하기 위한 네임스페이스
-using UnityEngine.InputSystem; // Space 키 기반 10일차 임시 행동 완료 입력을 사용하기 위한 네임스페이스
+using UnityEngine.InputSystem; // Space 키 기반 일반 행동 완료·배치 턴 스킵 입력을 사용하기 위한 네임스페이스
 using UnityEngine.SceneManagement; // 현재 씬 이름을 확인하기 위한 네임스페이스
 using ProjectEta.Board; // BoardView, BoardInputController를 사용하기 위한 네임스페이스
 using ProjectEta.Pieces; // PieceMovementType을 사용해 킹 여부를 판별하기 위한 네임스페이스
@@ -11,18 +11,18 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
     public class BattleController : MonoBehaviour // Battle 씬에서 단일 RunState와 턴 흐름을 소유하는 전투 진입점
     {
         [SerializeField] private int _startingKingHp = 3; // 새 테스트 런의 시작 킹 체력
-        [SerializeField] private float _dummyEnemyTurnDelay = 0.5f; // 10일차 더미 적 턴이 유지되는 테스트 시간
-        [SerializeField] private int _turnLimitTestValue = 30; // 13일차: 라운드 턴 제한 테스트 값(기획서 [테스트 값] 기준)
-        [SerializeField] private Vector2Int _testEnemySpawnPosition = new Vector2Int(4, 8); // 13일차: 승리 조건 테스트용 적이 배치될 좌표(적 영역 안)
+        [SerializeField] private float _dummyEnemyTurnDelay = 0.5f; // 실제 AI 전까지 적 턴이 유지되는 테스트 시간
+        [SerializeField] private int _turnLimitTestValue = 30; // 일반 라운드 턴 제한 테스트 값
+        [SerializeField] private Vector2Int _testEnemySpawnPosition = new Vector2Int(4, 8); // 테스트용 적 부대 기준 배치 좌표
         [SerializeField] private BoardView _boardView; // 실제 RunState.Board를 표시할 보드 뷰
         [SerializeField] private BoardInputController _boardInputController; // 실제 RunState를 변경할 입력 컨트롤러
 
         public RunState RunState => _runState; // 현재 전투가 사용하는 단일 런 상태
         public TurnManager TurnManager => _turnManager; // 현재 전투가 사용하는 턴 매니저
-        public TurnStatusUI TurnStatusUI => _turnStatusUI; // 화면 상단 중앙의 턴 상태 Canvas UI
+        public TurnStatusUI TurnStatusUI => _turnStatusUI; // 화면 상단 중앙의 색상형 턴 상태 Canvas UI
 
         private RunState _runState; // 보드·손패·덱·킹 체력 등을 소유하는 단일 상태 객체
-        private TurnManager _turnManager; // 플레이어/적 턴과 행동 권한을 관리하는 상태 객체
+        private TurnManager _turnManager; // 플레이어/적/배치 턴과 행동 권한을 관리하는 상태 객체
         private TurnStatusUI _turnStatusUI; // 현재 턴을 상단 중앙에 표시하는 Canvas UI
         private Coroutine _dummyEnemyTurnCoroutine; // 임시 적 턴 자동 종료 코루틴 참조
 
@@ -55,30 +55,48 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
 
                 if (_boardInputController != null) // 입력 컨트롤러가 정상 연결됐으면
                 {
-                    _boardInputController.EnsurePrototypeStartingHand(); // 기존 테스트용 King/Pawn을 실제 RunState.Hand에 넣음
-                    _boardInputController.SpawnTestEnemySquad(_testEnemySpawnPosition); // 14일차: 폰+룩 2기를 배치해 슬라이더 이동까지 실전 테스트(정식 적 배치는 이후 단계)
+                    _boardInputController.EnsurePrototypeStartingHand(); // 플레이어 실제 DeckState→HandState 시작 카드 흐름 구성
+                    _boardInputController.EnsurePrototypeEnemyStartingHand(); // 적 턴마다 카드 1장을 실제 소비해 소환할 프로토타입 적 손패 구성
+                    _boardInputController.SpawnTestEnemySquad(_testEnemySpawnPosition); // 기존 전투 테스트용 폰+룩 2기는 유지
                 }
             }
             else // 외부 상태가 이미 있으면
             {
                 BindState(); // 새로 만들지 않고 전달받은 상태를 그대로 연결
+                _boardInputController?.EnsurePrototypeEnemyStartingHand(); // 로드된 런에서도 적 일반 턴 카드 소환용 손패를 준비
             }
         }
 
-        private void Update() // 매 프레임 10일차 임시 턴 테스트 입력을 확인하는 메서드
+        private void Update() // 매 프레임 임시 Space 키 테스트 입력을 확인하는 메서드
         {
             if (_turnManager == null || Keyboard.current == null) // 턴 매니저나 키보드 입력이 없으면
             {
                 return; // 처리하지 않고 종료
             }
 
-            if (Keyboard.current.spaceKey.wasPressedThisFrame) // Space 키를 이번 프레임에 눌렀으면
+            if (!Keyboard.current.spaceKey.wasPressedThisFrame) // 이번 프레임에 Space 키를 누르지 않았다면
             {
-                TryCompletePlayerAction(); // 실제 이동이 연결되기 전 임시로 플레이어 일반 행동 완료 처리
+                return; // 별도 테스트 입력이 없으므로 종료
             }
+
+            if (_turnManager.CurrentState == TurnState.DeploymentTurn) // 현재 배치 턴이면
+            {
+                if (_turnManager.TryEndDeploymentTurn()) // Space 키를 배치 턴 종료 입력으로 사용
+                {
+                    Debug.Log($"배치 턴 종료 -> {_turnManager.TurnNumber}턴 PlayerTurn"); // 다음 일반 턴 진입 결과 출력
+                }
+                else if (_turnManager.IsInitialDeployment && !_turnManager.IsInitialKingPlaced) // 시작 배치에서 킹이 아직 없다면
+                {
+                    Debug.Log("배치 턴을 종료할 수 없습니다. 먼저 킹을 아군 영역에 반드시 배치하세요."); // 필수 조건 안내
+                }
+
+                return; // 배치 턴에서는 일반 행동 완료를 호출하지 않음
+            }
+
+            TryCompletePlayerAction(); // 그 밖의 경우 기존 임시 일반 행동 완료 입력으로 처리
         }
 
-        public void Initialize(RunState runState) // 이후 세이브 로드나 다른 씬에서 기존 RunState를 넘길 때 사용할 진입점
+        public void Initialize(RunState runState) // 세이브 로드나 다른 씬에서 기존 RunState를 넘길 때 사용할 진입점
         {
             if (runState == null) // 잘못된 상태를 전달하면
             {
@@ -90,6 +108,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
             ResolveReferences(); // 씬 참조를 다시 확보
             EnsureTurnSystems(); // 턴 매니저와 Canvas UI가 준비돼 있는지 확인
             BindState(); // 동일한 상태를 화면과 입력 양쪽에 연결
+            _boardInputController?.EnsurePrototypeEnemyStartingHand(); // 세이브 로드 진입에서도 적 카드 손패를 중복 없이 준비
         }
 
         public bool TryCompletePlayerAction() // 플레이어 일반 행동 1회를 완료하고 적 턴을 시작하는 외부 진입점
@@ -99,17 +118,17 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
                 return false; // 행동 완료를 처리할 수 없으므로 실패 반환
             }
 
-            if (!_turnManager.TryCompletePlayerAction()) // 현재 행동 권한이 없어 턴 매니저가 거부했다면
+            if (!_turnManager.TryCompletePlayerAction()) // 현재 일반 행동 권한이 없어 턴 매니저가 거부했다면
             {
-                Debug.Log("플레이어 행동 완료 거부: 현재 플레이어가 행동할 수 있는 턴이 아닙니다."); // 개발용 거부 사유 출력
-                return false; // 중복 행동 또는 잘못된 턴임을 반환
+                Debug.Log("플레이어 행동 완료 거부: 현재 플레이어 일반 행동 턴이 아닙니다."); // 개발용 거부 사유 출력
+                return false; // 중복 행동 또는 배치/적 턴임을 반환
             }
 
             Debug.Log($"Turn {_turnManager.TurnNumber}: Player action completed -> EnemyTurn"); // 플레이어 턴 종료 결과 출력
-            return true; // 정상적으로 플레이어 행동을 완료했음을 반환(더미 적 턴 시작은 HandleTurnChanged가 처리)
+            return true; // 정상적으로 플레이어 행동을 완료했음을 반환
         }
 
-        public void EndBattle(BattleOutcome outcome = BattleOutcome.Defeat) // 전투를 종료하는 진입점(13일차: 승리/패배 구분 추가, 기본값은 기존 호출부와의 호환을 위한 패배)
+        public void EndBattle(BattleOutcome outcome = BattleOutcome.Defeat) // 전투를 종료하는 진입점
         {
             if (_dummyEnemyTurnCoroutine != null) // 진행 중인 더미 적 턴이 있다면
             {
@@ -137,7 +156,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
         {
             if (_turnManager == null) // 아직 턴 매니저가 없다면
             {
-                _turnManager = new TurnManager(); // 1턴 플레이어 턴 상태로 새 턴 매니저 생성
+                _turnManager = new TurnManager(); // 전투 시작 킹 필수 자유 배치 턴 상태로 새 턴 매니저 생성
             }
 
             if (_turnStatusUI == null) // 턴 상태 UI 컴포넌트가 없다면
@@ -147,20 +166,51 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
 
             if (_turnStatusUI == null) // 기존 컴포넌트도 없다면
             {
-                _turnStatusUI = gameObject.AddComponent<TurnStatusUI>(); // 상단 중앙 Canvas UI를 생성할 컴포넌트 자동 추가
+                _turnStatusUI = gameObject.AddComponent<TurnStatusUI>(); // 상단 중앙 색상형 Canvas UI를 생성할 컴포넌트 자동 추가
             }
 
-            _turnStatusUI.Bind(_turnManager); // 현재 턴 매니저를 UI에 연결해 즉시 1턴 플레이어 턴을 표시
+            _turnStatusUI.Bind(_turnManager); // 현재 턴 매니저를 UI에 연결해 즉시 현재 턴 표시
 
-            _turnManager.TurnChanged -= HandleTurnChanged; // 버그 수정: 중복 구독을 막기 위해 먼저 해제
-            _turnManager.TurnChanged += HandleTurnChanged; // 버그 수정: Space 키뿐 아니라 실제 이동·공격으로 턴이 넘어갈 때도 더미 적 턴이 시작되도록 TurnChanged를 직접 구독
+            _turnManager.TurnChanged -= HandleTurnChanged; // 중복 구독을 막기 위해 먼저 해제
+            _turnManager.TurnChanged += HandleTurnChanged; // 실제 이동·공격·배치 완료 등 모든 턴 변경을 직접 구독
         }
 
-        private void HandleTurnChanged(TurnState state, int turnNumber) // 버그 수정: 무엇이 턴을 넘겼는지와 무관하게 적 턴에 진입하면 항상 더미 적 턴을 시작하는 메서드
+        private void HandleTurnChanged(TurnState state, int turnNumber) // 모든 턴 전환에 대한 전투 컨트롤러 후속 처리를 수행하는 메서드
         {
             if (state == TurnState.EnemyTurn) // 방금 적 턴으로 전환됐으면
             {
-                StartDummyEnemyTurn(); // 실제 AI 구현 전까지 짧은 더미 적 턴을 자동 실행
+                if (_boardInputController != null && _boardInputController.TryEnemySummonOneCard()) // 적 손패 카드 1장 소환이 가능하면
+                {
+                    Debug.Log("EnemyTurn: 카드 1장 소환 행동 완료 -> 즉시 다음 턴"); // 소환 자체가 적 턴의 유일한 행동임을 표시
+                    return; // TryEnemySummonOneCard 내부에서 CompleteEnemyTurn까지 처리했으므로 추가 턴 진행 금지
+                }
+
+                StartDummyEnemyTurn(); // 적 카드가 없거나 소환 공간이 없을 때만 기존 더미 적 턴 종료 흐름 사용
+                return; // 적 턴 처리 후 나머지 조건은 확인하지 않음
+            }
+
+            if (state == TurnState.DeploymentTurn && _turnManager.IsInitialDeployment && !_turnManager.IsInitialKingPlaced) // 시작 배치에서 아직 킹이 없다면
+            {
+                Debug.Log("시작 배치 턴: 먼저 킹을 배치하세요. 킹 배치 후에도 원하는 카드를 계속 배치할 수 있으며 Space로 턴을 종료합니다."); // 초기 진행 조건 안내
+                return; // 초기 배치에서는 일반 턴 로직을 실행하지 않음
+            }
+
+            if (state == TurnState.DeploymentTurn && _turnManager.IsInitialDeployment) // 킹을 놓은 뒤에도 시작 배치 턴이 계속 열려 있으면
+            {
+                Debug.Log($"시작 배치 턴 계속: 현재 {_turnManager.DeployedCardCount}장 배치 / 자유 배치 후 Space로 턴 종료"); // 자유 배치 상태 안내
+                return; // 명시적 종료 전까지 배치 턴 유지
+            }
+
+            if (state == TurnState.DeploymentTurn) // 5턴 주기 일반 배치 턴으로 전환됐으면
+            {
+                Debug.Log($"{turnNumber}턴 종료 - 배치 턴 시작: 원하는 만큼 자유롭게 배치한 뒤 Space로 배치 턴을 종료하세요."); // 주기 배치 조작 안내 출력
+                return; // 배치 턴에서는 일반 전투 로직을 실행하지 않음
+            }
+
+            if (state == TurnState.PlayerTurn && turnNumber > _turnLimitTestValue) // 배치 턴 완료를 포함해 새 일반 턴 번호가 제한을 넘겼으면
+            {
+                Debug.Log($"라운드 턴 제한({_turnLimitTestValue}턴) 초과 - 패배, 전투를 종료합니다."); // 패배 사유 출력
+                EndBattle(BattleOutcome.Defeat); // 배치 턴 경유 여부와 관계없이 동일하게 턴 제한 패배 처리
             }
         }
 
@@ -181,13 +231,13 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
             _boardView.Bind(_runState.Board); // 화면이 RunState.Board 바로 그 객체를 참조하도록 연결
             _boardInputController.Bind(_runState, _boardView, _turnManager); // 입력이 실제 RunState와 현재 TurnManager를 함께 참조하도록 연결
 
-            _boardInputController.AttackResolved -= HandleAttackResolved; // 12일차: 재연결 시 중복 구독을 막기 위해 먼저 해제
-            _boardInputController.AttackResolved += HandleAttackResolved; // 12일차: 전투 결과를 받아 킹 HP와 패배를 판정
+            _boardInputController.AttackResolved -= HandleAttackResolved; // 재연결 시 중복 구독을 막기 위해 먼저 해제
+            _boardInputController.AttackResolved += HandleAttackResolved; // 전투 결과를 받아 킹 HP와 승패를 판정
 
-            Debug.Log($"Battle state bound: Board={_boardView.IsBound}, Hand={_runState.Hand.Hand.Count}장, KingHP={_runState.KingHp}, Turn={_turnManager.TurnNumber}/{_turnManager.CurrentState}"); // 연결 결과를 개발용 로그로 확인
+            Debug.Log($"Battle state bound: Board={_boardView.IsBound}, Hand={_runState.Hand.Hand.Count}장, KingHP={_runState.KingHp}, Turn={_turnManager.TurnNumber}/{_turnManager.CurrentState}"); // 연결 결과 출력
         }
 
-        private void HandleAttackResolved(CombatResult result) // 전투 판정 결과를 받아 킹 HP·패배(12일차)와 적 전멸 승리(13일차)를 처리하는 메서드
+        private void HandleAttackResolved(CombatResult result) // 전투 판정 결과를 받아 킹 HP·패배와 적 전멸 승리를 처리하는 메서드
         {
             var defender = result.Defender; // 이번 공격을 받은 기물
 
@@ -204,7 +254,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
                 }
             }
 
-            if (result.DefenderDied && !defender.IsPlayerPiece) // 13일차: 이번 공격으로 적 기물이 사망했으면
+            if (result.DefenderDied && !defender.IsPlayerPiece) // 이번 공격으로 적 기물이 사망했으면
             {
                 int remainingEnemies = _runState.Board.CountPieces(isPlayerPiece: false); // 보드 위에 남은 적 기물 수 확인
                 Debug.Log($"적 처치: 남은 적 {remainingEnemies}기"); // 처치 결과를 콘솔에 출력
@@ -230,7 +280,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
             }
         }
 
-        private void StartDummyEnemyTurn() // 실제 AI가 없는 10일차에서 적 턴 흐름만 검증하기 위한 메서드
+        private void StartDummyEnemyTurn() // 실제 AI가 없는 현재 단계에서 적 턴 흐름만 검증하기 위한 메서드
         {
             if (_dummyEnemyTurnCoroutine != null) // 이전 더미 적 턴 코루틴이 남아 있다면
             {
@@ -240,19 +290,13 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
             _dummyEnemyTurnCoroutine = StartCoroutine(CompleteDummyEnemyTurnAfterDelay()); // 일정 시간 후 자동으로 적 턴을 끝내는 코루틴 시작
         }
 
-        private IEnumerator CompleteDummyEnemyTurnAfterDelay() // 짧게 적 턴을 보여준 뒤 다음 플레이어 턴으로 넘어가는 코루틴
+        private IEnumerator CompleteDummyEnemyTurnAfterDelay() // 짧게 적 턴을 보여준 뒤 배치 턴 또는 다음 플레이어 턴으로 넘어가는 코루틴
         {
-            yield return new WaitForSeconds(_dummyEnemyTurnDelay); // Canvas UI에서 적 턴 상태를 확인할 수 있도록 잠시 대기
+            yield return new WaitForSeconds(_dummyEnemyTurnDelay); // Canvas UI에서 적 턴 색상을 확인할 수 있도록 잠시 대기
 
-            if (_turnManager != null && _turnManager.CompleteEnemyTurn()) // 아직 적 턴이면 다음 플레이어 턴으로 정상 전환
+            if (_turnManager != null && _turnManager.CompleteEnemyTurn()) // 아직 적 턴이면 다음 상태로 정상 전환
             {
-                Debug.Log($"Turn {_turnManager.TurnNumber}: Enemy turn completed -> PlayerTurn"); // 다음 턴 시작 결과 출력
-
-                if (_turnManager.TurnNumber > _turnLimitTestValue) // 13일차: 새 턴 번호가 라운드 턴 제한(테스트 값)을 넘겼으면
-                {
-                    Debug.Log($"라운드 턴 제한({_turnLimitTestValue}턴) 초과 - 패배, 전투를 종료합니다."); // 패배 사유를 콘솔에 출력
-                    EndBattle(BattleOutcome.Defeat); // 턴 진행을 멈추고 패배로 전투 종료
-                }
+                Debug.Log($"Enemy turn completed -> {_turnManager.CurrentState} / Turn {_turnManager.TurnNumber}"); // 배치 턴 포함 실제 전환 결과 출력
             }
 
             _dummyEnemyTurnCoroutine = null; // 코루틴 완료 후 참조 초기화
