@@ -2,6 +2,7 @@ using System; // Action 이벤트와 Math를 사용하기 위한 네임스페이
 using System.Collections.Generic; // Dictionary를 사용하기 위한 네임스페이스
 using System.Linq; // IReadOnlyList에 대한 Contains 확장 메서드를 사용하기 위한 네임스페이스
 using UnityEngine; // MonoBehaviour, Physics 등을 사용하기 위한 네임스페이스
+using UnityEngine.EventSystems; // 버그 수정: 클릭이 UI(카드 더미 버튼·패널) 위에서 발생했는지 확인하기 위한 네임스페이스
 using UnityEngine.InputSystem; // 새 Input System(Mouse, Keyboard)을 사용하기 위한 네임스페이스
 using UnityEngine.Rendering; // 드래그 중 기물 고스트 머티리얼의 투명 블렌딩을 설정하기 위한 네임스페이스
 using ProjectEta.Battle; // TurnManager, TurnState를 사용하기 위한 네임스페이스
@@ -40,6 +41,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
         public event Action<CombatResult> AttackResolved; // 공격 판정이 끝날 때마다 외부 전투 시스템에 알리는 이벤트
         public event Action HandChanged; // 18일차: Draw·소환 등 실제 플레이어 손패가 바뀔 때 카드 UI에 알리는 이벤트
+        public event Action DeckChanged; // 19일차: 보유 풀·드로우 더미·죽은 카드 더미 구성이 바뀔 때 덱/무덤 패널 UI에 알리는 이벤트
 
         private const int PrototypeInitialHandSize = 5; // 기본 6종 중 5장을 초기 손패로 뽑는 테스트 값
         private RunState _runState; // BattleController가 소유하는 실제 런 상태
@@ -150,6 +152,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
             Debug.Log($"시작 덱 구성: 킹 포함 / Owned={deck.OwnedCardPool.Count}, Hand={_handState.Hand.Count}, Draw={deck.DrawPile.Count}"); // 실제 초기 카드 상태 로그
             HandChanged?.Invoke(); // 시작 손패 5장이 완성됐음을 이미지 손패 UI에 즉시 알림
+            DeckChanged?.Invoke(); // 19일차: 드로우 더미가 처음 구성됐음을 덱/무덤 패널 UI에 알림
         }
 
         public void EnsurePrototypeEnemyStartingHand() // 적이 자기 턴에 카드 1장을 실제 소비해 소환할 수 있도록 프로토타입 적 손패를 구성하는 메서드
@@ -218,7 +221,39 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
             Debug.Log($"카드 자동 드로우: Hand={_handState.Hand.Count}/{HandState.MaxHandSize}, Draw={_runState.Deck.DrawPile.Count}"); // 성공한 카드 상태 출력
             HandChanged?.Invoke(); // 자동 드로우로 손패가 바뀌었음을 카드 UI에 알림
+            DeckChanged?.Invoke(); // 19일차: 드로우 더미 장수가 줄었음을 덱 패널 UI에 알림
             return true; // 드로우 성공 반환
+        }
+
+        public bool TryDiscardHandCardToBottom(PieceDefinition card) // 19일차: 배치 턴에 손패 카드 1장을 드로우 더미 맨 아래로 정리하는 진입점
+        {
+            if (!CanUseDeploymentInput || _runState == null || _handState == null || card == null) // 배치 턴이 아니거나 필수 정보가 없으면
+            {
+                return false; // 정리를 실행하지 않고 실패 반환
+            }
+
+            if (!_runState.Deck.DiscardToBottom(card, _handState)) // 실제 손패→드로우 더미 이동 시도
+            {
+                return false; // 손패에 없는 카드 등으로 실패
+            }
+
+            if (_selectedCard == card) _selectedCard = null; // 정리한 카드가 선택돼 있었다면 선택 해제
+
+            Debug.Log($"손패 정리: {card.DisplayName} -> 드로우 더미 맨 아래 / Hand={_handState.Hand.Count}, Draw={_runState.Deck.DrawPile.Count}"); // 정리 결과 출력
+            HandChanged?.Invoke(); // 손패 수가 줄었음을 카드 UI에 알림
+            DeckChanged?.Invoke(); // 19일차: 드로우 더미 구성이 바뀌었음을 덱 패널 UI에 알림
+            return true; // 정리 성공 반환
+        }
+
+        public void ReturnDeadPileToOwnedPool() // 19일차: 승리 등으로 라운드가 끝났을 때 죽은 카드 더미를 보유 풀로 복귀시키는 진입점
+        {
+            if (_runState == null) return; // 연결된 런 상태가 없으면 처리하지 않음
+            if (_runState.Deck.DeadCardPile.Count == 0) return; // 되돌릴 죽은 카드가 없으면 종료
+
+            int returned = _runState.Deck.DeadCardPile.Count; // 로그용으로 복귀 전 죽은 카드 수 저장
+            _runState.Deck.ReturnDeadPileToOwnedPool(); // 실제 죽은 카드 더미를 보유 풀로 복귀
+            Debug.Log($"라운드 클리어: 죽은 카드 {returned}장이 보유 풀로 복귀했습니다."); // 복귀 결과 출력
+            DeckChanged?.Invoke(); // 19일차: 죽은 카드 더미가 비워졌음을 덱/무덤 패널 UI에 알림
         }
 
         private void Update() // 매 프레임 자동 호출되는 메서드
@@ -241,7 +276,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 DeselectPiece(); // 배치 턴에서는 기존 기물 이동 후보가 남지 않도록 해제
                 DeselectCurrentCell(); // 일반 칸 선택 강조도 해제
 
-                if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) // 배치 턴에 마우스 좌클릭이 들어오면
+                if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && !IsPointerOverInteractiveUI()) // 배치 턴에 마우스 좌클릭이 들어오고 UI 위가 아니면
                 {
                     HandleBoardClick(); // 선택된 손패 카드의 자유 배치만 처리
                 }
@@ -249,10 +284,15 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 return; // 배치 턴에서는 일반 기물 선택·이동·공격 흐름으로 내려가지 않음
             }
 
-            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) // 일반 PlayerTurn에 마우스 좌클릭이 들어오면
+            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && !IsPointerOverInteractiveUI()) // 일반 PlayerTurn에 마우스 좌클릭이 들어오고 UI 위가 아니면
             {
                 HandleBoardClick(); // 선택 카드가 있으면 소환, 없으면 기물 이동·공격 처리
             }
+        }
+
+        private static bool IsPointerOverInteractiveUI() // 버그 수정: 카드 더미 버튼·패널 등 화면 UI를 클릭했을 때 같은 클릭이 3D 보드로도 전달되지 않도록 확인하는 메서드
+        {
+            return EventSystem.current != null && EventSystem.current.IsPointerOverGameObject(); // 현재 클릭이 UI Raycast에 먼저 잡혔는지 확인
         }
 
         private void HandleCardSelectionInput() // 숫자키로 현재 손패 슬롯을 선택하는 메서드
@@ -305,6 +345,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         {
             cell = default; // 실패 시 기본 좌표를 반환하도록 초기화
             if (_camera == null || _boardView == null) return false; // 카메라나 보드가 없으면 변환 불가
+            if (float.IsNaN(screenPosition.x) || float.IsNaN(screenPosition.y)) return false; // 버그 수정: 유효하지 않은 좌표로 ScreenPointToRay 경고를 만들지 않음
             var ray = _camera.ScreenPointToRay(screenPosition); // 화면 좌표에서 월드 Ray 생성
             if (!Physics.Raycast(ray, out var hit)) return false; // 월드 오브젝트에 맞지 않으면 보드 밖으로 처리
             return _boardView.TryGetCellFromWorldPoint(hit.point, out cell); // 맞은 월드 위치를 보드 좌표로 변환해 반환
@@ -465,6 +506,11 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             }
 
             var screenPosition = Mouse.current.position.ReadValue(); // 현재 마우스 화면 좌표 읽기
+            if (float.IsNaN(screenPosition.x) || float.IsNaN(screenPosition.y)) // 버그 수정: 입력 장치가 이번 프레임에 유효하지 않은 좌표를 보고하면
+            {
+                return; // NaN 좌표로 ScreenPointToRay를 호출해 경고를 만들지 않고 이번 클릭을 무시
+            }
+
             var ray = _camera.ScreenPointToRay(screenPosition); // 화면 좌표를 카메라 기준 광선으로 변환
 
             if (!Physics.Raycast(ray, out var hit) || !_boardView.TryGetCellFromWorldPoint(hit.point, out var cell)) // 광선이 보드에 맞지 않거나 유효 칸으로 변환되지 않으면
@@ -651,6 +697,12 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             }
 
             _pieceViews.Remove(piece); // 화면 연결 정보 정리
+
+            if (piece.IsPlayerPiece && _runState != null) // 19일차: 아군 기물이 죽었으면(적은 아직 별도 덱 생명주기가 없음)
+            {
+                _runState.Deck.MoveToDeadPile(piece.Definition); // 해당 카드를 죽은 카드 더미로 이동해 같은 전투에서 재사용 차단
+                DeckChanged?.Invoke(); // 죽은 카드 더미 구성 변경을 덱/무덤 패널 UI에 알림
+            }
         }
 
         private void DeselectPiece() // 현재 선택된 기물과 이동/공격 후보 강조를 해제하는 메서드
@@ -863,12 +915,12 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
             if (_turnManager.CurrentState == TurnState.DeploymentTurn && _turnManager.IsInitialDeployment) // 킹을 이미 놓은 시작 배치 턴이면
             {
-                return $"시작 배치 턴: 킹 배치 완료 / 자유 배치 중 {_turnManager.DeployedCardCount}장 / Space = 배치 턴 종료"; // 추가 자유 배치와 종료 안내
+                return $"시작 배치 턴: 킹 배치 완료 / 자유 배치 중 {_turnManager.DeployedCardCount}장 / 카드 우클릭 = 손패 정리 / Space = 배치 턴 종료"; // 추가 자유 배치와 종료 안내
             }
 
             if (_turnManager.CurrentState == TurnState.DeploymentTurn) // 5턴마다 열리는 일반 배치 턴이면
             {
-                return $"배치 턴: 원하는 만큼 자유 배치 가능 / 현재 {_turnManager.DeployedCardCount}장 배치 / Space = 배치 턴 종료"; // 주기 배치 전용 조작 안내
+                return $"배치 턴: 원하는 만큼 자유 배치 가능 / 현재 {_turnManager.DeployedCardCount}장 배치 / 카드 우클릭 = 손패 정리 / Space = 배치 턴 종료"; // 주기 배치 전용 조작 안내
             }
 
             if (_turnManager.CurrentState == TurnState.PlayerTurn) // 일반 플레이어 턴이면

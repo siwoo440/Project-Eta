@@ -5,7 +5,7 @@ using ProjectEta.Pieces; // PieceDefinition과 PieceMovementType을 사용하기
 
 namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 네임스페이스
 {
-    public class CardView : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerEnterHandler, IPointerExitHandler // 손패 카드 1장을 표시하고 직접 드래그하는 컴포넌트
+    public class CardView : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler // 손패 카드 1장을 표시하고 직접 드래그·우클릭 정리하는 컴포넌트
     {
         public PieceDefinition Definition => _definition; // 현재 카드가 표현하는 실제 PieceDefinition
         public bool IsInteractable => _isInteractable; // 현재 턴 규칙상 이 카드를 드래그해 소환할 수 있는지 여부
@@ -92,6 +92,13 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             ReturnToHand(); // 잘못된 Drop이면 카드가 원래 손패 위치로 돌아감
         }
 
+        public void OnPointerClick(PointerEventData eventData) // 19일차: 배치 턴에 카드를 우클릭해 드로우 더미 맨 아래로 정리하는 이벤트
+        {
+            if (eventData.button != PointerEventData.InputButton.Right) return; // 우클릭이 아니면 처리하지 않음(좌클릭은 드래그로 이미 처리)
+            if (_owner == null || _definition == null) return; // 연결이 없으면 종료
+            if (_owner.TryDiscardCard(this)) gameObject.SetActive(false); // 정리 성공 시 다음 프레임 손패 재구성 전까지 즉시 숨김
+        }
+
         public void OnPointerEnter(PointerEventData eventData) // 마우스가 카드 위에 올라왔을 때 호출되는 이벤트
         {
             if (_isInteractable && !_isDragging) transform.localScale = Vector3.one * 1.05f; // 사용 가능한 카드를 살짝 확대
@@ -118,8 +125,14 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
 
         private void EnsureRequiredComponents() // 드래그 처리에서 항상 필요한 핵심 컴포넌트를 개별적으로 보장하는 메서드
         {
-            _rectTransform = gameObject.GetComponent<RectTransform>() ?? gameObject.AddComponent<RectTransform>(); // 기존 RectTransform이 있으면 재사용하고 없으면 추가
-            _canvasGroup = gameObject.GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>(); // MissingComponentException 방지를 위해 CanvasGroup을 항상 확보
+            // 버그 수정: "a ?? b" 형태는 파괴된(그러나 C# 참조는 남아있는) Unity 컴포넌트를 null로 인식하지 못해
+            // MissingComponentException으로 이어질 수 있다. Unity의 오버로드된 == 연산자가 실제로 호출되는
+            // 명시적 null 비교로 바꿔 파괴된 컴포넌트도 항상 다시 확보되도록 한다.
+            if (_rectTransform == null) _rectTransform = gameObject.GetComponent<RectTransform>(); // 기존 RectTransform 재확보 시도
+            if (_rectTransform == null) _rectTransform = gameObject.AddComponent<RectTransform>(); // 여전히 없으면 새로 추가
+
+            if (_canvasGroup == null) _canvasGroup = gameObject.GetComponent<CanvasGroup>(); // 기존 CanvasGroup 재확보 시도
+            if (_canvasGroup == null) _canvasGroup = gameObject.AddComponent<CanvasGroup>(); // 여전히 없으면 새로 추가
         }
 
         private void EnsureVisualTree() // 예시 이미지와 비슷한 판타지 카드 프레임 계층을 런타임 생성하는 메서드
@@ -127,12 +140,14 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             EnsureRequiredComponents(); // RectTransform이 이미 있어도 CanvasGroup 등 드래그 필수 컴포넌트를 반드시 보장
             if (_rootImage != null) return; // 실제 카드 시각 트리가 이미 만들어진 경우에만 중복 생성을 건너뜀
             _rectTransform.sizeDelta = new Vector2(CardWidth, CardHeight); // 카드 크기 적용
-            var layout = gameObject.GetComponent<LayoutElement>() ?? gameObject.AddComponent<LayoutElement>(); // 손패 레이아웃용 크기 컴포넌트 확보
+            var layout = gameObject.GetComponent<LayoutElement>(); // 손패 레이아웃용 크기 컴포넌트 재확보 시도(버그 수정: ?? 대신 명시적 null 비교 사용)
+            if (layout == null) layout = gameObject.AddComponent<LayoutElement>(); // 여전히 없으면 새로 추가
             layout.preferredWidth = CardWidth; // 카드 권장 너비 지정
             layout.preferredHeight = CardHeight; // 카드 권장 높이 지정
             layout.flexibleWidth = 0f; // 자동 가로 확장 방지
             layout.flexibleHeight = 0f; // 자동 세로 확장 방지
-            _rootImage = gameObject.GetComponent<Image>() ?? gameObject.AddComponent<Image>(); // 카드 전체 포인터 입력용 Image 확보
+            _rootImage = gameObject.GetComponent<Image>(); // 카드 전체 포인터 입력용 Image 재확보 시도(버그 수정: ?? 대신 명시적 null 비교 사용)
+            if (_rootImage == null) _rootImage = gameObject.AddComponent<Image>(); // 여전히 없으면 새로 추가
             _rootImage.sprite = GetRoundedSprite(); // 둥근 카드 Sprite 적용
             _rootImage.type = Image.Type.Sliced; // 모서리 형태 유지
             _rootImage.color = Color.white; // 기본 색상 적용

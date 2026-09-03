@@ -124,6 +124,14 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             return result; // 실제 소환 결과 반환
         }
 
+        public bool TryDiscardCard(CardView cardView) // 19일차: 카드 우클릭으로 배치 턴 손패 정리를 시도하는 메서드
+        {
+            if (cardView == null || _boardInput == null || cardView.Definition == null) return false; // 필수 정보가 없으면 실패
+            bool result = _boardInput.TryDiscardHandCardToBottom(cardView.Definition); // 실제 손패→드로우 더미 맨 아래 이동 시도
+            if (result) _refreshQueued = true; // 클릭 콜백이 끝난 뒤 안전하게 손패 UI 재구성
+            return result; // 실제 정리 결과 반환
+        }
+
         public CardView FindCardView(PieceDefinition definition) // 테스트와 디버그에서 특정 카드 UI를 찾는 메서드
         {
             foreach (var view in _cardViews) // 현재 카드 목록 순회

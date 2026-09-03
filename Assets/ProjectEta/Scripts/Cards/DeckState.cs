@@ -106,5 +106,14 @@ namespace ProjectEta.Cards // 카드 관련 타입을 모아두는 네임스페�
             _ownedCardPool.AddRange(_deadCardPile); // 죽은 카드 더미의 카드를 보유 풀에 합침
             _deadCardPile.Clear(); // 죽은 카드 더미 비우기
         }
+
+        public bool DiscardToBottom(PieceDefinition card, HandState hand) // 19일차: 배치 턴 손패 정리를 위해 손패 카드를 드로우 더미 맨 아래로 보내는 메서드
+        {
+            if (card == null || hand == null) return false; // 필수 정보가 없으면 실패
+            if (!hand.RemoveCard(card)) return false; // 실제 손패에 없는 카드는 처리하지 않음
+
+            _drawPile.Insert(0, card); // TryDraw가 맨 위로 쓰는 마지막 인덱스와 반대인 0번 인덱스를 "맨 아래"로 사용해 삽입
+            return true; // 정리 성공 반환
+        }
     }
 }

@@ -1,3 +1,4 @@
+using System.Linq; // IReadOnlyList<T>에 대한 Contains 확장 메서드를 사용하기 위한 네임스페이스
 using System.Reflection; // 테스트에서 직렬화된 기물 정의 필드에 값을 주입하기 위한 네임스페이스
 using NUnit.Framework; // EditMode 테스트 어트리뷰트와 Assert를 사용하기 위한 네임스페이스
 using UnityEngine; // GameObject, ScriptableObject, Object, Vector2Int를 사용하기 위한 네임스페이스
@@ -178,6 +179,74 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
                 Assert.AreEqual(TurnState.DeploymentTurn, context.TurnManager.CurrentState); // 배치 성공만으로 턴 종료 금지
                 Assert.IsTrue(context.TurnManager.IsInitialKingPlaced); // 킹 조건만 충족
                 Assert.IsTrue(context.TurnManager.CanDeploy); // 계속 자유 배치 가능
+            }
+            finally // 성공/실패와 무관하게 정리
+            {
+                context.Dispose(); // 테스트 객체 제거
+            }
+        }
+
+        [Test] // 19일차: 배치 턴에 손패 카드를 정리하면 손패에서 빠지고 드로우 더미 맨 아래로 이동하는지 검증
+        public void DeploymentTurn_DiscardCard_RemovesFromHandAndAddsToDrawPileBottom()
+        {
+            var context = CreateBoundContext(); // 시작 배치 턴 상태 생성
+
+            try // 테스트 자원 정리를 보장
+            {
+                context.BoardInput.EnsurePrototypeStartingHand(); // 시작 손패 5장 구성
+                int nonKingIndex = FindFirstNonKingIndex(context.RunState.Hand); // 정리할 비킹 카드 위치 탐색
+                var cardToDiscard = context.RunState.Hand.Hand[nonKingIndex]; // 정리 대상 카드 참조 저장
+                int handCountBefore = context.RunState.Hand.Hand.Count; // 정리 전 손패 수 저장
+                int drawCountBefore = context.RunState.Deck.DrawPile.Count; // 정리 전 드로우 더미 수 저장
+
+                bool result = context.BoardInput.TryDiscardHandCardToBottom(cardToDiscard); // 실제 손패 정리 실행
+
+                Assert.IsTrue(result); // 배치 턴에는 정리가 성공해야 함
+                Assert.AreEqual(handCountBefore - 1, context.RunState.Hand.Hand.Count); // 손패 수가 1 줄어야 함
+                Assert.AreEqual(drawCountBefore + 1, context.RunState.Deck.DrawPile.Count); // 드로우 더미 수가 1 늘어야 함
+                Assert.IsFalse(context.RunState.Hand.Hand.Contains(cardToDiscard)); // 정리한 카드가 손패에 남아 있지 않아야 함
+            }
+            finally // 성공/실패와 무관하게 정리
+            {
+                context.Dispose(); // 테스트 객체 제거
+            }
+        }
+
+        [Test] // 19일차: 일반 PlayerTurn에는 손패 정리를 할 수 없는지 검증(배치 턴 전용 기능)
+        public void PlayerTurn_DiscardCard_IsRejected()
+        {
+            var context = CreateStartedBattleContext(); // 킹 배치 후 1턴 PlayerTurn까지 진행한 컨텍스트 생성
+
+            try // 테스트 자원 정리를 보장
+            {
+                int nonKingIndex = FindFirstNonKingIndex(context.RunState.Hand); // 손패의 비킹 카드 위치 탐색
+                var card = context.RunState.Hand.Hand[nonKingIndex]; // 정리를 시도할 카드 참조 저장
+
+                bool result = context.BoardInput.TryDiscardHandCardToBottom(card); // 일반 턴에 정리 시도
+
+                Assert.IsFalse(result); // 배치 턴이 아니므로 거부돼야 함
+                Assert.IsTrue(context.RunState.Hand.Hand.Contains(card)); // 손패에 카드가 그대로 남아 있어야 함
+            }
+            finally // 성공/실패와 무관하게 정리
+            {
+                context.Dispose(); // 테스트 객체 제거
+            }
+        }
+
+        [Test] // 19일차: 라운드 클리어 시 죽은 카드 더미가 보유 풀로 복귀하는지 BoardInputController 경로로 검증
+        public void ReturnDeadPileToOwnedPool_ReturnsDeadCardsToOwnedPool()
+        {
+            var context = CreateBoundContext(); // 시작 배치 턴 상태 생성
+
+            try // 테스트 자원 정리를 보장
+            {
+                context.RunState.Deck.MoveToDeadPile(context.Definitions[1]); // 전투 중 사망했다고 가정한 카드를 죽은 카드 더미에 직접 추가
+                int ownedCountBefore = context.RunState.Deck.OwnedCardPool.Count; // 복귀 전 보유 풀 수 저장
+
+                context.BoardInput.ReturnDeadPileToOwnedPool(); // 실제 라운드 클리어 복귀 진입점 실행
+
+                Assert.AreEqual(0, context.RunState.Deck.DeadCardPile.Count); // 죽은 카드 더미가 비워져야 함
+                Assert.AreEqual(ownedCountBefore + 1, context.RunState.Deck.OwnedCardPool.Count); // 보유 풀 수가 1 늘어야 함
             }
             finally // 성공/실패와 무관하게 정리
             {
