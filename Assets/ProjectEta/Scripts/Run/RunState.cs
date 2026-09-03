@@ -50,6 +50,11 @@ namespace ProjectEta.Run // 런(플레이 세션) 관련 타입을 모아두는 
                 data.ownedCardPoolIds.Add(card.PieceId); // PieceId를 저장 목록에 추가
             }
 
+            foreach (var card in Deck.DrawPile) // 16일차: 현재 드로우 순서를 순회하며
+            {
+                data.drawPileIds.Add(card.PieceId); // 드로우 순서를 그대로 PieceId 목록에 저장
+            }
+
             foreach (var card in Deck.DeadCardPile) // 죽은 카드 더미를 순회하며
             {
                 data.deadCardPileIds.Add(card.PieceId); // PieceId를 저장 목록에 추가
@@ -103,6 +108,18 @@ namespace ProjectEta.Run // 런(플레이 세션) 관련 타입을 모아두는 
                 if (definition != null) // 정의를 찾았으면
                 {
                     runState.Deck.AddToOwnedPool(definition); // 보유 카드 풀에 추가
+                }
+            }
+
+            if (data.drawPileIds != null) // 16일차 이전 저장 파일처럼 드로우 목록이 없는 경우도 안전하게 처리
+            {
+                foreach (var pieceId in data.drawPileIds) // 저장된 드로우 순서를 처음부터 순회하며
+                {
+                    var definition = database.FindById(pieceId); // id로 기물 정의 조회
+                    if (definition != null) // 정의를 찾았으면
+                    {
+                        runState.Deck.AddToDrawPile(definition); // 저장된 순서대로 드로우 더미 복원
+                    }
                 }
             }
 

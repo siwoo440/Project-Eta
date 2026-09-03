@@ -11,6 +11,7 @@ namespace ProjectEta.Run // 런(플레이 세션) 관련 타입을 모아두는 
         public int metaCurrency; // 저장 시점의 메타 재화
         public List<string> handCardIds = new List<string>(); // 손패 카드들의 PieceId 목록
         public List<string> ownedCardPoolIds = new List<string>(); // 보유 카드 풀의 PieceId 목록
+        public List<string> drawPileIds = new List<string>(); // 16일차: 저장 시점의 드로우 순서를 유지할 PieceId 목록
         public List<string> deadCardPileIds = new List<string>(); // 죽은 카드 더미의 PieceId 목록
         public List<PieceSaveData> boardPieces = new List<PieceSaveData>(); // 보드 위 기물 스냅샷 목록
     }
