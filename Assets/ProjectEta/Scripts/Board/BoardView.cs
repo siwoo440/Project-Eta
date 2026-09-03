@@ -14,8 +14,10 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         [SerializeField] private int _gridLineThicknessPx = 3; // 격자선 두께(생성할 텍스처 픽셀 기준)
 
         public float TileSize => _tileSize; // 외부에서 타일 크기를 읽기 위한 프로퍼티
+        public BoardState State => _boardState; // 현재 화면이 참조하는 실제 보드 상태
+        public bool IsBound => _boardState != null; // RunState.Board가 연결됐는지 여부
 
-        private BoardState _boardState; // 이 뷰가 표시하는 보드 데이터
+        private BoardState _boardState; // 이 뷰가 표시하는 보드 데이터. 자체 생성하지 않고 BattleController에서 주입받음
         private Mesh _mesh; // 보드 전체를 하나로 표현하는 메시
         private readonly List<int> _idleLightTriangles = new List<int>(); // 밝은 칸 서브메시에 속한 삼각형 인덱스 목록
         private readonly List<int> _idleDarkTriangles = new List<int>(); // 어두운 칸 서브메시에 속한 삼각형 인덱스 목록
@@ -25,14 +27,31 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
         private void Awake() // 씬 시작 시 자동 호출되는 초기화 메서드
         {
-            _boardState = new BoardState(); // 보드 데이터 생성
-            BuildBoardMesh(); // 하나로 이어진 체스판 메시 생성
+            BuildBoardMesh(); // 화면용 보드 메시는 생성하되 BoardState는 BattleController가 주입함
         }
 
-        public TileState GetTile(Vector2Int cell) => _boardState.GetTile(cell); // 외부에서 칸 좌표로 타일 데이터를 조회하기 위한 메서드
+        public void Bind(BoardState boardState) // RunState.Board를 이 뷰가 표시할 실제 상태로 연결하는 메서드
+        {
+            if (boardState == null) // 잘못된 상태가 들어오면
+            {
+                Debug.LogError("BoardView.Bind: BoardState가 null입니다."); // 원인을 명확히 로그로 남김
+                return; // 기존 연결 상태를 유지한 채 종료
+            }
+
+            ClearHighlight(); // 이전 상태 기준 강조가 남아 있으면 제거
+            _boardState = boardState; // RunState가 소유한 실제 BoardState 참조를 그대로 사용
+        }
+
+        public TileState GetTile(Vector2Int cell) => _boardState?.GetTile(cell); // 외부에서 칸 좌표로 타일 데이터를 조회하기 위한 메서드
 
         public bool TryGetCellFromWorldPoint(Vector3 worldPoint, out Vector2Int cell) // 월드 좌표를 보드 칸 좌표로 변환하는 메서드
         {
+            if (_boardState == null) // 아직 런 상태가 연결되지 않았으면
+            {
+                cell = default; // 출력 좌표를 기본값으로 설정
+                return false; // 클릭 처리를 하지 않음
+            }
+
             var local = transform.InverseTransformPoint(worldPoint); // 보드 로컬 좌표로 변환
             float offsetX = (BoardState.Width - 1) / 2f; // 가로 중앙 정렬 오프셋
             float offsetY = (BoardState.Height - 1) / 2f; // 세로 중앙 정렬 오프셋
@@ -44,6 +63,11 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
         public void HighlightCell(Vector2Int cell) // 지정한 칸을 강조 표시하는 메서드
         {
+            if (_boardState == null) // 아직 실제 보드 상태가 연결되지 않았으면
+            {
+                return; // 강조하지 않고 종료
+            }
+
             ClearHighlight(); // 이전 강조를 먼저 해제
 
             var tileState = _boardState.GetTile(cell); // 강조할 칸의 타일 데이터 조회
@@ -73,8 +97,20 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 return; // 할 일이 없으므로 종료
             }
 
+            if (_boardState == null) // 보드 상태가 교체되는 도중이면
+            {
+                _highlightedCell = null; // 내부 강조 상태만 비우고 종료
+                return;
+            }
+
             var cell = _highlightedCell.Value; // 강조 해제할 칸 좌표
             var tileState = _boardState.GetTile(cell); // 해당 칸의 타일 데이터 조회
+            if (tileState == null) // 안전하게 타일을 찾지 못했으면
+            {
+                _highlightedCell = null; // 강조 상태만 초기화
+                return; // 메시 수정 없이 종료
+            }
+
             var sourceList = tileState.IsPlayerPlacementArea ? _installableTriangles : _blockedTriangles; // 현재 속해있던 서브메시 목록 선택
 
             var indices = GetCellTriangleIndices(cell); // 이 칸에 해당하는 삼각형 인덱스 계산
@@ -129,12 +165,20 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             _mesh.RecalculateNormals(); // 정점 배치를 바탕으로 법선 자동 계산
             _mesh.RecalculateBounds(); // 콜라이더·컬링에 필요한 경계 상자 자동 계산
 
-            var meshFilter = gameObject.AddComponent<MeshFilter>(); // 메시 필터 컴포넌트 추가
+            var meshFilter = gameObject.GetComponent<MeshFilter>(); // 이미 추가된 메시 필터가 있는지 조회
+            if (meshFilter == null) // 없으면
+            {
+                meshFilter = gameObject.AddComponent<MeshFilter>(); // 새로 추가
+            }
             meshFilter.sharedMesh = _mesh; // 생성한 메시 연결
 
             var gridTexture = CreateGridLineTexture(); // 격자선이 그려진 공용 텍스처 생성
 
-            var meshRenderer = gameObject.AddComponent<MeshRenderer>(); // 메시 렌더러 컴포넌트 추가
+            var meshRenderer = gameObject.GetComponent<MeshRenderer>(); // 이미 추가된 메시 렌더러가 있는지 조회
+            if (meshRenderer == null) // 없으면
+            {
+                meshRenderer = gameObject.AddComponent<MeshRenderer>(); // 새로 추가
+            }
             meshRenderer.sharedMaterials = new[] // 서브메시 순서에 맞춰 머티리얼 지정
             {
                 CreateBoardMaterial(_idleLightColor, gridTexture), // 서브메시 0: 밝은 칸
@@ -143,12 +187,21 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 CreateBoardMaterial(_blockedHighlightColor, gridTexture) // 서브메시 3: 설치 불가 강조
             };
 
-            var meshCollider = gameObject.AddComponent<MeshCollider>(); // 클릭 판정을 위한 메시 콜라이더 추가
+            var meshCollider = gameObject.GetComponent<MeshCollider>(); // 이미 추가된 콜라이더가 있는지 조회
+            if (meshCollider == null) // 없으면
+            {
+                meshCollider = gameObject.AddComponent<MeshCollider>(); // 새로 추가
+            }
             meshCollider.sharedMesh = _mesh; // 같은 메시를 충돌 판정에도 사용
         }
 
         private void ApplySubMeshes() // 네 서브메시 목록을 실제 메시에 반영하는 메서드
         {
+            if (_mesh == null) // 메시가 아직 생성되지 않았으면
+            {
+                return; // 적용하지 않고 종료
+            }
+
             _mesh.SetTriangles(_idleLightTriangles, 0); // 밝은 칸 서브메시 반영
             _mesh.SetTriangles(_idleDarkTriangles, 1); // 어두운 칸 서브메시 반영
             _mesh.SetTriangles(_installableTriangles, 2); // 설치 가능 강조 서브메시 반영
