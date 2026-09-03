@@ -1,6 +1,7 @@
 using System.Linq; // IReadOnlyList에 대한 Contains 확장 메서드를 사용하기 위한 네임스페이스
 using UnityEngine; // MonoBehaviour, Physics 등을 사용하기 위한 네임스페이스
 using UnityEngine.InputSystem; // 새 Input System(Mouse, Keyboard)을 사용하기 위한 네임스페이스
+using ProjectEta.Battle; // TurnManager를 사용해 플레이어 턴 입력 권한을 확인하기 위한 네임스페이스
 using ProjectEta.Cards; // HandState를 사용하기 위한 네임스페이스
 using ProjectEta.Pieces; // PieceDefinition, PieceRuntimeState, PieceView를 사용하기 위한 네임스페이스
 using ProjectEta.Run; // RunState를 사용하기 위한 네임스페이스
@@ -16,10 +17,13 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
         public RunState RunState => _runState; // 현재 입력이 변경하는 실제 런 상태
         public HandState HandState => _handState; // 현재 입력이 변경하는 실제 손패 상태
+        public TurnManager TurnManager => _turnManager; // 현재 입력 권한을 판단하는 실제 턴 매니저
         public bool IsBound => _runState != null && _handState != null && _boardView != null && _boardView.IsBound; // 전투 상태 연결 여부
+        public bool CanReceivePlayerInput => IsBound && (_turnManager == null || _turnManager.CanPlayerInput); // 현재 플레이어가 보드/카드 입력을 할 수 있는지 여부
 
         private RunState _runState; // BattleController가 소유하는 실제 런 상태
         private HandState _handState; // RunState.Hand 참조. 별도 테스트 손패를 만들지 않음
+        private TurnManager _turnManager; // BattleController가 소유하는 실제 턴 매니저
         private Vector2Int? _selectedCell; // 현재 선택된 칸 좌표(없으면 null)
         private PieceDefinition _selectedCard; // 현재 선택된 카드
 
@@ -36,7 +40,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             }
         }
 
-        public void Bind(RunState runState, BoardView boardView = null) // BattleController가 실제 RunState를 입력 시스템에 연결하는 메서드
+        public void Bind(RunState runState, BoardView boardView = null, TurnManager turnManager = null) // BattleController가 실제 RunState와 턴 매니저를 입력 시스템에 연결하는 메서드
         {
             if (runState == null) // 잘못된 런 상태가 들어오면
             {
@@ -61,6 +65,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
             _runState = runState; // 실제 런 상태 참조 저장
             _handState = runState.Hand; // 별도 HandState 대신 RunState.Hand를 그대로 사용
+            _turnManager = turnManager; // 전달받은 턴 매니저를 입력 권한 기준으로 사용
             _selectedCard = null; // 상태 교체 시 이전 카드 선택 제거
             DeselectCurrentCell(); // 이전 선택 칸 강조 제거
         }
@@ -96,6 +101,13 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 return; // 입력으로 임시 데이터를 만들지 않고 기다림
             }
 
+            if (!CanReceivePlayerInput) // 현재 적 턴 또는 전투 종료 상태라면
+            {
+                _selectedCard = null; // 적 턴으로 넘어갈 때 남아 있던 카드 선택을 해제
+                DeselectCurrentCell(); // 보드 선택 강조도 해제
+                return; // 플레이어의 모든 보드·카드 입력을 차단
+            }
+
             HandleCardSelectionInput(); // 숫자키 카드 선택 입력 처리
 
             if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) // 마우스가 있고 이번 프레임에 좌클릭했으면
@@ -124,7 +136,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
         private void ToggleCardSelection(PieceDefinition card) // 카드 선택 상태를 켜고 끄는 메서드
         {
-            if (_handState == null || card == null) // 손패 연결 또는 카드 데이터가 없으면
+            if (!CanReceivePlayerInput || _handState == null || card == null) // 플레이어 입력 권한·손패 연결·카드 데이터 중 하나라도 없으면
             {
                 return; // 처리하지 않고 종료
             }
@@ -143,9 +155,9 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
         private void HandleBoardClick() // 보드 클릭 시 칸 선택 또는 카드 소환을 처리하는 메서드
         {
-            if (_camera == null || _boardView == null) // 카메라 또는 보드 뷰가 없으면
+            if (!CanReceivePlayerInput || _camera == null || _boardView == null) // 플레이어 입력 권한·카메라·보드 뷰 중 하나라도 없으면
             {
-                return; // 클릭 처리를 할 수 없으므로 종료
+                return; // 클릭 처리를 하지 않고 종료
             }
 
             var screenPosition = Mouse.current.position.ReadValue(); // 현재 마우스 화면 좌표 읽기
@@ -169,7 +181,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
         private void TryPlayCardOnCell(Vector2Int cell) // 선택된 카드를 지정한 칸에 소환 시도하는 메서드
         {
-            if (_selectedCard == null || _handState == null) // 카드 선택 또는 실제 손패 연결이 없으면
+            if (!CanReceivePlayerInput || _selectedCard == null || _handState == null) // 플레이어 입력 권한·카드 선택·실제 손패 연결 중 하나라도 없으면
             {
                 return; // 소환하지 않고 종료
             }
@@ -204,6 +216,11 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
         private void SelectCell(Vector2Int cell) // 칸을 선택 상태로 만드는 메서드
         {
+            if (!CanReceivePlayerInput) // 현재 플레이어 입력이 잠긴 상태라면
+            {
+                return; // 선택 상태를 바꾸지 않음
+            }
+
             if (_selectedCell == cell) // 이미 같은 칸이 선택돼 있으면
             {
                 DeselectCurrentCell(); // 선택 해제(토글 동작)
@@ -234,7 +251,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             _selectedCell = null; // 선택 상태 초기화
         }
 
-        private void OnGUI() // 화면에 디버그용 UI를 그리는 메서드
+        private void OnGUI() // 화면에 기존 개발용 카드 디버그 UI를 그리는 메서드
         {
             if (!IsBound) // 실제 RunState가 아직 연결되지 않았으면
             {
@@ -244,7 +261,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
             GUI.Label(new Rect(10, 10, 420, 20), BuildCardLabel("[1] King", _kingDefinition)); // 킹 카드 상태 라벨 표시
             GUI.Label(new Rect(10, 30, 420, 20), BuildCardLabel("[2] Pawn", _pawnDefinition)); // 폰 카드 상태 라벨 표시
-            GUI.Label(new Rect(10, 50, 420, 20), $"RunState.Hand: {_handState.Hand.Count}장 / 카드 선택 후 아군 영역을 클릭하면 소환됩니다."); // 실제 손패 상태 안내
+            GUI.Label(new Rect(10, 50, 520, 20), $"RunState.Hand: {_handState.Hand.Count}장 / 입력: {(CanReceivePlayerInput ? "가능" : "적 턴 잠김")}"); // 실제 손패와 턴 입력 권한 안내
         }
 
         private string BuildCardLabel(string keyLabel, PieceDefinition card) // 카드 상태 텍스트를 만드는 메서드
