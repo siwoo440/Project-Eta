@@ -3,6 +3,7 @@ using System.Collections.Generic; // Dictionary를 사용하기 위한 네임스
 using System.Linq; // IReadOnlyList에 대한 Contains 확장 메서드를 사용하기 위한 네임스페이스
 using UnityEngine; // MonoBehaviour, Physics 등을 사용하기 위한 네임스페이스
 using UnityEngine.InputSystem; // 새 Input System(Mouse, Keyboard)을 사용하기 위한 네임스페이스
+using UnityEngine.Rendering; // 드래그 중 기물 고스트 머티리얼의 투명 블렌딩을 설정하기 위한 네임스페이스
 using ProjectEta.Battle; // TurnManager, TurnState를 사용하기 위한 네임스페이스
 using ProjectEta.Cards; // HandState, DeckState를 사용하기 위한 네임스페이스
 using ProjectEta.Pieces; // PieceDefinition, PieceRuntimeState, PieceView를 사용하기 위한 네임스페이스
@@ -33,8 +34,12 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         public PieceDefinition SelectedCard => _selectedCard; // 현재 손패에서 숫자키로 선택된 카드
         public PieceRuntimeState SelectedPiece => _selectedPiece; // 현재 선택된 이동 대기 기물
         public MovementResult PendingMovement => _pendingMovement; // 현재 선택된 기물의 이동/공격 후보 칸
+        public bool HasCardDropGhost => _cardDropGhost != null; // 카드 드래그 중 실제 기물 형태의 3D 고스트가 존재하는지 여부
+        public Vector2Int CardDropPreviewCell => _cardDropPreviewCell ?? new Vector2Int(-1, -1); // 현재 고스트가 가리키는 보드 셀
+        public bool IsCardDropPreviewValid => _isCardDropPreviewValid; // 현재 고스트 위치가 실제 소환 가능한 칸인지 여부
 
         public event Action<CombatResult> AttackResolved; // 공격 판정이 끝날 때마다 외부 전투 시스템에 알리는 이벤트
+        public event Action HandChanged; // 18일차: Draw·소환 등 실제 플레이어 손패가 바뀔 때 카드 UI에 알리는 이벤트
 
         private const int PrototypeInitialHandSize = 5; // 기본 6종 중 5장을 초기 손패로 뽑는 테스트 값
         private RunState _runState; // BattleController가 소유하는 실제 런 상태
@@ -46,6 +51,12 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         private PieceRuntimeState _selectedPiece; // 현재 이동을 위해 선택된 보드 위 기물
         private MovementResult _pendingMovement; // 선택된 기물의 이동/공격 후보 칸 계산 결과
         private readonly Dictionary<PieceRuntimeState, PieceView> _pieceViews = new Dictionary<PieceRuntimeState, PieceView>(); // 기물 데이터와 화면 표시 연결 목록
+        private GameObject _cardDropGhost; // 카드 드래그 중 목표 셀에 표시하는 실제 기물 실루엣 고스트 루트
+        private PieceView _cardDropGhostView; // 기존 PieceView 모델링을 재사용하는 고스트 뷰
+        private Material _cardDropGhostMaterial; // 유효/무효 위치에 따라 색을 바꾸는 투명 고스트 머티리얼
+        private PieceDefinition _cardDropGhostDefinition; // 현재 고스트가 표현 중인 카드 정의
+        private Vector2Int? _cardDropPreviewCell; // 현재 마우스가 가리키는 보드 셀
+        private bool _isCardDropPreviewValid; // 현재 프리뷰 셀의 실제 소환 가능 여부
 
         private void Awake() // 씬 시작 시 자동 호출되는 초기화 메서드
         {
@@ -138,6 +149,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             }
 
             Debug.Log($"시작 덱 구성: 킹 포함 / Owned={deck.OwnedCardPool.Count}, Hand={_handState.Hand.Count}, Draw={deck.DrawPile.Count}"); // 실제 초기 카드 상태 로그
+            HandChanged?.Invoke(); // 시작 손패 5장이 완성됐음을 이미지 손패 UI에 즉시 알림
         }
 
         public void EnsurePrototypeEnemyStartingHand() // 적이 자기 턴에 카드 1장을 실제 소비해 소환할 수 있도록 프로토타입 적 손패를 구성하는 메서드
@@ -205,6 +217,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             }
 
             Debug.Log($"카드 자동 드로우: Hand={_handState.Hand.Count}/{HandState.MaxHandSize}, Draw={_runState.Deck.DrawPile.Count}"); // 성공한 카드 상태 출력
+            HandChanged?.Invoke(); // 자동 드로우로 손패가 바뀌었음을 카드 UI에 알림
             return true; // 드로우 성공 반환
         }
 
@@ -261,28 +274,167 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             if (Keyboard.current.digit0Key.wasPressedThisFrame) TrySelectHandSlot(9); // 0번 키는 현재 손패 열 번째 카드 선택
         }
 
-        public bool TrySelectHandSlot(int handIndex) // 현재 손패 인덱스를 기준으로 배치할 카드를 선택하는 테스트 가능한 진입점
+        public bool TrySelectHandSlot(int handIndex) // 현재 손패 인덱스를 기준으로 숫자키 보조 선택을 처리하는 테스트 가능한 진입점
         {
-            if (!CanUseCardSummonInput || _handState == null) // 배치 턴도 아니고 일반 PlayerTurn 소환권도 없거나 손패 상태가 없으면
-            {
-                return false; // 카드 선택 실패 반환
-            }
-
-            if (handIndex < 0 || handIndex >= _handState.Hand.Count) // 요청한 슬롯에 카드가 존재하지 않으면
+            if (_handState == null || handIndex < 0 || handIndex >= _handState.Hand.Count) // 손패가 없거나 요청 슬롯이 범위를 벗어나면
             {
                 Debug.Log($"손패 {handIndex + 1}번 슬롯에는 카드가 없습니다."); // 비어 있는 슬롯임을 개발 로그로 출력
-                return false; // 선택 상태를 바꾸지 않고 실패 반환
+                return false; // 선택 실패 반환
             }
 
             var card = _handState.Hand[handIndex]; // 현재 손패 순서 그대로 선택 후보 카드 조회
-            if (_turnManager != null && _turnManager.IsInitialDeployment && !_turnManager.IsInitialKingPlaced && card.MovementType != PieceMovementType.King) // 시작 배치에서는 킹만 선택 가능
+            if (!CanSummonCard(card)) // 현재 턴·킹 필수·손패 규칙상 이 카드를 사용할 수 없으면
             {
-                Debug.Log("시작 배치 턴에는 반드시 킹을 먼저 배치해야 합니다."); // 킹 필수 규칙 안내
-                return false; // 비킹 카드 선택을 거부
+                Debug.Log("현재 턴에는 해당 손패 카드를 소환할 수 없습니다."); // 사용 불가 이유를 개발 로그로 안내
+                return false; // 카드 선택 거부
             }
 
-            ToggleCardSelection(card); // 검증을 통과한 실제 손패 카드 선택 토글
-            return true; // 유효한 손패 슬롯 입력으로 처리했음을 반환
+            ToggleCardSelection(card); // 기존 숫자키 보조 선택 상태 토글
+            return true; // 유효한 카드 선택 성공 반환
+        }
+
+        public bool CanSummonCard(PieceDefinition card) // 18일차 CardView가 현재 카드를 드래그할 수 있는지 확인하는 공통 규칙 메서드
+        {
+            if (!CanUseCardSummonInput || _handState == null || card == null) return false; // 현재 소환 가능한 턴이 아니거나 데이터가 없으면 실패
+            if (!_handState.Hand.Contains(card)) return false; // 실제 플레이어 손패에 없는 카드는 사용할 수 없음
+            if (_turnManager != null && _turnManager.IsInitialDeployment && !_turnManager.IsInitialKingPlaced && card.MovementType != PieceMovementType.King) return false; // 첫 배치에서는 킹만 허용
+            return true; // 모든 소환 사전 조건을 만족하면 사용 가능
+        }
+
+        public bool TryGetBoardCellFromScreenPoint(Vector2 screenPosition, out Vector2Int cell) // UI 드래그 화면 좌표를 실제 3D 보드 셀로 변환하는 메서드
+        {
+            cell = default; // 실패 시 기본 좌표를 반환하도록 초기화
+            if (_camera == null || _boardView == null) return false; // 카메라나 보드가 없으면 변환 불가
+            var ray = _camera.ScreenPointToRay(screenPosition); // 화면 좌표에서 월드 Ray 생성
+            if (!Physics.Raycast(ray, out var hit)) return false; // 월드 오브젝트에 맞지 않으면 보드 밖으로 처리
+            return _boardView.TryGetCellFromWorldPoint(hit.point, out cell); // 맞은 월드 위치를 보드 좌표로 변환해 반환
+        }
+
+        public bool PreviewCardDrop(PieceDefinition card, Vector2 screenPosition) // 카드를 드래그하는 동안 커서 아래 보드 칸에 실제 기물 실루엣 고스트를 표시하는 메서드
+        {
+            if (_selectedPiece != null) DeselectPiece(); // 카드 드래그를 시작하면 이동/공격 후보 선택을 취소해 행동 종류를 명확히 분리
+            if (!CanSummonCard(card) || !TryGetBoardCellFromScreenPoint(screenPosition, out var cell)) // 카드 사용 불가 또는 보드 밖이면
+            {
+                ClearCardDropPreview(); // 보드 밖에서는 고스트와 강조를 모두 제거
+                return false; // 유효 Drop 아님
+            }
+
+            return PreviewCardDropAtCell(card, cell); // 테스트 가능한 셀 기반 공통 프리뷰 경로 사용
+        }
+
+        public bool PreviewCardDropAtCell(PieceDefinition card, Vector2Int cell) // 특정 셀에 카드 기물 고스트를 표시하는 테스트 가능한 프리뷰 메서드
+        {
+            if (!CanSummonCard(card) || _boardView == null) // 현재 카드 사용 권한이나 보드 연결이 없으면
+            {
+                ClearCardDropPreview(); // 남아 있던 프리뷰를 정리
+                return false; // 프리뷰 실패 반환
+            }
+
+            var tile = _boardView.GetTile(cell); // 현재 목표 셀의 실제 TileState 조회
+            if (tile == null) // 보드 범위를 벗어난 좌표면
+            {
+                ClearCardDropPreview(); // 고스트와 강조 제거
+                return false; // 프리뷰 불가 반환
+            }
+
+            bool isValid = tile.IsPlayerPlacementArea && !tile.IsOccupied; // 실제 소환 조건인 아군 영역 + 빈 칸 여부 계산
+            _cardDropPreviewCell = cell; // 현재 목표 셀 저장
+            _isCardDropPreviewValid = isValid; // 유효/무효 상태 저장
+
+            if (isValid) _boardView.HighlightCell(cell); // 실제 소환 가능한 칸은 기존 보드 강조도 함께 표시
+            else _boardView.ClearHighlight(); // 적 영역·점유 칸은 파란 강조 대신 붉은 고스트만 보여 혼동 방지
+
+            ShowCardDropGhost(card, cell, isValid); // 실제 기물 모델 실루엣을 목표 셀에 표시
+            return isValid; // 실제 Drop 가능 여부 반환
+        }
+
+        public void ClearCardDropPreview() // 카드 드래그이 끝나거나 보드 밖으로 나갔을 때 모든 프리뷰를 정리하는 메서드
+        {
+            _boardView?.ClearHighlight(); // 기존 선택 셀 하이라이트 제거
+            _selectedCell = null; // 일반 셀 선택 상태도 함께 초기화
+            _cardDropPreviewCell = null; // 고스트 목표 셀 초기화
+            _isCardDropPreviewValid = false; // 유효 상태 초기화
+            DestroyCardDropGhost(); // 실제 기물 고스트 오브젝트와 머티리얼 제거
+        }
+
+        private void ShowCardDropGhost(PieceDefinition card, Vector2Int cell, bool isValid) // 현재 카드 종류와 목표 셀을 실제 3D 기물 윤곽으로 보여주는 메서드
+        {
+            if (_cardDropGhost == null || _cardDropGhostDefinition != card) // 카드 종류가 바뀌었거나 아직 고스트가 없으면
+            {
+                DestroyCardDropGhost(); // 이전 카드 고스트 정리
+                _cardDropGhost = new GameObject("CardDropGhost"); // 새 고스트 루트 생성
+                _cardDropGhost.transform.SetParent(_boardView.transform, false); // 실제 기물과 같은 보드 좌표계를 사용하도록 BoardView 자식으로 연결
+                _cardDropGhostView = _cardDropGhost.AddComponent<PieceView>(); // 기존 기물별 프리미티브 모델링을 그대로 재사용
+                var previewState = new PieceRuntimeState(card, cell, true); // 실제 보드에는 등록하지 않는 미리보기 전용 런타임 상태 생성
+                _cardDropGhostView.Initialize(previewState, _boardView.TileSize); // 킹·폰·나이트 등 카드 종류에 맞는 3D 모델 생성
+                _cardDropGhostDefinition = card; // 현재 고스트 카드 정의 저장
+
+                foreach (var collider in _cardDropGhost.GetComponentsInChildren<Collider>(true)) collider.enabled = false; // 고스트가 Raycast를 가로채지 않도록 모든 콜라이더 비활성화
+                ReplaceGhostMaterials(); // 실제 기물 머티리얼을 투명 프리뷰 머티리얼로 교체
+            }
+            else // 같은 카드 고스트를 계속 이동시키는 경우
+            {
+                _cardDropGhostView.MoveTo(cell, _boardView.TileSize); // 새 목표 셀 위치로 고스트만 이동
+            }
+
+            if (_cardDropGhost != null) _cardDropGhost.name = $"CardDropGhost_{card.DisplayName}_{cell.x}_{cell.y}"; // Hierarchy에서 목표 카드와 셀을 쉽게 확인할 수 있게 이름 지정
+            UpdateGhostColor(isValid); // 유효 위치는 청록, 무효 위치는 붉은색으로 즉시 구분
+        }
+
+        private void ReplaceGhostMaterials() // PieceView가 만든 실제 기물 머티리얼을 하나의 투명 고스트 머티리얼로 교체하는 메서드
+        {
+            var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Sprites/Default"); // URP 우선으로 투명 표현 가능한 셰이더 탐색
+            if (shader == null) return; // 사용할 셰이더를 찾지 못하면 기존 기물 머티리얼 상태로라도 모델을 유지
+            _cardDropGhostMaterial = new Material(shader); // 프리뷰 전용 머티리얼 생성
+            ConfigureGhostMaterialTransparency(_cardDropGhostMaterial); // URP 투명 Surface 설정 적용
+
+            var renderers = _cardDropGhost.GetComponentsInChildren<Renderer>(true); // 고스트의 모든 모델 파츠 렌더러 수집
+            foreach (var renderer in renderers) // 모든 파츠를 순회하며
+            {
+                renderer.sharedMaterial = _cardDropGhostMaterial; // 하나의 고스트 머티리얼을 공유해 일관된 실루엣 색 적용
+                renderer.shadowCastingMode = ShadowCastingMode.Off; // 고스트가 실제 기물처럼 그림자를 만들지 않도록 차단
+                renderer.receiveShadows = false; // 고스트가 어둡게 변하지 않도록 그림자 수신 차단
+            }
+        }
+
+        private static void ConfigureGhostMaterialTransparency(Material material) // URP 머티리얼을 반투명 고스트용으로 설정하는 메서드
+        {
+            if (material == null) return; // 머티리얼이 없으면 종료
+            if (material.HasProperty("_Surface")) material.SetFloat("_Surface", 1f); // URP Surface Type을 Transparent로 변경
+            if (material.HasProperty("_Blend")) material.SetFloat("_Blend", 0f); // Alpha 블렌딩 사용
+            if (material.HasProperty("_SrcBlend")) material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha); // 소스 알파 기반 블렌드 설정
+            if (material.HasProperty("_DstBlend")) material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha); // 배경과 알파 반전 혼합
+            if (material.HasProperty("_ZWrite")) material.SetFloat("_ZWrite", 0f); // 투명 고스트가 깊이 버퍼를 가리지 않도록 설정
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT"); // URP 투명 Surface 키워드 활성화
+            material.renderQueue = (int)RenderQueue.Transparent; // 실제 기물 뒤/앞 관계에서 투명 오브젝트 큐 사용
+        }
+
+        private void UpdateGhostColor(bool isValid) // 프리뷰 위치의 유효성에 따라 고스트 실루엣 색을 변경하는 메서드
+        {
+            if (_cardDropGhostMaterial == null) return; // 교체 머티리얼이 없으면 종료
+            Color ghostColor = isValid ? new Color(0.15f, 0.92f, 0.88f, 0.42f) : new Color(0.95f, 0.18f, 0.16f, 0.42f); // 유효 청록 / 무효 붉은색 반투명 색상 선택
+            if (_cardDropGhostMaterial.HasProperty("_BaseColor")) _cardDropGhostMaterial.SetColor("_BaseColor", ghostColor); // URP Lit/Unlit 기본 색상 적용
+            _cardDropGhostMaterial.color = ghostColor; // 일반 color 프로퍼티에도 동일 색 적용
+        }
+
+        private void DestroyCardDropGhost() // 카드 드래그용 고스트 오브젝트와 생성 머티리얼을 안전하게 정리하는 메서드
+        {
+            if (_cardDropGhost != null) // 고스트 오브젝트가 존재하면
+            {
+                if (Application.isPlaying) Destroy(_cardDropGhost); // Play Mode에서는 프레임 종료 시 안전하게 파괴
+                else DestroyImmediate(_cardDropGhost); // EditMode 테스트에서는 즉시 파괴
+            }
+
+            if (_cardDropGhostMaterial != null) // 프리뷰 전용 머티리얼이 존재하면
+            {
+                if (Application.isPlaying) Destroy(_cardDropGhostMaterial); // Play Mode에서는 안전하게 예약 파괴
+                else DestroyImmediate(_cardDropGhostMaterial); // EditMode에서는 즉시 파괴
+            }
+
+            _cardDropGhost = null; // 고스트 루트 참조 초기화
+            _cardDropGhostView = null; // PieceView 참조 초기화
+            _cardDropGhostMaterial = null; // 머티리얼 참조 초기화
+            _cardDropGhostDefinition = null; // 카드 정의 참조 초기화
         }
 
         private void ToggleCardSelection(PieceDefinition card) // 배치 턴의 손패 카드 선택 상태를 켜고 끄는 메서드
@@ -516,56 +668,45 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             }
         }
 
-        public bool TryDeploySelectedCardTo(Vector2Int cell) // 17일차: 배치 턴에 선택된 손패 카드 1장을 지정 칸에 배치하는 테스트 가능한 진입점
+        public bool TryDeploySelectedCardTo(Vector2Int cell) // 기존 숫자키 선택→보드 클릭 소환 방식을 유지하는 호환 진입점
         {
-            if (!CanUseCardSummonInput || _selectedCard == null || _handState == null) // 카드 소환 권한·카드 선택·실제 손패 연결 중 하나라도 없으면
+            if (_selectedCard == null) return false; // 숫자키로 선택된 카드가 없으면 소환 실패
+            return TrySummonCardFromUI(_selectedCard, cell); // 18일차 드래그 Drop과 같은 공통 카드 소환 경로 사용
+        }
+
+        public bool TrySummonCardFromUI(PieceDefinition card, Vector2Int cell) // CardView 드래그 Drop이 직접 호출하는 실제 플레이어 카드 소환 메서드
+        {
+            if (!CanSummonCard(card) || _handState == null) return false; // 현재 턴·손패·킹 필수 규칙을 만족하지 못하면 실패
+
+            var tileState = _boardView.GetTile(cell); // Drop된 보드 좌표의 실제 TileState 조회
+            if (tileState == null || !tileState.IsPlayerPlacementArea || tileState.IsOccupied) // 아군 10×5 영역의 빈 칸이 아니면
             {
-                return false; // 잘못된 턴의 소환을 거부
+                Debug.Log($"{cell}에는 카드를 소환할 수 없습니다 (아군 영역의 빈 칸만 가능)."); // Drop 실패 이유 출력
+                return false; // 카드 소비 없이 실패 반환
             }
 
-            if (_turnManager != null && _turnManager.IsInitialDeployment && !_turnManager.IsInitialKingPlaced && _selectedCard.MovementType != PieceMovementType.King) // 방어적으로 실제 배치 직전에도 킹 필수 규칙 재검사
-            {
-                Debug.Log("시작 배치 턴에는 킹 이외의 기물을 배치할 수 없습니다."); // 잘못된 외부 호출도 차단
-                return false; // 비킹 카드 배치 실패
-            }
+            var runtimeState = SpawnPiece(card, tileState, isPlayerPiece: true, objectName: "Piece"); // 카드 데이터로 실제 아군 기물 생성
+            _handState.RemoveCard(card); // 사용한 실제 카드 1장을 손패에서 제거
+            _selectedCard = null; // 숫자키 보조 선택 상태도 함께 해제
+            DeselectPiece(); // 일반 기물 선택과 카드 소환 행동이 겹치지 않도록 선택 해제
+            DeselectCurrentCell(); // 남은 일반 셀 강조 정리
 
-            var tileState = _boardView.GetTile(cell); // RunState.Board의 클릭 칸 데이터 조회
-            if (tileState == null) // 유효하지 않은 칸이면
-            {
-                return false; // 배치 실패 반환
-            }
-
-            if (!tileState.IsPlayerPlacementArea || tileState.IsOccupied) // 아군 10×5 영역이 아니거나 이미 점유돼 있으면
-            {
-                Debug.Log($"{tileState.BoardPosition}에는 배치할 수 없습니다 (아군 영역의 빈 칸만 가능)."); // 실패 사유 출력
-                return false; // 배치 실패 반환
-            }
-
-            var cardToDeploy = _selectedCard; // 배치 완료 과정에서 선택이 초기화되기 전에 실제 카드 참조 저장
-            var runtimeState = SpawnPiece(cardToDeploy, tileState, isPlayerPiece: true, objectName: "Piece"); // 선택된 카드로 기물을 실제 생성
-            _handState.RemoveCard(cardToDeploy); // 실제 RunState.Hand에서 사용한 카드 제거
-            _selectedCard = null; // 카드 선택 해제
-            DeselectCurrentCell(); // 남아 있을 수 있는 일반 칸 강조 해제
-
-            Debug.Log($"{runtimeState.Definition.DisplayName} 배치: {tileState.BoardPosition} / RunState.Hand={_handState.Hand.Count}장"); // 상태 변경 결과 출력
+            Debug.Log($"{runtimeState.Definition.DisplayName} 카드 소환: {tileState.BoardPosition} / Hand={_handState.Hand.Count}장"); // 소환 결과 출력
 
             if (_turnManager != null) // 실제 턴 매니저가 연결돼 있으면
             {
-                if (_turnManager.CurrentState == TurnState.DeploymentTurn) // 시작/주기 자유 배치 턴에서 소환한 경우
+                if (_turnManager.CurrentState == TurnState.DeploymentTurn) // 시작/주기 자유 배치 턴이면
                 {
-                    if (_turnManager.IsInitialDeployment && runtimeState.Definition.MovementType == PieceMovementType.King) // 시작 배치에서 킹을 실제 놓았다면
-                    {
-                        _turnManager.MarkInitialKingPlaced(); // 킹 필수 조건을 충족했다고 턴 매니저에 알림
-                    }
-
-                    _turnManager.RegisterDeployment(); // 자유 배치 수만 누적하고 턴은 계속 유지
+                    if (_turnManager.IsInitialDeployment && runtimeState.Definition.MovementType == PieceMovementType.King) _turnManager.MarkInitialKingPlaced(); // 시작 킹 필수 조건 충족
+                    _turnManager.RegisterDeployment(); // 자유 배치 수만 누적하고 배치 턴은 유지
                 }
-                else if (_turnManager.CurrentState == TurnState.PlayerTurn) // 일반 플레이어 턴에 카드 1장을 소환한 경우
+                else if (_turnManager.CurrentState == TurnState.PlayerTurn) // 일반 플레이어 턴이면
                 {
-                    _turnManager.TryCompletePlayerAction(); // 소환 자체를 이번 턴의 유일한 행동으로 처리해 즉시 EnemyTurn으로 전환
+                    _turnManager.TryCompletePlayerAction(); // 카드 소환 자체를 이번 턴 행동 1회로 처리해 즉시 EnemyTurn으로 전환
                 }
             }
 
+            HandChanged?.Invoke(); // 실제 손패에서 카드가 빠졌음을 이미지 손패 UI에 알림
             return true; // 카드 소환 성공 반환
         }
 
@@ -695,24 +836,17 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             DeselectCurrentCell(); // 일반 칸 선택 강조 해제
         }
 
-        private void OnGUI() // 화면 좌측에 개발용 손패·배치 상태 UI를 그리는 메서드
+        private void OnGUI() // 18일차 이후 실제 카드 손패는 Canvas로 표시하고 좌상단에는 최소 디버그 정보만 남기는 메서드
         {
             if (!IsBound) // 실제 RunState가 아직 연결되지 않았으면
             {
                 GUI.Label(new Rect(10, 10, 600, 20), "BattleController가 RunState를 연결하는 중입니다."); // 상태 연결 대기 안내
-                return; // 카드 UI는 그리지 않음
+                return; // 추가 디버그 UI는 그리지 않음
             }
 
-            for (int i = 0; i < HandState.MaxHandSize; i++) // 손패 최대 10개 슬롯을 순서대로 표시하며
-            {
-                string keyLabel = i == 9 ? "0" : (i + 1).ToString(); // 열 번째 슬롯은 0번 키로 표시
-                PieceDefinition card = i < _handState.Hand.Count ? _handState.Hand[i] : null; // 현재 슬롯의 실제 손패 카드 조회
-                GUI.Label(new Rect(10, 10 + (i * 20), 520, 20), BuildHandSlotLabel(keyLabel, card)); // 숫자키·카드 이름·선택 상태 표시
-            }
-
-            GUI.Label(new Rect(10, 220, 760, 20), $"PlayerHand {_handState.Hand.Count}/{HandState.MaxHandSize} | Draw {_runState.Deck.DrawPile.Count} | EnemyHand {_enemyHandState.Hand.Count}/{HandState.MaxHandSize} | Dead {_runState.Deck.DeadCardPile.Count}"); // 플레이어·적 카드 상태 요약
-            GUI.Label(new Rect(10, 240, 760, 20), BuildTurnInputLabel()); // 현재 일반/배치/잠금 입력 상태 안내
-            GUI.Label(new Rect(10, 260, 760, 20), BuildSelectedPieceLabel()); // 현재 선택된 기물과 이동/공격 후보 수 안내
+            GUI.Label(new Rect(10, 10, 820, 20), $"Debug | PlayerHand {_handState.Hand.Count}/{HandState.MaxHandSize} | Draw {_runState.Deck.DrawPile.Count} | EnemyHand {_enemyHandState.Hand.Count}"); // 카드 상태 한 줄 요약
+            GUI.Label(new Rect(10, 30, 920, 20), BuildTurnInputLabel()); // 현재 턴 조작 안내 표시
+            GUI.Label(new Rect(10, 50, 920, 20), BuildSelectedPieceLabel()); // 선택 기물 디버그 상태 표시
         }
 
         private string BuildTurnInputLabel() // 현재 턴 종류에 맞는 개발용 조작 안내 문구를 만드는 메서드
@@ -745,19 +879,6 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             return $"입력 잠김: {_turnManager.CurrentState}"; // 적 턴 또는 전투 종료 상태 안내 반환
         }
 
-        private string BuildHandSlotLabel(string keyLabel, PieceDefinition card) // 현재 손패 슬롯을 개발용 텍스트로 만드는 메서드
-        {
-            if (card == null) // 해당 손패 슬롯이 비어 있으면
-            {
-                return $"[{keyLabel}] -"; // 비어 있는 슬롯 표시
-            }
-
-            string displayName = string.IsNullOrEmpty(card.DisplayName) ? card.name : card.DisplayName; // 표시 이름이 비어 있으면 Unity 오브젝트 이름을 대신 사용
-            return _selectedCard == card // 현재 선택 카드와 비교해
-                ? $"[{keyLabel}] {displayName} <배치 선택됨>" // 선택된 손패 카드 표시
-                : $"[{keyLabel}] {displayName}"; // 일반 손패 카드 표시
-        }
-
         private string BuildSelectedPieceLabel() // 선택된 기물 상태를 안내 문구로 만드는 메서드
         {
             if (_selectedPiece == null || _pendingMovement == null) // 선택된 기물이 없으면
@@ -768,8 +889,9 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             return $"선택: {_selectedPiece.Definition.DisplayName} @ {_selectedPiece.BoardPosition} / 이동 {_pendingMovement.MoveTiles.Count}칸, 공격 {_pendingMovement.AttackTiles.Count}칸"; // 선택 상태 안내 문구 반환
         }
 
-        private void OnDestroy() // 입력 컨트롤러가 파괴될 때 이벤트 구독을 정리하는 메서드
+        private void OnDestroy() // 입력 컨트롤러가 파괴될 때 이벤트와 드래그 프리뷰를 정리하는 메서드
         {
+            ClearCardDropPreview(); // 남아 있을 수 있는 기물 고스트와 머티리얼을 먼저 제거
             if (_turnManager != null) // 연결된 턴 매니저가 남아 있으면
             {
                 _turnManager.TurnChanged -= HandleTurnChangedForCardDraw; // 자동 드로우 이벤트 구독 해제

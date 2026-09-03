@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement; // 현재 씬 이름을 확인하기 위한 �
 using ProjectEta.Board; // BoardView, BoardInputController를 사용하기 위한 네임스페이스
 using ProjectEta.Pieces; // PieceMovementType을 사용해 킹 여부를 판별하기 위한 네임스페이스
 using ProjectEta.Run; // RunState를 사용하기 위한 네임스페이스
+using ProjectEta.UI; // 18일차 이미지 손패 HandUI를 사용하기 위한 네임스페이스
 
 namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페이스
 {
@@ -20,10 +21,12 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
         public RunState RunState => _runState; // 현재 전투가 사용하는 단일 런 상태
         public TurnManager TurnManager => _turnManager; // 현재 전투가 사용하는 턴 매니저
         public TurnStatusUI TurnStatusUI => _turnStatusUI; // 화면 상단 중앙의 색상형 턴 상태 Canvas UI
+        public HandUI HandUI => _handUI; // 화면 하단 중앙의 카드 이미지 손패 UI
 
         private RunState _runState; // 보드·손패·덱·킹 체력 등을 소유하는 단일 상태 객체
         private TurnManager _turnManager; // 플레이어/적/배치 턴과 행동 권한을 관리하는 상태 객체
         private TurnStatusUI _turnStatusUI; // 현재 턴을 상단 중앙에 표시하는 Canvas UI
+        private HandUI _handUI; // 18일차: 실제 HandState를 카드 이미지와 드래그 Drop으로 표시하는 하단 UI
         private Coroutine _dummyEnemyTurnCoroutine; // 임시 적 턴 자동 종료 코루틴 참조
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // 씬 로드가 끝난 직후 자동 실행
@@ -175,6 +178,21 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
             _turnManager.TurnChanged += HandleTurnChanged; // 실제 이동·공격·배치 완료 등 모든 턴 변경을 직접 구독
         }
 
+        private void EnsureHandUI() // 18일차 카드 이미지 손패 Canvas를 한 번만 준비하고 실제 BoardInputController에 연결하는 메서드
+        {
+            if (_handUI == null) // 아직 HandUI 참조가 없다면
+            {
+                _handUI = GetComponent<HandUI>(); // 같은 BattleController GameObject에 기존 HandUI가 있는지 먼저 확인
+            }
+
+            if (_handUI == null) // 기존 HandUI도 없다면
+            {
+                _handUI = gameObject.AddComponent<HandUI>(); // 하단 카드 손패 Canvas를 런타임 생성할 컴포넌트 추가
+            }
+
+            _handUI.Bind(_boardInputController); // 실제 HandState·턴·보드 소환 로직을 카드 UI에 연결
+        }
+
         private void HandleTurnChanged(TurnState state, int turnNumber) // 모든 턴 전환에 대한 전투 컨트롤러 후속 처리를 수행하는 메서드
         {
             if (state == TurnState.EnemyTurn) // 방금 적 턴으로 전환됐으면
@@ -230,6 +248,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
 
             _boardView.Bind(_runState.Board); // 화면이 RunState.Board 바로 그 객체를 참조하도록 연결
             _boardInputController.Bind(_runState, _boardView, _turnManager); // 입력이 실제 RunState와 현재 TurnManager를 함께 참조하도록 연결
+            EnsureHandUI(); // 실제 손패를 화면 하단 판타지 카드 UI와 드래그 Drop 소환으로 연결
 
             _boardInputController.AttackResolved -= HandleAttackResolved; // 재연결 시 중복 구독을 막기 위해 먼저 해제
             _boardInputController.AttackResolved += HandleAttackResolved; // 전투 결과를 받아 킹 HP와 승패를 판정
