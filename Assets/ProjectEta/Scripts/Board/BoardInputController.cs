@@ -16,6 +16,10 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         [SerializeField] private BoardView _boardView; // 좌표 변환·컨테이너로 쓸 보드 뷰
         [SerializeField] private PieceDefinition _kingDefinition; // 테스트용 킹 카드 데이터
         [SerializeField] private PieceDefinition _pawnDefinition; // 테스트용 폰 카드 데이터
+        [SerializeField] private PieceDefinition _knightDefinition; // 14일차: 테스트용 나이트 카드 데이터(도약 이동 검증)
+        [SerializeField] private PieceDefinition _bishopDefinition; // 14일차: 테스트용 비숍 카드 데이터(대각선 슬라이더 검증)
+        [SerializeField] private PieceDefinition _rookDefinition; // 14일차: 테스트용 룩 카드 데이터(직선 슬라이더 검증)
+        [SerializeField] private PieceDefinition _queenDefinition; // 14일차: 테스트용 퀸 카드 데이터(직선+대각선 슬라이더 검증)
 
         public RunState RunState => _runState; // 현재 입력이 변경하는 실제 런 상태
         public HandState HandState => _handState; // 현재 입력이 변경하는 실제 손패 상태
@@ -80,7 +84,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             DeselectCurrentCell(); // 이전 선택 칸 강조 제거
         }
 
-        public void EnsurePrototypeStartingHand() // 새 런에서만 호출해 현재 테스트용 시작 카드 2장을 실제 RunState.Hand에 넣는 메서드
+        public void EnsurePrototypeStartingHand() // 새 런에서만 호출해 현재 테스트용 시작 카드를 실제 RunState.Hand에 넣는 메서드(14일차: King/Pawn 외 Knight/Bishop/Rook/Queen까지 확장해 미검증 이동 로직을 실전 테스트)
         {
             if (_handState == null) // 아직 런 상태가 연결되지 않았으면
             {
@@ -93,14 +97,12 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 return; // 중복 추가하지 않음
             }
 
-            if (_kingDefinition != null) // 킹 데이터가 지정돼 있으면
+            foreach (var definition in new[] { _kingDefinition, _pawnDefinition, _knightDefinition, _bishopDefinition, _rookDefinition, _queenDefinition }) // 테스트용 카드 6종을 순회하며
             {
-                _handState.TryAddCard(_kingDefinition); // 실제 RunState.Hand에 킹 카드 추가
-            }
-
-            if (_pawnDefinition != null) // 폰 데이터가 지정돼 있으면
-            {
-                _handState.TryAddCard(_pawnDefinition); // 실제 RunState.Hand에 폰 카드 추가
+                if (definition != null) // 인스펙터에 데이터가 연결돼 있으면
+                {
+                    _handState.TryAddCard(definition); // 실제 RunState.Hand에 카드 추가
+                }
             }
         }
 
@@ -142,6 +144,26 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             if (Keyboard.current.digit2Key.wasPressedThisFrame && _pawnDefinition != null) // 이번 프레임에 2번 키를 눌렀고 폰 데이터가 있으면
             {
                 ToggleCardSelection(_pawnDefinition); // 폰 카드 선택 토글
+            }
+
+            if (Keyboard.current.digit3Key.wasPressedThisFrame && _knightDefinition != null) // 14일차: 3번 키로 나이트 카드 선택 토글
+            {
+                ToggleCardSelection(_knightDefinition); // 나이트 카드 선택 토글
+            }
+
+            if (Keyboard.current.digit4Key.wasPressedThisFrame && _bishopDefinition != null) // 14일차: 4번 키로 비숍 카드 선택 토글
+            {
+                ToggleCardSelection(_bishopDefinition); // 비숍 카드 선택 토글
+            }
+
+            if (Keyboard.current.digit5Key.wasPressedThisFrame && _rookDefinition != null) // 14일차: 5번 키로 룩 카드 선택 토글
+            {
+                ToggleCardSelection(_rookDefinition); // 룩 카드 선택 토글
+            }
+
+            if (Keyboard.current.digit6Key.wasPressedThisFrame && _queenDefinition != null) // 14일차: 6번 키로 퀸 카드 선택 토글
+            {
+                ToggleCardSelection(_queenDefinition); // 퀸 카드 선택 토글
             }
         }
 
@@ -395,6 +417,12 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             return SpawnTestEnemy(_pawnDefinition, position); // 인스펙터에 연결된 폰 정의를 그대로 적 기물로 재사용(정의 자체는 아군/적군 구분이 없음)
         }
 
+        public void SpawnTestEnemySquad(Vector2Int anchor) // 14일차: 슬라이더 이동까지 실전 테스트할 수 있도록 폰+룩 2종으로 적을 배치하는 편의 진입점
+        {
+            SpawnTestEnemy(_pawnDefinition, anchor); // 기준 좌표에 폰 배치
+            SpawnTestEnemy(_rookDefinition, anchor + new Vector2Int(2, 0)); // 기준 좌표에서 오른쪽으로 2칸 떨어진 곳에 룩 배치
+        }
+
         public PieceRuntimeState SpawnTestEnemy(PieceDefinition definition, Vector2Int position) // 13일차: 승리 조건·전투를 테스트할 수 있도록 적 기물을 직접 배치하는 개발용 진입점(정식 적 배치·AI는 이후 단계에서 별도 구현)
         {
             if (!IsBound || definition == null) // 아직 상태가 연결되지 않았거나 기물 정의가 없으면
@@ -473,8 +501,12 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
             GUI.Label(new Rect(10, 10, 420, 20), BuildCardLabel("[1] King", _kingDefinition)); // 킹 카드 상태 라벨 표시
             GUI.Label(new Rect(10, 30, 420, 20), BuildCardLabel("[2] Pawn", _pawnDefinition)); // 폰 카드 상태 라벨 표시
-            GUI.Label(new Rect(10, 50, 520, 20), $"RunState.Hand: {_handState.Hand.Count}장 / 입력: {(CanReceivePlayerInput ? "가능" : "적 턴 잠김")}"); // 실제 손패와 턴 입력 권한 안내
-            GUI.Label(new Rect(10, 70, 520, 20), BuildSelectedPieceLabel()); // 11일차: 현재 선택된 기물과 이동/공격 후보 수 안내
+            GUI.Label(new Rect(10, 50, 420, 20), BuildCardLabel("[3] Knight", _knightDefinition)); // 14일차: 나이트 카드 상태 라벨 표시
+            GUI.Label(new Rect(10, 70, 420, 20), BuildCardLabel("[4] Bishop", _bishopDefinition)); // 14일차: 비숍 카드 상태 라벨 표시
+            GUI.Label(new Rect(10, 90, 420, 20), BuildCardLabel("[5] Rook", _rookDefinition)); // 14일차: 룩 카드 상태 라벨 표시
+            GUI.Label(new Rect(10, 110, 420, 20), BuildCardLabel("[6] Queen", _queenDefinition)); // 14일차: 퀸 카드 상태 라벨 표시
+            GUI.Label(new Rect(10, 130, 520, 20), $"RunState.Hand: {_handState.Hand.Count}장 / 입력: {(CanReceivePlayerInput ? "가능" : "적 턴 잠김")}"); // 실제 손패와 턴 입력 권한 안내
+            GUI.Label(new Rect(10, 150, 520, 20), BuildSelectedPieceLabel()); // 11일차: 현재 선택된 기물과 이동/공격 후보 수 안내
         }
 
         private string BuildSelectedPieceLabel() // 11일차: 선택된 기물 상태를 안내 문구로 만드는 메서드

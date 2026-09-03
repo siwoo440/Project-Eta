@@ -56,7 +56,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
                 if (_boardInputController != null) // 입력 컨트롤러가 정상 연결됐으면
                 {
                     _boardInputController.EnsurePrototypeStartingHand(); // 기존 테스트용 King/Pawn을 실제 RunState.Hand에 넣음
-                    _boardInputController.SpawnTestEnemyPawn(_testEnemySpawnPosition); // 13일차: 전투·승리 조건을 바로 테스트할 수 있도록 적 기물 1기를 직접 배치(정식 적 배치는 이후 단계)
+                    _boardInputController.SpawnTestEnemySquad(_testEnemySpawnPosition); // 14일차: 폰+룩 2기를 배치해 슬라이더 이동까지 실전 테스트(정식 적 배치는 이후 단계)
                 }
             }
             else // 외부 상태가 이미 있으면
@@ -106,8 +106,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
             }
 
             Debug.Log($"Turn {_turnManager.TurnNumber}: Player action completed -> EnemyTurn"); // 플레이어 턴 종료 결과 출력
-            StartDummyEnemyTurn(); // 실제 AI 구현 전까지 짧은 더미 적 턴을 자동 실행
-            return true; // 정상적으로 플레이어 행동을 완료했음을 반환
+            return true; // 정상적으로 플레이어 행동을 완료했음을 반환(더미 적 턴 시작은 HandleTurnChanged가 처리)
         }
 
         public void EndBattle(BattleOutcome outcome = BattleOutcome.Defeat) // 전투를 종료하는 진입점(13일차: 승리/패배 구분 추가, 기본값은 기존 호출부와의 호환을 위한 패배)
@@ -152,6 +151,17 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
             }
 
             _turnStatusUI.Bind(_turnManager); // 현재 턴 매니저를 UI에 연결해 즉시 1턴 플레이어 턴을 표시
+
+            _turnManager.TurnChanged -= HandleTurnChanged; // 버그 수정: 중복 구독을 막기 위해 먼저 해제
+            _turnManager.TurnChanged += HandleTurnChanged; // 버그 수정: Space 키뿐 아니라 실제 이동·공격으로 턴이 넘어갈 때도 더미 적 턴이 시작되도록 TurnChanged를 직접 구독
+        }
+
+        private void HandleTurnChanged(TurnState state, int turnNumber) // 버그 수정: 무엇이 턴을 넘겼는지와 무관하게 적 턴에 진입하면 항상 더미 적 턴을 시작하는 메서드
+        {
+            if (state == TurnState.EnemyTurn) // 방금 적 턴으로 전환됐으면
+            {
+                StartDummyEnemyTurn(); // 실제 AI 구현 전까지 짧은 더미 적 턴을 자동 실행
+            }
         }
 
         private void BindState() // RunState의 보드·손패와 TurnManager를 실제 화면/입력 시스템에 주입하는 메서드
@@ -212,6 +222,11 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
             if (_boardInputController != null) // 입력 컨트롤러 참조가 남아 있으면
             {
                 _boardInputController.AttackResolved -= HandleAttackResolved; // 이벤트 구독 해제로 불필요한 참조 제거
+            }
+
+            if (_turnManager != null) // 턴 매니저 참조가 남아 있으면
+            {
+                _turnManager.TurnChanged -= HandleTurnChanged; // 이벤트 구독 해제로 불필요한 참조 제거
             }
         }
 

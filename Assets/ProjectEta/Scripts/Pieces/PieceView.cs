@@ -36,13 +36,26 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
             var model = new GameObject("Model"); // 모델 파츠를 담을 빈 오브젝트 생성
             model.transform.SetParent(transform, false); // 이 컴포넌트의 자식으로 배치(로컬 좌표 유지)
 
-            if (movementType == PieceMovementType.King) // 킹형이면
+            switch (movementType) // 14일차: 이동 타입별로 서로 다른 실루엣을 갖도록 분기
             {
-                BuildKingModel(model.transform, material); // 킹 모델 생성
-            }
-            else // 그 외(현재는 폰만)이면
-            {
-                BuildPawnModel(model.transform, material); // 폰 모델 생성
+                case PieceMovementType.King: // 킹형이면
+                    BuildKingModel(model.transform, material); // 킹 모델 생성
+                    break;
+                case PieceMovementType.Knight: // 나이트형이면
+                    BuildKnightModel(model.transform, material); // 나이트 모델 생성
+                    break;
+                case PieceMovementType.Bishop: // 비숍형이면
+                    BuildBishopModel(model.transform, material); // 비숍 모델 생성
+                    break;
+                case PieceMovementType.Rook: // 룩형이면
+                    BuildRookModel(model.transform, material); // 룩 모델 생성
+                    break;
+                case PieceMovementType.Queen: // 퀸형이면
+                    BuildQueenModel(model.transform, material); // 퀸 모델 생성
+                    break;
+                default: // 그 외(폰, 아직 전용 모델이 없는 합성 기물 등)이면
+                    BuildPawnModel(model.transform, material); // 폰 모델을 기본값으로 사용
+                    break;
             }
         }
 
@@ -64,17 +77,74 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
             CreatePart(parent, PrimitiveType.Cube, new Vector3(0f, 1.14f, 0f), new Vector3(0.18f, 0.06f, 0.06f), material); // 십자가 가로 파츠 생성
         }
 
-        private static void CreatePart(Transform parent, PrimitiveType type, Vector3 localPosition, Vector3 localScale, Material material) // 프리미티브 파츠 하나를 생성하는 메서드
+        private static void BuildKnightModel(Transform parent, Material material) // 14일차: 나이트 모델을 프리미티브로 구성하는 메서드
+        {
+            // 받침 - 몸통 - 기울어진 머리 - 주둥이 - 귀 순서로 쌓아 말머리를 단순화한 나이트 실루엣을 구성한다.
+            CreatePart(parent, PrimitiveType.Cylinder, new Vector3(0f, 0.05f, 0f), new Vector3(0.34f, 0.05f, 0.34f), material); // 받침 파츠 생성
+            CreatePart(parent, PrimitiveType.Cylinder, new Vector3(0f, 0.28f, 0f), new Vector3(0.16f, 0.2f, 0.16f), material); // 몸통 파츠 생성
+            CreatePart(parent, PrimitiveType.Cube, new Vector3(0f, 0.56f, 0.02f), new Vector3(0.16f, 0.3f, 0.22f), material, Quaternion.Euler(20f, 0f, 0f)); // 앞으로 기울어진 머리 파츠 생성
+            CreatePart(parent, PrimitiveType.Cube, new Vector3(0f, 0.66f, 0.16f), new Vector3(0.1f, 0.1f, 0.18f), material, Quaternion.Euler(-15f, 0f, 0f)); // 앞으로 뻗은 주둥이 파츠 생성
+            CreatePart(parent, PrimitiveType.Cube, new Vector3(-0.05f, 0.74f, -0.02f), new Vector3(0.05f, 0.1f, 0.05f), material, Quaternion.Euler(25f, 0f, -20f)); // 뒤로 젖혀진 귀 파츠 생성
+        }
+
+        private static void BuildBishopModel(Transform parent, Material material) // 14일차: 비숍 모델을 프리미티브로 구성하는 메서드
+        {
+            // 받침 - 가늘고 긴 몸통 - 머리 - 꼭대기 구슬 순서로 쌓아 주교 지팡이를 연상시키는 비숍 실루엣을 구성한다.
+            CreatePart(parent, PrimitiveType.Cylinder, new Vector3(0f, 0.05f, 0f), new Vector3(0.32f, 0.05f, 0.32f), material); // 받침 파츠 생성
+            CreatePart(parent, PrimitiveType.Cylinder, new Vector3(0f, 0.42f, 0f), new Vector3(0.15f, 0.37f, 0.15f), material); // 몸통 파츠 생성(킹보다 가늘고 길게)
+            CreatePart(parent, PrimitiveType.Sphere, new Vector3(0f, 0.86f, 0f), new Vector3(0.2f, 0.2f, 0.2f), material); // 머리 파츠 생성
+            CreatePart(parent, PrimitiveType.Sphere, new Vector3(0f, 1.04f, 0f), new Vector3(0.08f, 0.08f, 0.08f), material); // 꼭대기 구슬 파츠 생성
+        }
+
+        private static void BuildRookModel(Transform parent, Material material) // 14일차: 룩 모델을 프리미티브로 구성하는 메서드
+        {
+            // 받침 - 굵은 몸통 - 성벽 상판 - 흉벽(사방 작은 큐브) 순서로 쌓아 성탑을 연상시키는 룩 실루엣을 구성한다.
+            CreatePart(parent, PrimitiveType.Cylinder, new Vector3(0f, 0.05f, 0f), new Vector3(0.36f, 0.05f, 0.36f), material); // 받침 파츠 생성
+            CreatePart(parent, PrimitiveType.Cylinder, new Vector3(0f, 0.35f, 0f), new Vector3(0.26f, 0.3f, 0.26f), material); // 몸통 파츠 생성(굵은 원기둥)
+            CreatePart(parent, PrimitiveType.Cylinder, new Vector3(0f, 0.68f, 0f), new Vector3(0.32f, 0.04f, 0.32f), material); // 성벽 상단 원판 파츠 생성
+            CreatePart(parent, PrimitiveType.Cube, new Vector3(0.22f, 0.78f, 0f), new Vector3(0.1f, 0.12f, 0.1f), material); // 흉벽 파츠 생성(+X)
+            CreatePart(parent, PrimitiveType.Cube, new Vector3(-0.22f, 0.78f, 0f), new Vector3(0.1f, 0.12f, 0.1f), material); // 흉벽 파츠 생성(-X)
+            CreatePart(parent, PrimitiveType.Cube, new Vector3(0f, 0.78f, 0.22f), new Vector3(0.1f, 0.12f, 0.1f), material); // 흉벽 파츠 생성(+Z)
+            CreatePart(parent, PrimitiveType.Cube, new Vector3(0f, 0.78f, -0.22f), new Vector3(0.1f, 0.12f, 0.1f), material); // 흉벽 파츠 생성(-Z)
+        }
+
+        private static void BuildQueenModel(Transform parent, Material material) // 14일차: 퀸 모델을 프리미티브로 구성하는 메서드
+        {
+            // 받침 - 킹보다 긴 몸통 - 머리 - 왕관 스파이크(구 5개) 순서로 쌓아 킹보다 화려한 퀸 실루엣을 구성한다.
+            CreatePart(parent, PrimitiveType.Cylinder, new Vector3(0f, 0.05f, 0f), new Vector3(0.36f, 0.05f, 0.36f), material); // 받침 파츠 생성
+            CreatePart(parent, PrimitiveType.Cylinder, new Vector3(0f, 0.5f, 0f), new Vector3(0.19f, 0.45f, 0.19f), material); // 몸통 파츠 생성(킹보다 길게)
+            CreatePart(parent, PrimitiveType.Sphere, new Vector3(0f, 1.0f, 0f), new Vector3(0.26f, 0.26f, 0.26f), material); // 머리 파츠 생성
+
+            const int spikeCount = 5; // 왕관 스파이크 개수
+            const float radius = 0.14f; // 스파이크가 배치될 반지름
+            const float spikeY = 1.16f; // 스파이크 높이
+            for (int i = 0; i < spikeCount; i++) // 스파이크 개수만큼 순회하며
+            {
+                float angle = i * Mathf.PI * 2f / spikeCount; // 이번 스파이크의 배치 각도 계산
+                var spikePosition = new Vector3(Mathf.Cos(angle) * radius, spikeY, Mathf.Sin(angle) * radius); // 원형으로 배치할 좌표 계산
+                CreatePart(parent, PrimitiveType.Sphere, spikePosition, new Vector3(0.07f, 0.07f, 0.07f), material); // 왕관 스파이크 파츠 생성
+            }
+        }
+
+        private static void CreatePart(Transform parent, PrimitiveType type, Vector3 localPosition, Vector3 localScale, Material material, Quaternion? localRotation = null) // 프리미티브 파츠 하나를 생성하는 메서드(14일차: 나이트 머리처럼 기울어진 파츠를 위해 회전 옵션 추가)
         {
             var part = GameObject.CreatePrimitive(type); // 지정한 타입의 기본 도형 생성
             var partCollider = part.GetComponent<Collider>(); // 기본으로 붙는 콜라이더 참조
             if (partCollider != null) // 콜라이더가 있으면
             {
-                Destroy(partCollider); // 파츠 개별 콜라이더는 제거(루트에만 콜라이더를 둘 예정)
+                if (Application.isPlaying) // 버그 수정: Play 모드에서는 다음 프레임에 파괴되는 Destroy를 사용
+                {
+                    Destroy(partCollider); // 파츠 개별 콜라이더는 제거(루트에만 콜라이더를 둘 예정)
+                }
+                else // EditMode(에디터 배치, EditMode 테스트 등)에서는
+                {
+                    DestroyImmediate(partCollider); // 즉시 파괴하는 DestroyImmediate를 사용(Destroy는 EditMode에서 에러를 발생시킴)
+                }
             }
 
             part.transform.SetParent(parent, false); // 부모 아래로 배치(로컬 좌표 유지)
             part.transform.localPosition = localPosition; // 로컬 위치 지정
+            part.transform.localRotation = localRotation ?? Quaternion.identity; // 로컬 회전 지정(지정하지 않으면 회전 없음)
             part.transform.localScale = localScale; // 로컬 크기 지정
             part.GetComponent<Renderer>().sharedMaterial = material; // 공유 머티리얼 적용
         }

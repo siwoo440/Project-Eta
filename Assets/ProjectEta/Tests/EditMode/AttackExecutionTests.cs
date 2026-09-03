@@ -85,6 +85,31 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
             }
         }
 
+        [Test] // 14일차: SpawnTestEnemySquad가 폰+룩을 각각 지정한 위치에 배치하는지 확인하는 테스트
+        public void SpawnTestEnemySquad_PlacesPawnAndRookAtExpectedPositions()
+        {
+            var context = CreateBoundContext(); // 공통 초기화 수행
+
+            try
+            {
+                var pawnDefinition = CreateDefinition(baseHp: 1, baseAtk: 1); // 테스트용 폰 정의
+                var rookDefinition = CreateDefinition(baseHp: 3, baseAtk: 2); // 테스트용 룩 정의
+                SetPrivateField(context.Input, "_pawnDefinition", pawnDefinition); // 인스펙터 연결을 흉내내 private 필드에 직접 대입
+                SetPrivateField(context.Input, "_rookDefinition", rookDefinition); // 인스펙터 연결을 흉내내 private 필드에 직접 대입
+
+                var anchor = new Vector2Int(4, 8); // 적 스쿼드 기준 좌표
+                context.Input.SpawnTestEnemySquad(anchor); // 폰+룩 2기 배치 실행
+
+                Assert.AreSame(pawnDefinition, context.RunState.Board.GetTile(anchor).OccupyingPiece.Definition); // 기준 칸에 폰이 배치돼야 함
+                Assert.AreSame(rookDefinition, context.RunState.Board.GetTile(anchor + new Vector2Int(2, 0)).OccupyingPiece.Definition); // 오른쪽 2칸에 룩이 배치돼야 함
+                Assert.AreEqual(2, context.RunState.Board.CountPieces(isPlayerPiece: false)); // 적군 수가 정확히 2여야 함
+            }
+            finally
+            {
+                Object.DestroyImmediate(context.Root); // 테스트 오브젝트 정리
+            }
+        }
+
         [Test] // 비치명 공격 시 HP만 줄고 양측 위치는 그대로 유지되는지 확인하는 테스트
         public void TryAttackSelectedPieceTarget_NonLethal_ReducesHpButKeepsPositions()
         {
