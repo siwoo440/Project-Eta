@@ -3,6 +3,7 @@ using UnityEngine; // MonoBehaviour, GameObject, Debug 등을 사용하기 위�
 using UnityEngine.InputSystem; // Space 키 기반 10일차 임시 행동 완료 입력을 사용하기 위한 네임스페이스
 using UnityEngine.SceneManagement; // 현재 씬 이름을 확인하기 위한 네임스페이스
 using ProjectEta.Board; // BoardView, BoardInputController를 사용하기 위한 네임스페이스
+using ProjectEta.Pieces; // PieceMovementType을 사용해 킹 여부를 판별하기 위한 네임스페이스
 using ProjectEta.Run; // RunState를 사용하기 위한 네임스페이스
 
 namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페이스
@@ -167,7 +168,36 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
             _boardView.Bind(_runState.Board); // 화면이 RunState.Board 바로 그 객체를 참조하도록 연결
             _boardInputController.Bind(_runState, _boardView, _turnManager); // 입력이 실제 RunState와 현재 TurnManager를 함께 참조하도록 연결
 
+            _boardInputController.AttackResolved -= HandleAttackResolved; // 12일차: 재연결 시 중복 구독을 막기 위해 먼저 해제
+            _boardInputController.AttackResolved += HandleAttackResolved; // 12일차: 전투 결과를 받아 킹 HP와 패배를 판정
+
             Debug.Log($"Battle state bound: Board={_boardView.IsBound}, Hand={_runState.Hand.Hand.Count}장, KingHP={_runState.KingHp}, Turn={_turnManager.TurnNumber}/{_turnManager.CurrentState}"); // 연결 결과를 개발용 로그로 확인
+        }
+
+        private void HandleAttackResolved(CombatResult result) // 12일차: 전투 판정 결과를 받아 킹이 맞았을 때 RunState.KingHp와 패배를 처리하는 메서드
+        {
+            var defender = result.Defender; // 이번 공격을 받은 기물
+            if (!defender.IsPlayerPiece || defender.Definition.MovementType != PieceMovementType.King) // 아군 킹이 아니면
+            {
+                return; // 킹 HP와 무관한 공격이므로 처리하지 않음
+            }
+
+            _runState.KingHp = defender.CurrentHp; // 보드 위 킹 기물의 실제 체력을 RunState.KingHp에 동기화
+            Debug.Log($"킹 피격: 남은 KingHP={_runState.KingHp}"); // 킹 피격 결과를 콘솔에 출력
+
+            if (_runState.IsDefeated) // 킹 체력이 0 이하가 됐으면
+            {
+                Debug.Log("킹 HP 0 - 런 패배, 전투를 종료합니다."); // 패배 사유를 콘솔에 출력
+                EndBattle(); // 턴 진행을 멈추고 전투 종료 상태로 전환
+            }
+        }
+
+        private void OnDestroy() // 오브젝트가 파괴될 때 이벤트 구독을 정리하는 메서드
+        {
+            if (_boardInputController != null) // 입력 컨트롤러 참조가 남아 있으면
+            {
+                _boardInputController.AttackResolved -= HandleAttackResolved; // 이벤트 구독 해제로 불필요한 참조 제거
+            }
         }
 
         private void StartDummyEnemyTurn() // 실제 AI가 없는 10일차에서 적 턴 흐름만 검증하기 위한 메서드

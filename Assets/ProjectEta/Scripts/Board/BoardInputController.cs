@@ -1,3 +1,4 @@
+using System; // Action 이벤트를 사용하기 위한 네임스페이스
 using System.Collections.Generic; // Dictionary를 사용하기 위한 네임스페이스
 using System.Linq; // IReadOnlyList에 대한 Contains 확장 메서드를 사용하기 위한 네임스페이스
 using UnityEngine; // MonoBehaviour, Physics 등을 사용하기 위한 네임스페이스
@@ -23,6 +24,8 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         public bool CanReceivePlayerInput => IsBound && (_turnManager == null || _turnManager.CanPlayerInput); // 현재 플레이어가 보드/카드 입력을 할 수 있는지 여부
         public PieceRuntimeState SelectedPiece => _selectedPiece; // 11일차: 현재 선택된(이동 대기 중인) 기물
         public MovementResult PendingMovement => _pendingMovement; // 11일차: 현재 선택된 기물의 이동/공격 후보 칸
+
+        public event Action<CombatResult> AttackResolved; // 12일차: 공격 판정이 끝날 때마다 알림(킹 HP 동기화 등 외부 시스템이 구독)
 
         private RunState _runState; // BattleController가 소유하는 실제 런 상태
         private HandState _handState; // RunState.Hand 참조. 별도 테스트 손패를 만들지 않음
@@ -190,7 +193,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
                     if (_pendingMovement != null && _pendingMovement.AttackTiles.Contains(cell)) // 클릭한 칸이 공격 후보면
                     {
-                        HandleAttackCandidateClick(cell); // 공격 후보 클릭 처리(현재는 안내만)
+                        ExecuteAttack(cell); // 실제 전투 판정 실행
                         return; // 처리 완료 후 종료
                     }
                 }
@@ -253,33 +256,94 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
         private void ExecuteMove(Vector2Int destination) // 선택된 기물을 실제로 이동시키고 턴을 소비하는 메서드
         {
-            var originTile = _boardView.GetTile(_selectedPiece.BoardPosition); // 기물이 원래 있던 칸의 타일 데이터 조회
-            var destinationTile = _boardView.GetTile(destination); // 이동할 칸의 타일 데이터 조회
-            if (originTile == null || destinationTile == null) // 둘 중 하나라도 유효하지 않으면
-            {
-                DeselectPiece(); // 안전하게 선택만 해제
-                return; // 이동을 실행하지 않고 종료
-            }
+            var piece = _selectedPiece; // 이동 완료 후 DeselectPiece가 선택을 지우기 전에 참조를 미리 저장
+            var origin = piece.BoardPosition; // 로그 출력을 위해 원래 좌표를 미리 저장
 
-            originTile.OccupyingPiece = null; // 원래 칸의 점유 상태 해제
-            _selectedPiece.BoardPosition = destination; // 기물의 실제 좌표 갱신
-            destinationTile.OccupyingPiece = _selectedPiece; // 새 칸의 점유 상태 갱신
-
-            if (_pieceViews.TryGetValue(_selectedPiece, out var pieceView) && pieceView != null) // 이 기물과 연결된 화면 표시가 있으면
-            {
-                pieceView.MoveTo(destination, _boardView.TileSize); // 화면 위치도 같은 좌표로 이동
-            }
-
-            Debug.Log($"{_selectedPiece.Definition.DisplayName} 이동: {originTile.BoardPosition} -> {destination}"); // 이동 결과를 콘솔에 출력
+            MovePieceTo(piece, destination); // 보드 점유·좌표·화면 위치를 함께 갱신(12일차: 공격 후 점유와 동일한 메서드 재사용)
+            Debug.Log($"{piece.Definition.DisplayName} 이동: {origin} -> {destination}"); // 이동 결과를 콘솔에 출력
 
             DeselectPiece(); // 이동을 마쳤으니 선택과 후보 강조 해제
             _turnManager?.TryCompletePlayerAction(); // 이동을 플레이어의 이번 턴 행동으로 처리해 적 턴으로 전환
         }
 
-        private void HandleAttackCandidateClick(Vector2Int target) // 11일차: 공격 후보 칸 클릭을 처리하는 메서드(실제 전투 판정은 아직 없음)
+        public bool TryAttackSelectedPieceTarget(Vector2Int target) // 12일차: 현재 선택된 기물로 지정한 공격 후보 칸을 공격하는 진입점(테스트에서도 재사용)
         {
-            Debug.Log($"공격 대상 클릭: {target} — HP·ATK 전투 판정은 아직 구현되지 않았습니다."); // 다음 일차에서 실제 전투로 이어질 자리 표시
-            DeselectPiece(); // 우선 선택만 해제하고 턴은 소비하지 않음(전투 미구현)
+            if (!CanReceivePlayerInput || _selectedPiece == null || _pendingMovement == null || !_pendingMovement.AttackTiles.Contains(target)) // 적 턴이거나 선택된 기물이 없거나 유효한 공격 후보가 아니면
+            {
+                return false; // 공격을 실행하지 않고 실패 반환
+            }
+
+            ExecuteAttack(target); // 실제 전투 판정 실행
+            return true; // 정상적으로 공격을 실행했음을 반환
+        }
+
+        private void ExecuteAttack(Vector2Int target) // 12일차: 공격 후보 칸에 대해 실제 HP·ATK 전투 판정을 실행하는 메서드
+        {
+            var targetTile = _boardView.GetTile(target); // 공격 대상 칸의 실제 타일 데이터 조회
+            if (targetTile == null || !targetTile.IsOccupied) // 유효하지 않거나 이미 비어 있는 칸이면(선택 이후 상태가 바뀐 경우 대비)
+            {
+                DeselectPiece(); // 선택만 해제
+                return; // 공격을 실행하지 않고 종료
+            }
+
+            var attacker = _selectedPiece; // 현재 선택된 공격자
+            var defender = targetTile.OccupyingPiece; // 실제 공격 대상 기물
+            var result = CombatResolver.ResolveAttack(attacker, defender); // 확정 규칙(고정 ATK만큼 HP 감소)으로 전투 판정 실행
+
+            Debug.Log($"{attacker.Definition.DisplayName} 공격 -> {defender.Definition.DisplayName}: {result.DamageDealt} 피해, 남은 HP {defender.CurrentHp}"); // 판정 결과를 콘솔에 출력
+
+            if (result.DefenderDied) // 치명 공격(대상 사망)이면
+            {
+                RemovePieceFromBoard(defender); // 대상을 보드와 화면에서 제거
+                MovePieceTo(attacker, target); // 공격자가 대상이 있던 칸을 점유(확정 규칙)
+                Debug.Log($"{attacker.Definition.DisplayName}이(가) {target} 칸을 점유했습니다."); // 점유 결과를 콘솔에 출력
+            }
+            else // 비치명 공격(대상 생존)이면
+            {
+                Debug.Log($"{defender.Definition.DisplayName} 생존 — {attacker.Definition.DisplayName}은(는) 원위치를 유지합니다."); // 원위치 유지 결과를 콘솔에 출력
+            }
+
+            AttackResolved?.Invoke(result); // 외부 시스템(킹 HP 동기화 등)에 전투 결과 통지
+
+            DeselectPiece(); // 선택과 후보 강조 해제
+            _turnManager?.TryCompletePlayerAction(); // 공격도 이동과 동일하게 플레이어의 이번 턴 행동으로 처리
+        }
+
+        private void MovePieceTo(PieceRuntimeState piece, Vector2Int destination) // 기물의 보드 좌표와 화면 위치를 함께 갱신하는 공통 메서드
+        {
+            var originTile = _boardView.GetTile(piece.BoardPosition); // 기물이 원래 있던 칸의 타일 데이터 조회
+            if (originTile != null) // 원래 칸이 유효하면
+            {
+                originTile.OccupyingPiece = null; // 원래 칸의 점유 상태 해제
+            }
+
+            piece.BoardPosition = destination; // 기물의 실제 좌표 갱신
+            var destinationTile = _boardView.GetTile(destination); // 이동할 칸의 타일 데이터 조회
+            if (destinationTile != null) // 대상 칸이 유효하면
+            {
+                destinationTile.OccupyingPiece = piece; // 새 칸의 점유 상태 갱신
+            }
+
+            if (_pieceViews.TryGetValue(piece, out var pieceView) && pieceView != null) // 이 기물과 연결된 화면 표시가 있으면
+            {
+                pieceView.MoveTo(destination, _boardView.TileSize); // 화면 위치도 같은 좌표로 이동
+            }
+        }
+
+        private void RemovePieceFromBoard(PieceRuntimeState piece) // 사망한 기물을 보드 점유와 화면에서 제거하는 메서드
+        {
+            var tile = _boardView.GetTile(piece.BoardPosition); // 이 기물이 있던 칸의 타일 데이터 조회
+            if (tile != null && tile.OccupyingPiece == piece) // 아직 그 칸을 이 기물이 점유하고 있으면
+            {
+                tile.OccupyingPiece = null; // 점유 상태 해제
+            }
+
+            if (_pieceViews.TryGetValue(piece, out var pieceView) && pieceView != null) // 연결된 화면 표시가 있으면
+            {
+                Destroy(pieceView.gameObject); // 화면에서 기물 오브젝트 제거
+            }
+
+            _pieceViews.Remove(piece); // 더 이상 필요 없는 화면 연결 정보 정리
         }
 
         private void DeselectPiece() // 11일차: 현재 선택된 기물과 이동/공격 후보 강조를 해제하는 메서드
