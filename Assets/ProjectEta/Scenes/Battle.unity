@@ -433,6 +433,7 @@ GameObject:
   m_Component:
   - component: {fileID: 190000002}
   - component: {fileID: 190000003}
+  - component: {fileID: 190000004}
   m_Layer: 0
   m_Name: BoardView
   m_TagString: Untagged
@@ -469,8 +470,22 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   _tileSize: 1
   _tileGap: 0.05
-  _playerAreaColor: {r: 0.25, g: 0.45, b: 0.95, a: 1}
-  _enemyAreaColor: {r: 0.95, g: 0.3, b: 0.3, a: 1}
+  _idleColor: {r: 1, g: 1, b: 1, a: 1}
+  _installableHighlightColor: {r: 0.55, g: 0.75, b: 1, a: 1}
+  _blockedHighlightColor: {r: 1, g: 0.55, b: 0.55, a: 1}
+--- !u!114 &190000004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 190000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b3c4d5e6f708192a3b4c5d6e7f8091a, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _camera: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

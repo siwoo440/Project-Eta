@@ -6,18 +6,21 @@ namespace ProjectEta.Board
     {
         [SerializeField] private float _tileSize = 1f;
         [SerializeField] private float _tileGap = 0.05f;
-        [SerializeField] private Color _playerAreaColor = new Color(0.25f, 0.45f, 0.95f);
-        [SerializeField] private Color _enemyAreaColor = new Color(0.95f, 0.3f, 0.3f);
+        [SerializeField] private Color _idleColor = Color.white;
+        [SerializeField] private Color _installableHighlightColor = new Color(0.55f, 0.75f, 1f);
+        [SerializeField] private Color _blockedHighlightColor = new Color(1f, 0.55f, 0.55f);
 
         private BoardState _boardState;
-        private Material _playerMaterial;
-        private Material _enemyMaterial;
+        private Material _idleMaterial;
+        private Material _installableHighlightMaterial;
+        private Material _blockedHighlightMaterial;
 
         private void Awake()
         {
             _boardState = new BoardState();
-            _playerMaterial = CreateTileMaterial(_playerAreaColor);
-            _enemyMaterial = CreateTileMaterial(_enemyAreaColor);
+            _idleMaterial = CreateTileMaterial(_idleColor);
+            _installableHighlightMaterial = CreateTileMaterial(_installableHighlightColor);
+            _blockedHighlightMaterial = CreateTileMaterial(_blockedHighlightColor);
             BuildTiles();
         }
 
@@ -45,8 +48,9 @@ namespace ProjectEta.Board
             tile.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             tile.transform.localScale = Vector3.one * (_tileSize - _tileGap);
 
-            var tileRenderer = tile.GetComponent<Renderer>();
-            tileRenderer.sharedMaterial = tileState.IsPlayerPlacementArea ? _playerMaterial : _enemyMaterial;
+            var highlightMaterial = tileState.IsPlayerPlacementArea ? _installableHighlightMaterial : _blockedHighlightMaterial;
+            var tileView = tile.AddComponent<TileView>();
+            tileView.Initialize(tileState, _idleMaterial, highlightMaterial);
         }
 
         private static Material CreateTileMaterial(Color color)
