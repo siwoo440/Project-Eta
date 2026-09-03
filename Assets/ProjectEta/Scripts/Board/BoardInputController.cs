@@ -6,7 +6,7 @@ using ProjectEta.Pieces; // PieceDefinition, PieceRuntimeState, PieceView를 사
 
 namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페이스
 {
-    public class BoardInputController : MonoBehaviour // 마우스/키보드로 타일 선택과 카드 소환을 처리하는 컴포넌트
+    public class BoardInputController : MonoBehaviour // 마우스/키보드로 칸 선택과 카드 소환을 처리하는 컴포넌트
     {
         [SerializeField] private Camera _camera; // 레이캐스트에 사용할 카메라
         [SerializeField] private BoardView _boardView; // 좌표 변환·컨테이너로 쓸 보드 뷰
@@ -15,7 +15,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
         private readonly HandState _handState = new HandState(); // 테스트용 손패 상태
 
-        private TileView _selectedTile; // 현재 선택된 타일
+        private Vector2Int? _selectedCell; // 현재 선택된 칸 좌표(없으면 null)
         private PieceDefinition _selectedCard; // 현재 선택된 카드
 
         private void Awake() // 씬 시작 시 자동 호출되는 초기화 메서드
@@ -76,34 +76,30 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 : "카드 선택 해제"); // 해제됐을 때 안내 로그
         }
 
-        private void HandleBoardClick() // 보드 클릭 시 타일 선택 또는 카드 소환을 처리하는 메서드
+        private void HandleBoardClick() // 보드 클릭 시 칸 선택 또는 카드 소환을 처리하는 메서드
         {
             var screenPosition = Mouse.current.position.ReadValue(); // 현재 마우스 화면 좌표 읽기
             var ray = _camera.ScreenPointToRay(screenPosition); // 화면 좌표를 카메라 기준 광선으로 변환
 
-            if (Physics.Raycast(ray, out var hit)) // 광선이 무언가에 맞으면
+            if (Physics.Raycast(ray, out var hit) && _boardView.TryGetCellFromWorldPoint(hit.point, out var cell)) // 광선이 보드 메시에 맞고 유효한 칸으로 변환되면
             {
-                var tileView = hit.collider.GetComponent<TileView>(); // 맞은 오브젝트의 타일 뷰 컴포넌트 조회
-                if (tileView != null) // 타일을 맞췄으면
+                if (_selectedCard != null) // 선택된 카드가 있으면
                 {
-                    if (_selectedCard != null) // 선택된 카드가 있으면
-                    {
-                        TryPlayCardOnTile(tileView); // 그 칸에 카드 소환 시도
-                    }
-                    else // 선택된 카드가 없으면
-                    {
-                        SelectTile(tileView); // 일반 타일 선택 처리
-                    }
-                    return; // 처리 완료 후 종료
+                    TryPlayCardOnCell(cell); // 그 칸에 카드 소환 시도
                 }
+                else // 선택된 카드가 없으면
+                {
+                    SelectCell(cell); // 일반 칸 선택 처리
+                }
+                return; // 처리 완료 후 종료
             }
 
-            DeselectCurrentTile(); // 타일 외의 곳을 클릭했으면 선택 해제
+            DeselectCurrentCell(); // 보드 밖을 클릭했으면 선택 해제
         }
 
-        private void TryPlayCardOnTile(TileView tileView) // 선택된 카드를 지정한 타일에 소환 시도하는 메서드
+        private void TryPlayCardOnCell(Vector2Int cell) // 선택된 카드를 지정한 칸에 소환 시도하는 메서드
         {
-            var tileState = tileView.TileState; // 클릭한 타일의 데이터 조회
+            var tileState = _boardView.GetTile(cell); // 클릭한 칸의 데이터 조회
             if (!tileState.IsPlayerPlacementArea || tileState.IsOccupied) // 아군 영역이 아니거나 이미 점유돼 있으면
             {
                 Debug.Log($"{tileState.BoardPosition}에는 소환할 수 없습니다 (아군 영역의 빈 칸만 가능)."); // 사유를 콘솔에 출력
@@ -122,35 +118,33 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             Debug.Log($"{runtimeState.Definition.DisplayName} 소환: {tileState.BoardPosition}"); // 소환 결과를 콘솔에 출력
             _selectedCard = null; // 카드 선택 해제
 
-            SelectTile(tileView); // 소환한 칸을 선택 상태로 표시
+            SelectCell(cell); // 소환한 칸을 선택 상태로 표시
         }
 
-        private void SelectTile(TileView tileView) // 타일을 선택 상태로 만드는 메서드
+        private void SelectCell(Vector2Int cell) // 칸을 선택 상태로 만드는 메서드
         {
-            if (_selectedTile == tileView) // 이미 같은 타일이 선택돼 있으면
+            if (_selectedCell == cell) // 이미 같은 칸이 선택돼 있으면
             {
-                DeselectCurrentTile(); // 선택 해제(토글 동작)
+                DeselectCurrentCell(); // 선택 해제(토글 동작)
                 return; // 종료
             }
 
-            DeselectCurrentTile(); // 기존 선택 해제
+            _boardView.HighlightCell(cell); // 보드 메시에 강조 표시 반영
+            _selectedCell = cell; // 새 칸을 선택 상태로 저장
 
-            _selectedTile = tileView; // 새 타일을 선택 상태로 저장
-            _selectedTile.Select(); // 선택 하이라이트 적용
-
-            var tileState = _selectedTile.TileState; // 선택한 타일의 데이터 조회
+            var tileState = _boardView.GetTile(cell); // 선택한 칸의 데이터 조회
             Debug.Log($"Tile selected: {tileState.BoardPosition} - Occupied: {tileState.IsOccupied}, PlayerArea: {tileState.IsPlayerPlacementArea}"); // 좌표·점유·영역 상태를 콘솔에 출력
         }
 
-        private void DeselectCurrentTile() // 현재 선택된 타일을 해제하는 메서드
+        private void DeselectCurrentCell() // 현재 선택된 칸을 해제하는 메서드
         {
-            if (_selectedTile == null) // 선택된 타일이 없으면
+            if (_selectedCell == null) // 선택된 칸이 없으면
             {
                 return; // 할 일이 없으므로 종료
             }
 
-            _selectedTile.Deselect(); // 하이라이트 해제
-            _selectedTile = null; // 선택 상태 초기화
+            _boardView.ClearHighlight(); // 보드 메시의 강조 표시 해제
+            _selectedCell = null; // 선택 상태 초기화
         }
 
         private void OnGUI() // 화면에 디버그용 UI를 그리는 메서드

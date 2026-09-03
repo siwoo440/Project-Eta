@@ -486,10 +486,12 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier:
   _tileSize: 1
-  _tileGap: 0.05
-  _idleColor: {r: 1, g: 1, b: 1, a: 1}
+  _idleLightColor: {r: 1, g: 1, b: 1, a: 1}
+  _idleDarkColor: {r: 0.12, g: 0.12, b: 0.12, a: 1}
   _installableHighlightColor: {r: 0.55, g: 0.75, b: 1, a: 1}
   _blockedHighlightColor: {r: 1, g: 0.55, b: 0.55, a: 1}
+  _gridLineColor: {r: 0.15, g: 0.15, b: 0.15, a: 1}
+  _gridLineThicknessPx: 3
 --- !u!114 &190000004
 MonoBehaviour:
   m_ObjectHideFlags: 0
