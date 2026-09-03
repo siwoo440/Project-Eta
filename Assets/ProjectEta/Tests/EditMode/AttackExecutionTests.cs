@@ -38,6 +38,53 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
             field.SetValue(target, value); // 조회한 필드에 값 대입
         }
 
+        [Test] // 13일차: SpawnTestEnemy가 지정한 칸에 적 기물을 실제로 배치하는지 확인하는 테스트
+        public void SpawnTestEnemy_PlacesEnemyPieceOnBoard()
+        {
+            var context = CreateBoundContext(); // 공통 초기화 수행
+
+            try
+            {
+                var enemyDefinition = CreateDefinition(baseHp: 3, baseAtk: 1); // 테스트용 적 정의
+                var position = new Vector2Int(4, 8); // 적 영역 안의 좌표
+
+                var enemy = context.Input.SpawnTestEnemy(enemyDefinition, position); // 지정 좌표에 적 기물 배치 시도
+
+                Assert.IsNotNull(enemy); // 소환이 성공해야 함
+                Assert.IsFalse(enemy.IsPlayerPiece); // 소환된 기물은 적으로 표시돼야 함
+                Assert.AreSame(enemy, context.RunState.Board.GetTile(position).OccupyingPiece); // 보드의 해당 칸이 이 기물로 점유돼야 함
+                Assert.AreEqual(1, context.RunState.Board.CountPieces(isPlayerPiece: false)); // 적군 수가 정확히 1이어야 함
+            }
+            finally
+            {
+                Object.DestroyImmediate(context.Root); // 테스트 오브젝트 정리
+            }
+        }
+
+        [Test] // 13일차: 이미 점유된 칸에는 SpawnTestEnemy가 실패하는지 확인하는 테스트
+        public void SpawnTestEnemy_Fails_WhenTileAlreadyOccupied()
+        {
+            var context = CreateBoundContext(); // 공통 초기화 수행
+
+            try
+            {
+                var position = new Vector2Int(4, 8); // 배치를 시도할 좌표
+                var blockerDefinition = CreateDefinition(baseHp: 1, baseAtk: 0); // 미리 칸을 막아둘 기물 정의
+                var blocker = new PieceRuntimeState(blockerDefinition, position, isPlayerPiece: false); // 해당 칸을 먼저 점유할 기물 생성
+                context.RunState.Board.GetTile(position).OccupyingPiece = blocker; // 칸을 미리 점유시킴
+
+                var enemyDefinition = CreateDefinition(baseHp: 3, baseAtk: 1); // 새로 배치를 시도할 적 정의
+                var result = context.Input.SpawnTestEnemy(enemyDefinition, position); // 이미 점유된 칸에 배치 시도
+
+                Assert.IsNull(result); // 소환이 거부돼 null을 반환해야 함
+                Assert.AreSame(blocker, context.RunState.Board.GetTile(position).OccupyingPiece); // 기존 점유 기물이 그대로 유지돼야 함
+            }
+            finally
+            {
+                Object.DestroyImmediate(context.Root); // 테스트 오브젝트 정리
+            }
+        }
+
         [Test] // 비치명 공격 시 HP만 줄고 양측 위치는 그대로 유지되는지 확인하는 테스트
         public void TryAttackSelectedPieceTarget_NonLethal_ReducesHpButKeepsPositions()
         {
@@ -102,6 +149,34 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
                 Assert.IsNull(context.RunState.Board.GetTile(attackerOrigin).OccupyingPiece); // 공격자의 원래 칸은 비어야 함
                 Assert.AreSame(attacker, context.RunState.Board.GetTile(defenderOrigin).OccupyingPiece); // 대상 칸은 이제 공격자가 점유해야 함
                 Assert.AreEqual(TurnState.EnemyTurn, context.TurnManager.CurrentState); // 공격도 플레이어 행동으로 처리돼 적 턴으로 전환돼야 함
+            }
+            finally
+            {
+                Object.DestroyImmediate(context.Root); // 테스트 오브젝트 정리
+            }
+        }
+
+        [Test] // 13일차: 마지막 적을 처치하면 BoardState.CountPieces가 적군 0을 반환하는지 확인하는 테스트(승리 조건이 의존하는 데이터)
+        public void TryAttackSelectedPieceTarget_Lethal_LeavesZeroRemainingEnemies()
+        {
+            var context = CreateBoundContext(); // 공통 초기화 수행
+
+            try
+            {
+                var attackerDefinition = CreateDefinition(baseHp: 3, baseAtk: 5); // 확실히 처치 가능한 ATK 5 공격자
+                var defenderDefinition = CreateDefinition(baseHp: 1, baseAtk: 0); // HP 1인 유일한 적 정의
+                var attackerOrigin = new Vector2Int(4, 1); // 공격자 시작 좌표
+                var defenderOrigin = new Vector2Int(4, 2); // 유일한 적의 좌표(공격자와 인접)
+
+                var attacker = new PieceRuntimeState(attackerDefinition, attackerOrigin, isPlayerPiece: true); // 아군 공격자 생성
+                var defender = new PieceRuntimeState(defenderDefinition, defenderOrigin, isPlayerPiece: false); // 보드 위 유일한 적 생성
+                context.RunState.Board.GetTile(attackerOrigin).OccupyingPiece = attacker; // 보드에 공격자 배치
+                context.RunState.Board.GetTile(defenderOrigin).OccupyingPiece = defender; // 보드에 유일한 적 배치
+
+                context.Input.TrySelectPieceAt(attackerOrigin); // 공격자 선택
+                context.Input.TryAttackSelectedPieceTarget(defenderOrigin); // 유일한 적 처치
+
+                Assert.AreEqual(0, context.RunState.Board.CountPieces(isPlayerPiece: false)); // 남은 적이 0이어야 승리 판정이 정상 동작함
             }
             finally
             {

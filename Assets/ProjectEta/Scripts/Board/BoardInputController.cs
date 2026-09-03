@@ -380,14 +380,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 return; // 소환하지 않고 종료
             }
 
-            var runtimeState = new PieceRuntimeState(_selectedCard, tileState.BoardPosition, isPlayerPiece: true); // 선택된 카드로 기물 런타임 상태 생성
-            tileState.OccupyingPiece = runtimeState; // 먼저 실제 RunState.Board의 타일 점유 상태 갱신
-
-            var pieceObject = new GameObject("Piece"); // 기물을 담을 빈 오브젝트 생성
-            pieceObject.transform.SetParent(_boardView.transform, false); // 보드 뷰의 자식으로 배치(로컬 좌표 유지)
-            var pieceView = pieceObject.AddComponent<PieceView>(); // 기물 뷰 컴포넌트 부착
-            pieceView.Initialize(runtimeState, _boardView.TileSize); // 기물 뷰에 실제 런타임 데이터와 타일 크기 주입
-            _pieceViews[runtimeState] = pieceView; // 11일차: 이후 이동 시 같은 화면 오브젝트를 옮길 수 있도록 등록
+            var runtimeState = SpawnPiece(_selectedCard, tileState, isPlayerPiece: true, objectName: "Piece"); // 선택된 카드로 기물을 실제 생성하고 보드·화면에 등록
 
             _handState.RemoveCard(_selectedCard); // 실제 RunState.Hand에서 사용한 카드 제거
 
@@ -395,6 +388,42 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             _selectedCard = null; // 카드 선택 해제
 
             SelectCell(cell); // 소환한 칸을 선택 상태로 표시
+        }
+
+        public PieceRuntimeState SpawnTestEnemyPawn(Vector2Int position) // 13일차: BoardInputController에 이미 연결된 테스트용 폰 정의로 적을 배치하는 편의 진입점
+        {
+            return SpawnTestEnemy(_pawnDefinition, position); // 인스펙터에 연결된 폰 정의를 그대로 적 기물로 재사용(정의 자체는 아군/적군 구분이 없음)
+        }
+
+        public PieceRuntimeState SpawnTestEnemy(PieceDefinition definition, Vector2Int position) // 13일차: 승리 조건·전투를 테스트할 수 있도록 적 기물을 직접 배치하는 개발용 진입점(정식 적 배치·AI는 이후 단계에서 별도 구현)
+        {
+            if (!IsBound || definition == null) // 아직 상태가 연결되지 않았거나 기물 정의가 없으면
+            {
+                return null; // 소환하지 않고 실패 반환
+            }
+
+            var tileState = _boardView.GetTile(position); // 지정한 좌표의 실제 타일 데이터 조회
+            if (tileState == null || tileState.IsOccupied) // 유효하지 않거나 이미 점유된 칸이면
+            {
+                Debug.LogWarning($"SpawnTestEnemy: {position}에 배치할 수 없습니다(범위 밖 또는 이미 점유됨)."); // 실패 사유 안내
+                return null; // 소환하지 않고 실패 반환
+            }
+
+            return SpawnPiece(definition, tileState, isPlayerPiece: false, objectName: "Piece(Enemy)"); // 적 기물로 생성하고 보드·화면에 등록
+        }
+
+        private PieceRuntimeState SpawnPiece(PieceDefinition definition, TileState tileState, bool isPlayerPiece, string objectName) // 기물 런타임 상태를 만들고 보드 점유·화면 표시까지 함께 등록하는 공용 메서드
+        {
+            var runtimeState = new PieceRuntimeState(definition, tileState.BoardPosition, isPlayerPiece); // 기물 런타임 상태 생성
+            tileState.OccupyingPiece = runtimeState; // 실제 RunState.Board의 타일 점유 상태 갱신
+
+            var pieceObject = new GameObject(objectName); // 기물을 담을 빈 오브젝트 생성
+            pieceObject.transform.SetParent(_boardView.transform, false); // 보드 뷰의 자식으로 배치(로컬 좌표 유지)
+            var pieceView = pieceObject.AddComponent<PieceView>(); // 기물 뷰 컴포넌트 부착
+            pieceView.Initialize(runtimeState, _boardView.TileSize); // 기물 뷰에 실제 런타임 데이터와 타일 크기 주입
+            _pieceViews[runtimeState] = pieceView; // 이후 이동 시 같은 화면 오브젝트를 옮길 수 있도록 등록
+
+            return runtimeState; // 생성된 런타임 상태 반환
         }
 
         private void SelectCell(Vector2Int cell) // 칸을 선택 상태로 만드는 메서드

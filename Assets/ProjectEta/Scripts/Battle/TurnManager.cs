@@ -11,6 +11,7 @@ namespace ProjectEta.Battle // 전투 턴 관련 타입을 모아두는 네임�
         public bool HasPlayerActed { get; private set; } // 이번 플레이어 턴에 행동을 이미 완료했는지 여부
         public bool CanPlayerInput => CurrentState == TurnState.PlayerTurn; // 현재 플레이어 입력 자체가 허용되는지 여부
         public bool CanPlayerAct => CurrentState == TurnState.PlayerTurn && !HasPlayerActed; // 현재 플레이어가 일반 행동을 1회 수행할 수 있는지 여부
+        public BattleOutcome Outcome { get; private set; } = BattleOutcome.None; // 13일차: 전투가 어떻게 끝났는지(승리/패배) 기록
 
         public TurnManager() // 새 전투용 턴 매니저 생성자
         {
@@ -46,7 +47,7 @@ namespace ProjectEta.Battle // 전투 턴 관련 타입을 모아두는 네임�
             return true; // 정상적으로 다음 턴으로 넘어갔음을 반환
         }
 
-        public void EndBattle() // 승리·패배 시 턴 진행을 완전히 멈추는 메서드
+        public void EndBattle(BattleOutcome outcome = BattleOutcome.Defeat) // 승리·패배 시 턴 진행을 완전히 멈추는 메서드(13일차: 결과 구분 추가, 기본값은 기존 호출부와의 호환을 위한 패배)
         {
             if (CurrentState == TurnState.BattleEnded) // 이미 전투가 종료된 상태라면
             {
@@ -54,6 +55,7 @@ namespace ProjectEta.Battle // 전투 턴 관련 타입을 모아두는 네임�
             }
 
             CurrentState = TurnState.BattleEnded; // 현재 상태를 전투 종료로 변경
+            Outcome = outcome; // 전투 종료 사유(승리/패배)를 기록
             NotifyTurnChanged(); // UI가 종료 상태를 표시하도록 알림
         }
 

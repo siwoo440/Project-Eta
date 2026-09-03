@@ -68,6 +68,25 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             return true; // 점유 성공
         }
 
+        public int CountPieces(bool isPlayerPiece) // 13일차: 보드 위에 남아 있는 아군 또는 적군 기물 수를 세는 메서드(승리 조건 판정에 사용)
+        {
+            int count = 0; // 세어 나갈 기물 수
+
+            for (int x = 0; x < Width; x++) // 보드 가로 방향으로 순회
+            {
+                for (int y = 0; y < Height; y++) // 보드 세로 방향으로 순회
+                {
+                    var piece = _tiles[x, y].OccupyingPiece; // 이 칸의 점유 기물 조회
+                    if (piece != null && piece.IsPlayerPiece == isPlayerPiece) // 기물이 있고 찾는 진영과 일치하면
+                    {
+                        count++; // 개수 증가
+                    }
+                }
+            }
+
+            return count; // 최종 개수 반환
+        }
+
         public void ClearArea(Vector2Int anchor, Vector2Int size) // TryOccupyArea로 점유했던 영역을 비우는 메서드
         {
             for (int x = 0; x < size.x; x++) // 영역 가로 방향으로 순회

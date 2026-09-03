@@ -1,6 +1,7 @@
 using NUnit.Framework; // [Test], Assert 등을 사용하기 위한 네임스페이스
-using UnityEngine; // Vector2Int를 사용하기 위한 네임스페이스
+using UnityEngine; // ScriptableObject, Vector2Int를 사용하기 위한 네임스페이스
 using ProjectEta.Board; // BoardState를 사용하기 위한 네임스페이스
+using ProjectEta.Pieces; // PieceDefinition, PieceRuntimeState를 사용하기 위한 네임스페이스
 
 namespace ProjectEta.Tests.EditMode // 테스트 코드를 모아두는 네임스페이스
 {
@@ -44,6 +45,20 @@ namespace ProjectEta.Tests.EditMode // 테스트 코드를 모아두는 네임�
                     }
                 }
             }
+        }
+
+        [Test] // 13일차: 보드 위 아군/적군 기물 수를 정확히 세는지 확인하는 테스트
+        public void CountPieces_ReturnsExactCountPerSide()
+        {
+            var board = new BoardState(); // 테스트용 보드 생성
+            var definition = ScriptableObject.CreateInstance<PieceDefinition>(); // 테스트용 임시 기물 정의 생성
+
+            board.GetTile(new Vector2Int(4, 1)).OccupyingPiece = new PieceRuntimeState(definition, new Vector2Int(4, 1), isPlayerPiece: true); // 아군 기물 1 배치
+            board.GetTile(new Vector2Int(3, 1)).OccupyingPiece = new PieceRuntimeState(definition, new Vector2Int(3, 1), isPlayerPiece: true); // 아군 기물 2 배치
+            board.GetTile(new Vector2Int(4, 8)).OccupyingPiece = new PieceRuntimeState(definition, new Vector2Int(4, 8), isPlayerPiece: false); // 적군 기물 1 배치
+
+            Assert.AreEqual(2, board.CountPieces(isPlayerPiece: true)); // 아군 기물이 정확히 2개여야 함
+            Assert.AreEqual(1, board.CountPieces(isPlayerPiece: false)); // 적군 기물이 정확히 1개여야 함
         }
     }
 }

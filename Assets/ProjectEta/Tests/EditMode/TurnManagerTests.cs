@@ -50,7 +50,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
         public void EndBattle_BlocksFurtherTurnProgress()
         {
             var turnManager = new TurnManager(); // 새 턴 매니저 생성
-            turnManager.EndBattle(); // 전투 종료 처리
+            turnManager.EndBattle(); // 전투 종료 처리(기본값 Defeat)
 
             bool playerResult = turnManager.TryCompletePlayerAction(); // 종료 후 플레이어 행동을 시도
             bool enemyResult = turnManager.CompleteEnemyTurn(); // 종료 후 적 턴 완료를 시도
@@ -59,6 +59,39 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
             Assert.That(playerResult, Is.False); // 종료 후 플레이어 행동은 실패해야 함
             Assert.That(enemyResult, Is.False); // 종료 후 적 턴 진행도 실패해야 함
             Assert.That(turnManager.CanPlayerAct, Is.False); // 종료 상태에서는 플레이어 행동이 불가능해야 함
+        }
+
+        [Test] // 13일차: EndBattle에 전달한 결과(승리/패배)가 그대로 기록되는지 검증
+        public void EndBattle_RecordsGivenOutcome()
+        {
+            var victoryManager = new TurnManager(); // 승리 시나리오용 턴 매니저
+            victoryManager.EndBattle(BattleOutcome.Victory); // 승리로 전투 종료
+
+            var defeatManager = new TurnManager(); // 패배 시나리오용 턴 매니저
+            defeatManager.EndBattle(BattleOutcome.Defeat); // 패배로 전투 종료
+
+            Assert.That(victoryManager.Outcome, Is.EqualTo(BattleOutcome.Victory)); // 승리 결과가 정확히 기록돼야 함
+            Assert.That(defeatManager.Outcome, Is.EqualTo(BattleOutcome.Defeat)); // 패배 결과가 정확히 기록돼야 함
+        }
+
+        [Test] // 13일차: 기본 EndBattle() 호출은 기존 호출부와의 호환을 위해 패배로 기록되는지 검증
+        public void EndBattle_WithNoArguments_DefaultsToDefeat()
+        {
+            var turnManager = new TurnManager(); // 새 턴 매니저 생성
+            turnManager.EndBattle(); // 인자 없이 전투 종료 처리
+
+            Assert.That(turnManager.Outcome, Is.EqualTo(BattleOutcome.Defeat)); // 기본값이 패배여야 함
+        }
+
+        [Test] // 13일차: 이미 종료된 전투는 다시 EndBattle을 호출해도 결과가 바뀌지 않는지 검증
+        public void EndBattle_DoesNotOverwriteOutcome_WhenAlreadyEnded()
+        {
+            var turnManager = new TurnManager(); // 새 턴 매니저 생성
+            turnManager.EndBattle(BattleOutcome.Victory); // 먼저 승리로 종료
+
+            turnManager.EndBattle(BattleOutcome.Defeat); // 이미 끝난 전투를 다시 패배로 종료 시도
+
+            Assert.That(turnManager.Outcome, Is.EqualTo(BattleOutcome.Victory)); // 처음 기록된 승리 결과가 그대로 유지돼야 함
         }
     }
 }

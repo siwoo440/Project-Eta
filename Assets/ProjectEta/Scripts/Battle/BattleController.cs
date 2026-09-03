@@ -12,6 +12,8 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
     {
         [SerializeField] private int _startingKingHp = 3; // 새 테스트 런의 시작 킹 체력
         [SerializeField] private float _dummyEnemyTurnDelay = 0.5f; // 10일차 더미 적 턴이 유지되는 테스트 시간
+        [SerializeField] private int _turnLimitTestValue = 30; // 13일차: 라운드 턴 제한 테스트 값(기획서 [테스트 값] 기준)
+        [SerializeField] private Vector2Int _testEnemySpawnPosition = new Vector2Int(4, 8); // 13일차: 승리 조건 테스트용 적이 배치될 좌표(적 영역 안)
         [SerializeField] private BoardView _boardView; // 실제 RunState.Board를 표시할 보드 뷰
         [SerializeField] private BoardInputController _boardInputController; // 실제 RunState를 변경할 입력 컨트롤러
 
@@ -54,6 +56,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
                 if (_boardInputController != null) // 입력 컨트롤러가 정상 연결됐으면
                 {
                     _boardInputController.EnsurePrototypeStartingHand(); // 기존 테스트용 King/Pawn을 실제 RunState.Hand에 넣음
+                    _boardInputController.SpawnTestEnemyPawn(_testEnemySpawnPosition); // 13일차: 전투·승리 조건을 바로 테스트할 수 있도록 적 기물 1기를 직접 배치(정식 적 배치는 이후 단계)
                 }
             }
             else // 외부 상태가 이미 있으면
@@ -107,7 +110,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
             return true; // 정상적으로 플레이어 행동을 완료했음을 반환
         }
 
-        public void EndBattle() // 승리·패배 시스템이 완성됐을 때 호출할 전투 종료 진입점
+        public void EndBattle(BattleOutcome outcome = BattleOutcome.Defeat) // 전투를 종료하는 진입점(13일차: 승리/패배 구분 추가, 기본값은 기존 호출부와의 호환을 위한 패배)
         {
             if (_dummyEnemyTurnCoroutine != null) // 진행 중인 더미 적 턴이 있다면
             {
@@ -115,7 +118,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
                 _dummyEnemyTurnCoroutine = null; // 코루틴 참조 초기화
             }
 
-            _turnManager?.EndBattle(); // 턴 상태를 전투 종료로 변경
+            _turnManager?.EndBattle(outcome); // 턴 상태를 전투 종료로 변경하고 결과를 기록
         }
 
         private void ResolveReferences() // 인스펙터 연결이 없어도 현재 Battle 씬에서 필요한 컴포넌트를 자동 탐색하는 메서드
@@ -174,21 +177,33 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
             Debug.Log($"Battle state bound: Board={_boardView.IsBound}, Hand={_runState.Hand.Hand.Count}장, KingHP={_runState.KingHp}, Turn={_turnManager.TurnNumber}/{_turnManager.CurrentState}"); // 연결 결과를 개발용 로그로 확인
         }
 
-        private void HandleAttackResolved(CombatResult result) // 12일차: 전투 판정 결과를 받아 킹이 맞았을 때 RunState.KingHp와 패배를 처리하는 메서드
+        private void HandleAttackResolved(CombatResult result) // 전투 판정 결과를 받아 킹 HP·패배(12일차)와 적 전멸 승리(13일차)를 처리하는 메서드
         {
             var defender = result.Defender; // 이번 공격을 받은 기물
-            if (!defender.IsPlayerPiece || defender.Definition.MovementType != PieceMovementType.King) // 아군 킹이 아니면
+
+            if (defender.IsPlayerPiece && defender.Definition.MovementType == PieceMovementType.King) // 아군 킹이 공격받았으면
             {
-                return; // 킹 HP와 무관한 공격이므로 처리하지 않음
+                _runState.KingHp = defender.CurrentHp; // 보드 위 킹 기물의 실제 체력을 RunState.KingHp에 동기화
+                Debug.Log($"킹 피격: 남은 KingHP={_runState.KingHp}"); // 킹 피격 결과를 콘솔에 출력
+
+                if (_runState.IsDefeated) // 킹 체력이 0 이하가 됐으면
+                {
+                    Debug.Log("킹 HP 0 - 런 패배, 전투를 종료합니다."); // 패배 사유를 콘솔에 출력
+                    EndBattle(BattleOutcome.Defeat); // 턴 진행을 멈추고 패배로 전투 종료
+                    return; // 같은 판정에서 승리 조건까지 확인할 필요 없으므로 종료
+                }
             }
 
-            _runState.KingHp = defender.CurrentHp; // 보드 위 킹 기물의 실제 체력을 RunState.KingHp에 동기화
-            Debug.Log($"킹 피격: 남은 KingHP={_runState.KingHp}"); // 킹 피격 결과를 콘솔에 출력
-
-            if (_runState.IsDefeated) // 킹 체력이 0 이하가 됐으면
+            if (result.DefenderDied && !defender.IsPlayerPiece) // 13일차: 이번 공격으로 적 기물이 사망했으면
             {
-                Debug.Log("킹 HP 0 - 런 패배, 전투를 종료합니다."); // 패배 사유를 콘솔에 출력
-                EndBattle(); // 턴 진행을 멈추고 전투 종료 상태로 전환
+                int remainingEnemies = _runState.Board.CountPieces(isPlayerPiece: false); // 보드 위에 남은 적 기물 수 확인
+                Debug.Log($"적 처치: 남은 적 {remainingEnemies}기"); // 처치 결과를 콘솔에 출력
+
+                if (remainingEnemies == 0) // 남은 적이 없으면
+                {
+                    Debug.Log("적 전멸 - 승리, 전투를 종료합니다."); // 승리 사유를 콘솔에 출력
+                    EndBattle(BattleOutcome.Victory); // 턴 진행을 멈추고 승리로 전투 종료
+                }
             }
         }
 
@@ -217,6 +232,12 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
             if (_turnManager != null && _turnManager.CompleteEnemyTurn()) // 아직 적 턴이면 다음 플레이어 턴으로 정상 전환
             {
                 Debug.Log($"Turn {_turnManager.TurnNumber}: Enemy turn completed -> PlayerTurn"); // 다음 턴 시작 결과 출력
+
+                if (_turnManager.TurnNumber > _turnLimitTestValue) // 13일차: 새 턴 번호가 라운드 턴 제한(테스트 값)을 넘겼으면
+                {
+                    Debug.Log($"라운드 턴 제한({_turnLimitTestValue}턴) 초과 - 패배, 전투를 종료합니다."); // 패배 사유를 콘솔에 출력
+                    EndBattle(BattleOutcome.Defeat); // 턴 진행을 멈추고 패배로 전투 종료
+                }
             }
 
             _dummyEnemyTurnCoroutine = null; // 코루틴 완료 후 참조 초기화

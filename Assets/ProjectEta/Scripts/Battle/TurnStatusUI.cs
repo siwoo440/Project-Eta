@@ -108,7 +108,7 @@ namespace ProjectEta.Battle // 전투 턴 관련 타입을 모아두는 네임�
             _label.text = BuildLabel(state, turnNumber); // 상태와 턴 번호를 조합한 최종 문구를 화면에 적용
         }
 
-        private static string BuildLabel(TurnState state, int turnNumber) // TurnState를 한국어 UI 문구로 변환하는 메서드
+        private string BuildLabel(TurnState state, int turnNumber) // TurnState를 한국어 UI 문구로 변환하는 메서드(13일차: 전투 종료 시 승리/패배 구분을 위해 인스턴스 메서드로 변경)
         {
             switch (state) // 현재 턴 상태에 따라 표시 문구를 선택
             {
@@ -116,8 +116,12 @@ namespace ProjectEta.Battle // 전투 턴 관련 타입을 모아두는 네임�
                     return $"{turnNumber}턴 · 플레이어 턴"; // 플레이어 턴 문구 반환
                 case TurnState.EnemyTurn: // 적 턴이면
                     return $"{turnNumber}턴 · 적 턴"; // 적 턴 문구 반환
-                default: // 전투 종료 상태라면
-                    return $"{turnNumber}턴 · 전투 종료"; // 전투 종료 문구 반환
+                case TurnState.BattleEnded when _turnManager?.Outcome == BattleOutcome.Victory: // 전투가 승리로 끝났으면
+                    return $"{turnNumber}턴 · 승리"; // 승리 문구 반환
+                case TurnState.BattleEnded when _turnManager?.Outcome == BattleOutcome.Defeat: // 전투가 패배로 끝났으면
+                    return $"{turnNumber}턴 · 패배"; // 패배 문구 반환
+                default: // 결과가 아직 없는 전투 종료 상태라면
+                    return $"{turnNumber}턴 · 전투 종료"; // 기존 일반 전투 종료 문구 반환
             }
         }
 
