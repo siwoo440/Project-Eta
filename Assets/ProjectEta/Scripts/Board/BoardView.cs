@@ -10,6 +10,8 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         [SerializeField] private Color _idleDarkColor = new Color(0.12f, 0.12f, 0.12f); // 체스판 어두운 칸 색상
         [SerializeField] private Color _installableHighlightColor = new Color(0.55f, 0.75f, 1f); // 설치 가능(아군 영역) 강조 색상
         [SerializeField] private Color _blockedHighlightColor = new Color(1f, 0.55f, 0.55f); // 설치 불가(적 영역) 강조 색상
+        [SerializeField] private Color _moveCandidateColor = new Color(0.4f, 0.85f, 0.4f); // 11일차: 이동 가능 칸 강조 색상
+        [SerializeField] private Color _attackCandidateColor = new Color(1f, 0.5f, 0.15f); // 11일차: 공격 가능 칸 강조 색상
         [SerializeField] private Color _gridLineColor = new Color(0.15f, 0.15f, 0.15f); // 칸 경계 격자선 색상
         [SerializeField] private int _gridLineThicknessPx = 3; // 격자선 두께(생성할 텍스처 픽셀 기준)
 
@@ -23,6 +25,10 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         private readonly List<int> _idleDarkTriangles = new List<int>(); // 어두운 칸 서브메시에 속한 삼각형 인덱스 목록
         private readonly List<int> _installableTriangles = new List<int>(); // 설치 가능 강조 서브메시에 속한 삼각형 인덱스 목록
         private readonly List<int> _blockedTriangles = new List<int>(); // 설치 불가 강조 서브메시에 속한 삼각형 인덱스 목록
+        private readonly List<int> _moveCandidateTriangles = new List<int>(); // 11일차: 이동 가능 강조 서브메시에 속한 삼각형 인덱스 목록
+        private readonly List<int> _attackCandidateTriangles = new List<int>(); // 11일차: 공격 가능 강조 서브메시에 속한 삼각형 인덱스 목록
+        private readonly List<Vector2Int> _highlightedMoveCells = new List<Vector2Int>(); // 11일차: 현재 이동 가능으로 강조된 칸 목록
+        private readonly List<Vector2Int> _highlightedAttackCells = new List<Vector2Int>(); // 11일차: 현재 공격 가능으로 강조된 칸 목록
         private Vector2Int? _highlightedCell; // 현재 강조 표시 중인 칸(없으면 null)
 
         private void Awake() // 씬 시작 시 자동 호출되는 초기화 메서드
@@ -68,6 +74,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 return; // 강조하지 않고 종료
             }
 
+            ClearMoveCandidates(); // 11일차: 이동/공격 후보 강조와 동시에 표시되지 않도록 먼저 해제
             ClearHighlight(); // 이전 강조를 먼저 해제
 
             var tileState = _boardState.GetTile(cell); // 강조할 칸의 타일 데이터 조회
@@ -125,6 +132,82 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             ApplySubMeshes(); // 변경된 서브메시 구성을 메시에 반영
         }
 
+        public void HighlightMoveCandidates(IReadOnlyList<Vector2Int> moveTiles, IReadOnlyList<Vector2Int> attackTiles) // 11일차: 선택한 기물의 이동/공격 후보 칸을 한꺼번에 강조하는 메서드
+        {
+            if (_boardState == null) // 아직 실제 보드 상태가 연결되지 않았으면
+            {
+                return; // 강조하지 않고 종료
+            }
+
+            ClearHighlight(); // 기존 단일 칸 선택 강조와 동시에 표시되지 않도록 먼저 해제
+            ClearMoveCandidates(); // 이전 이동/공격 후보 강조를 먼저 해제
+
+            foreach (var cell in moveTiles) // 전달받은 이동 가능 칸을 순회하며
+            {
+                if (!_boardState.IsInsideBoard(cell)) // 보드 밖 좌표면
+                {
+                    continue; // 건너뜀
+                }
+
+                MoveCellTrianglesToHighlightSet(cell, _moveCandidateTriangles); // 이동 가능 강조 서브메시로 이동
+                _highlightedMoveCells.Add(cell); // 강조된 칸 목록에 기록
+            }
+
+            foreach (var cell in attackTiles) // 전달받은 공격 가능 칸을 순회하며
+            {
+                if (!_boardState.IsInsideBoard(cell)) // 보드 밖 좌표면
+                {
+                    continue; // 건너뜀
+                }
+
+                MoveCellTrianglesToHighlightSet(cell, _attackCandidateTriangles); // 공격 가능 강조 서브메시로 이동
+                _highlightedAttackCells.Add(cell); // 강조된 칸 목록에 기록
+            }
+
+            ApplySubMeshes(); // 변경된 서브메시 구성을 메시에 반영
+        }
+
+        public void ClearMoveCandidates() // 11일차: 이동/공격 후보 강조를 모두 해제하고 체스판 원래 색으로 되돌리는 메서드
+        {
+            if (_highlightedMoveCells.Count == 0 && _highlightedAttackCells.Count == 0) // 강조된 후보 칸이 없으면
+            {
+                return; // 할 일이 없으므로 종료
+            }
+
+            RestoreCellTrianglesToIdle(_highlightedMoveCells, _moveCandidateTriangles); // 이동 후보 칸들을 원래 체스판 색으로 복원
+            RestoreCellTrianglesToIdle(_highlightedAttackCells, _attackCandidateTriangles); // 공격 후보 칸들을 원래 체스판 색으로 복원
+            _highlightedMoveCells.Clear(); // 강조 칸 목록 초기화
+            _highlightedAttackCells.Clear(); // 강조 칸 목록 초기화
+            ApplySubMeshes(); // 변경된 서브메시 구성을 메시에 반영
+        }
+
+        private void MoveCellTrianglesToHighlightSet(Vector2Int cell, List<int> targetList) // 한 칸의 삼각형 인덱스를 체스판 색 목록에서 지정한 강조 목록으로 옮기는 메서드
+        {
+            var indices = GetCellTriangleIndices(cell); // 이 칸에 해당하는 삼각형 인덱스 계산
+            var idleList = IsLightSquare(cell) ? _idleLightTriangles : _idleDarkTriangles; // 이 칸이 원래 속했던 체스판 색 목록 선택
+            foreach (var index in indices) // 각 인덱스를 순회하며
+            {
+                idleList.Remove(index); // 원래 속했던 서브메시에서 제거
+            }
+
+            targetList.AddRange(indices); // 대상 강조 서브메시에 추가
+        }
+
+        private void RestoreCellTrianglesToIdle(List<Vector2Int> cells, List<int> sourceList) // 강조됐던 칸들의 삼각형 인덱스를 체스판 원래 색 목록으로 되돌리는 메서드
+        {
+            foreach (var cell in cells) // 강조됐던 각 칸을 순회하며
+            {
+                var indices = GetCellTriangleIndices(cell); // 이 칸에 해당하는 삼각형 인덱스 계산
+                foreach (var index in indices) // 각 인덱스를 순회하며
+                {
+                    sourceList.Remove(index); // 강조 서브메시에서 제거
+                }
+
+                var idleList = IsLightSquare(cell) ? _idleLightTriangles : _idleDarkTriangles; // 되돌아갈 체스판 색 목록 선택
+                idleList.AddRange(indices); // 원래 체스판 색 서브메시로 되돌림
+            }
+        }
+
         private void BuildBoardMesh() // 10x10 칸 전체를 이음매 없는 하나의 메시로 체스판 패턴과 함께 만드는 메서드
         {
             _mesh = new Mesh { name = "BoardMesh" }; // 새 메시 객체 생성
@@ -159,7 +242,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
             _mesh.vertices = vertices; // 계산한 정점을 메시에 반영
             _mesh.uv = uvs; // 계산한 UV를 메시에 반영
-            _mesh.subMeshCount = 4; // 밝은 칸/어두운 칸/설치가능/설치불가 4개 서브메시로 분리
+            _mesh.subMeshCount = 6; // 밝은 칸/어두운 칸/설치가능/설치불가/이동후보/공격후보 6개 서브메시로 분리
             ApplySubMeshes(); // 초기 서브메시 구성을 메시에 반영
 
             _mesh.RecalculateNormals(); // 정점 배치를 바탕으로 법선 자동 계산
@@ -184,7 +267,9 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 CreateBoardMaterial(_idleLightColor, gridTexture), // 서브메시 0: 밝은 칸
                 CreateBoardMaterial(_idleDarkColor, gridTexture), // 서브메시 1: 어두운 칸
                 CreateBoardMaterial(_installableHighlightColor, gridTexture), // 서브메시 2: 설치 가능 강조
-                CreateBoardMaterial(_blockedHighlightColor, gridTexture) // 서브메시 3: 설치 불가 강조
+                CreateBoardMaterial(_blockedHighlightColor, gridTexture), // 서브메시 3: 설치 불가 강조
+                CreateBoardMaterial(_moveCandidateColor, gridTexture), // 서브메시 4: 11일차 이동 가능 강조
+                CreateBoardMaterial(_attackCandidateColor, gridTexture) // 서브메시 5: 11일차 공격 가능 강조
             };
 
             var meshCollider = gameObject.GetComponent<MeshCollider>(); // 이미 추가된 콜라이더가 있는지 조회
@@ -206,6 +291,8 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             _mesh.SetTriangles(_idleDarkTriangles, 1); // 어두운 칸 서브메시 반영
             _mesh.SetTriangles(_installableTriangles, 2); // 설치 가능 강조 서브메시 반영
             _mesh.SetTriangles(_blockedTriangles, 3); // 설치 불가 강조 서브메시 반영
+            _mesh.SetTriangles(_moveCandidateTriangles, 4); // 11일차: 이동 가능 강조 서브메시 반영
+            _mesh.SetTriangles(_attackCandidateTriangles, 5); // 11일차: 공격 가능 강조 서브메시 반영
         }
 
         private static bool IsLightSquare(Vector2Int cell) => (cell.x + cell.y) % 2 == 0; // 좌표 합의 홀짝으로 체스판의 밝은 칸 여부를 판정하는 메서드

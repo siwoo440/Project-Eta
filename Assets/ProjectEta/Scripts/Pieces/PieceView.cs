@@ -13,12 +13,22 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
         public void Initialize(PieceRuntimeState runtimeState, float tileSize) // 외부에서 데이터를 주입해 초기화하는 메서드
         {
             RuntimeState = runtimeState; // 런타임 상태 저장
-            name = $"Piece_{runtimeState.Definition.DisplayName}_{runtimeState.BoardPosition.x}_{runtimeState.BoardPosition.y}"; // 계층창에서 구분되도록 이름 지정
-            transform.localPosition = BoardView.BoardToLocalPosition(runtimeState.BoardPosition, tileSize); // 보드 좌표를 3D 위치로 변환해 배치
+            ApplyBoardPosition(runtimeState.BoardPosition, tileSize); // 계층창 이름과 3D 위치를 현재 좌표에 맞춤
 
             var material = CreatePieceMaterial(runtimeState.IsPlayerPiece ? _playerColor : _enemyColor); // 아군/적군에 따라 머티리얼 생성
             BuildModel(runtimeState.Definition.MovementType, material); // 이동 타입에 맞는 3D 모델 생성
             AttachSelectionCollider(); // 클릭 판정용 콜라이더 부착
+        }
+
+        public void MoveTo(Vector2Int boardPosition, float tileSize) // 11일차: 실제 이동 실행 시 화면 위치를 새 좌표로 갱신하는 메서드
+        {
+            ApplyBoardPosition(boardPosition, tileSize); // 이름과 3D 위치를 새 좌표 기준으로 갱신(모델은 그대로 재사용)
+        }
+
+        private void ApplyBoardPosition(Vector2Int boardPosition, float tileSize) // 좌표에 맞춰 이름과 3D 위치를 함께 갱신하는 공통 메서드
+        {
+            name = $"Piece_{RuntimeState.Definition.DisplayName}_{boardPosition.x}_{boardPosition.y}"; // 계층창에서 구분되도록 이름 지정
+            transform.localPosition = BoardView.BoardToLocalPosition(boardPosition, tileSize); // 보드 좌표를 3D 위치로 변환해 배치
         }
 
         private void BuildModel(PieceMovementType movementType, Material material) // 이동 타입별 모델을 만드는 메서드

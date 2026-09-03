@@ -1,3 +1,4 @@
+using System.Collections.Generic; // Dictionary를 사용하기 위한 네임스페이스
 using System.Linq; // IReadOnlyList에 대한 Contains 확장 메서드를 사용하기 위한 네임스페이스
 using UnityEngine; // MonoBehaviour, Physics 등을 사용하기 위한 네임스페이스
 using UnityEngine.InputSystem; // 새 Input System(Mouse, Keyboard)을 사용하기 위한 네임스페이스
@@ -20,12 +21,17 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         public TurnManager TurnManager => _turnManager; // 현재 입력 권한을 판단하는 실제 턴 매니저
         public bool IsBound => _runState != null && _handState != null && _boardView != null && _boardView.IsBound; // 전투 상태 연결 여부
         public bool CanReceivePlayerInput => IsBound && (_turnManager == null || _turnManager.CanPlayerInput); // 현재 플레이어가 보드/카드 입력을 할 수 있는지 여부
+        public PieceRuntimeState SelectedPiece => _selectedPiece; // 11일차: 현재 선택된(이동 대기 중인) 기물
+        public MovementResult PendingMovement => _pendingMovement; // 11일차: 현재 선택된 기물의 이동/공격 후보 칸
 
         private RunState _runState; // BattleController가 소유하는 실제 런 상태
         private HandState _handState; // RunState.Hand 참조. 별도 테스트 손패를 만들지 않음
         private TurnManager _turnManager; // BattleController가 소유하는 실제 턴 매니저
         private Vector2Int? _selectedCell; // 현재 선택된 칸 좌표(없으면 null)
         private PieceDefinition _selectedCard; // 현재 선택된 카드
+        private PieceRuntimeState _selectedPiece; // 11일차: 현재 이동을 위해 선택된 보드 위 기물
+        private MovementResult _pendingMovement; // 11일차: 선택된 기물의 이동/공격 후보 칸 계산 결과
+        private readonly Dictionary<PieceRuntimeState, PieceView> _pieceViews = new Dictionary<PieceRuntimeState, PieceView>(); // 11일차: 기물 데이터와 화면 표시를 연결해 이동 시 같이 옮기기 위한 목록
 
         private void Awake() // 씬 시작 시 자동 호출되는 초기화 메서드
         {
@@ -67,6 +73,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             _handState = runState.Hand; // 별도 HandState 대신 RunState.Hand를 그대로 사용
             _turnManager = turnManager; // 전달받은 턴 매니저를 입력 권한 기준으로 사용
             _selectedCard = null; // 상태 교체 시 이전 카드 선택 제거
+            DeselectPiece(); // 11일차: 상태 교체 시 이전 기물 선택도 제거
             DeselectCurrentCell(); // 이전 선택 칸 강조 제거
         }
 
@@ -104,6 +111,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             if (!CanReceivePlayerInput) // 현재 적 턴 또는 전투 종료 상태라면
             {
                 _selectedCard = null; // 적 턴으로 넘어갈 때 남아 있던 카드 선택을 해제
+                DeselectPiece(); // 11일차: 남아 있던 기물 선택과 이동/공격 후보 강조도 해제
                 DeselectCurrentCell(); // 보드 선택 강조도 해제
                 return; // 플레이어의 모든 보드·카드 입력을 차단
             }
@@ -147,13 +155,14 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 return; // 선택하지 않고 종료
             }
 
+            DeselectPiece(); // 11일차: 카드를 선택하면 진행 중이던 기물 이동 선택은 취소
             _selectedCard = _selectedCard == card ? null : card; // 이미 선택된 카드면 해제, 아니면 새로 선택
             Debug.Log(_selectedCard != null // 선택 결과에 따라
                 ? $"카드 선택: {_selectedCard.DisplayName} (배치할 아군 칸을 클릭하세요)" // 선택됐을 때 안내 로그
                 : "카드 선택 해제"); // 해제됐을 때 안내 로그
         }
 
-        private void HandleBoardClick() // 보드 클릭 시 칸 선택 또는 카드 소환을 처리하는 메서드
+        private void HandleBoardClick() // 보드 클릭 시 카드 소환·기물 선택·기물 이동을 처리하는 메서드
         {
             if (!CanReceivePlayerInput || _camera == null || _boardView == null) // 플레이어 입력 권한·카메라·보드 뷰 중 하나라도 없으면
             {
@@ -168,15 +177,124 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 if (_selectedCard != null) // 선택된 카드가 있으면
                 {
                     TryPlayCardOnCell(cell); // 그 칸에 카드 소환 시도
+                    return; // 처리 완료 후 종료
                 }
-                else // 선택된 카드가 없으면
+
+                if (_selectedPiece != null) // 11일차: 이동을 위해 선택해 둔 기물이 있으면
                 {
-                    SelectCell(cell); // 일반 칸 선택 처리
+                    if (_pendingMovement != null && _pendingMovement.MoveTiles.Contains(cell)) // 클릭한 칸이 이동 후보면
+                    {
+                        ExecuteMove(cell); // 실제 이동 실행
+                        return; // 처리 완료 후 종료
+                    }
+
+                    if (_pendingMovement != null && _pendingMovement.AttackTiles.Contains(cell)) // 클릭한 칸이 공격 후보면
+                    {
+                        HandleAttackCandidateClick(cell); // 공격 후보 클릭 처리(현재는 안내만)
+                        return; // 처리 완료 후 종료
+                    }
                 }
+
+                if (TrySelectPieceAt(cell)) // 클릭한 칸에 내 기물이 있으면 선택 처리
+                {
+                    return; // 처리 완료 후 종료
+                }
+
+                DeselectPiece(); // 후보 칸도 내 기물도 아닌 칸을 클릭했으면 기물 선택 해제
+                SelectCell(cell); // 기존 일반 칸 선택(디버그용) 처리
                 return; // 처리 완료 후 종료
             }
 
+            DeselectPiece(); // 11일차: 보드 밖을 클릭했으면 기물 선택도 해제
             DeselectCurrentCell(); // 보드 밖을 클릭했으면 선택 해제
+        }
+
+        public bool TrySelectPieceAt(Vector2Int cell) // 11일차: 지정한 칸에 내 기물이 있으면 선택하고 이동/공격 후보를 계산하는 진입점(테스트에서도 재사용)
+        {
+            if (!CanReceivePlayerInput) // 적 턴이거나 아직 상태가 연결되지 않았으면
+            {
+                return false; // 선택할 수 없으므로 실패 반환
+            }
+
+            var tileState = _boardView.GetTile(cell); // 클릭한 칸의 실제 타일 데이터 조회
+            if (tileState == null || !tileState.IsOccupied || !tileState.OccupyingPiece.IsPlayerPiece) // 유효 칸이 아니거나 내 기물이 없으면
+            {
+                return false; // 선택하지 않고 실패 반환
+            }
+
+            if (_selectedPiece == tileState.OccupyingPiece) // 이미 선택된 같은 기물을 다시 클릭했으면
+            {
+                DeselectPiece(); // 선택 해제(토글 동작)
+                return true; // 선택 관련 클릭으로 처리했음을 반환
+            }
+
+            _selectedPiece = tileState.OccupyingPiece; // 새로 선택한 기물 저장
+            _pendingMovement = MovementResolver.GetReachableTiles( // 이 기물의 이동/공격 후보 칸 계산
+                _selectedPiece.Definition.MovementType,
+                _selectedPiece.BoardPosition,
+                _selectedPiece.IsPlayerPiece,
+                _boardView.State);
+            _boardView.HighlightMoveCandidates(_pendingMovement.MoveTiles, _pendingMovement.AttackTiles); // 계산한 후보 칸을 화면에 강조 표시
+
+            Debug.Log($"{_selectedPiece.Definition.DisplayName} 선택: 이동 {_pendingMovement.MoveTiles.Count}칸 / 공격 {_pendingMovement.AttackTiles.Count}칸"); // 선택 결과를 콘솔에 출력
+            return true; // 정상적으로 선택했음을 반환
+        }
+
+        public bool TryMoveSelectedPieceTo(Vector2Int destination) // 11일차: 현재 선택된 기물을 지정한 후보 칸으로 이동시키는 진입점(테스트에서도 재사용)
+        {
+            if (!CanReceivePlayerInput || _selectedPiece == null || _pendingMovement == null || !_pendingMovement.MoveTiles.Contains(destination)) // 적 턴이거나 선택된 기물이 없거나 유효한 이동 후보가 아니면
+            {
+                return false; // 이동을 실행하지 않고 실패 반환
+            }
+
+            ExecuteMove(destination); // 실제 이동 실행
+            return true; // 정상적으로 이동했음을 반환
+        }
+
+        private void ExecuteMove(Vector2Int destination) // 선택된 기물을 실제로 이동시키고 턴을 소비하는 메서드
+        {
+            var originTile = _boardView.GetTile(_selectedPiece.BoardPosition); // 기물이 원래 있던 칸의 타일 데이터 조회
+            var destinationTile = _boardView.GetTile(destination); // 이동할 칸의 타일 데이터 조회
+            if (originTile == null || destinationTile == null) // 둘 중 하나라도 유효하지 않으면
+            {
+                DeselectPiece(); // 안전하게 선택만 해제
+                return; // 이동을 실행하지 않고 종료
+            }
+
+            originTile.OccupyingPiece = null; // 원래 칸의 점유 상태 해제
+            _selectedPiece.BoardPosition = destination; // 기물의 실제 좌표 갱신
+            destinationTile.OccupyingPiece = _selectedPiece; // 새 칸의 점유 상태 갱신
+
+            if (_pieceViews.TryGetValue(_selectedPiece, out var pieceView) && pieceView != null) // 이 기물과 연결된 화면 표시가 있으면
+            {
+                pieceView.MoveTo(destination, _boardView.TileSize); // 화면 위치도 같은 좌표로 이동
+            }
+
+            Debug.Log($"{_selectedPiece.Definition.DisplayName} 이동: {originTile.BoardPosition} -> {destination}"); // 이동 결과를 콘솔에 출력
+
+            DeselectPiece(); // 이동을 마쳤으니 선택과 후보 강조 해제
+            _turnManager?.TryCompletePlayerAction(); // 이동을 플레이어의 이번 턴 행동으로 처리해 적 턴으로 전환
+        }
+
+        private void HandleAttackCandidateClick(Vector2Int target) // 11일차: 공격 후보 칸 클릭을 처리하는 메서드(실제 전투 판정은 아직 없음)
+        {
+            Debug.Log($"공격 대상 클릭: {target} — HP·ATK 전투 판정은 아직 구현되지 않았습니다."); // 다음 일차에서 실제 전투로 이어질 자리 표시
+            DeselectPiece(); // 우선 선택만 해제하고 턴은 소비하지 않음(전투 미구현)
+        }
+
+        private void DeselectPiece() // 11일차: 현재 선택된 기물과 이동/공격 후보 강조를 해제하는 메서드
+        {
+            if (_selectedPiece == null) // 선택된 기물이 없으면
+            {
+                return; // 할 일이 없으므로 종료
+            }
+
+            _selectedPiece = null; // 선택 상태 초기화
+            _pendingMovement = null; // 후보 계산 결과 초기화
+            if (_boardView != null) // 보드 뷰가 존재하면
+            {
+                _boardView.ClearMoveCandidates(); // 화면의 이동/공격 후보 강조 해제
+            }
         }
 
         private void TryPlayCardOnCell(Vector2Int cell) // 선택된 카드를 지정한 칸에 소환 시도하는 메서드
@@ -205,6 +323,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             pieceObject.transform.SetParent(_boardView.transform, false); // 보드 뷰의 자식으로 배치(로컬 좌표 유지)
             var pieceView = pieceObject.AddComponent<PieceView>(); // 기물 뷰 컴포넌트 부착
             pieceView.Initialize(runtimeState, _boardView.TileSize); // 기물 뷰에 실제 런타임 데이터와 타일 크기 주입
+            _pieceViews[runtimeState] = pieceView; // 11일차: 이후 이동 시 같은 화면 오브젝트를 옮길 수 있도록 등록
 
             _handState.RemoveCard(_selectedCard); // 실제 RunState.Hand에서 사용한 카드 제거
 
@@ -262,6 +381,17 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             GUI.Label(new Rect(10, 10, 420, 20), BuildCardLabel("[1] King", _kingDefinition)); // 킹 카드 상태 라벨 표시
             GUI.Label(new Rect(10, 30, 420, 20), BuildCardLabel("[2] Pawn", _pawnDefinition)); // 폰 카드 상태 라벨 표시
             GUI.Label(new Rect(10, 50, 520, 20), $"RunState.Hand: {_handState.Hand.Count}장 / 입력: {(CanReceivePlayerInput ? "가능" : "적 턴 잠김")}"); // 실제 손패와 턴 입력 권한 안내
+            GUI.Label(new Rect(10, 70, 520, 20), BuildSelectedPieceLabel()); // 11일차: 현재 선택된 기물과 이동/공격 후보 수 안내
+        }
+
+        private string BuildSelectedPieceLabel() // 11일차: 선택된 기물 상태를 안내 문구로 만드는 메서드
+        {
+            if (_selectedPiece == null || _pendingMovement == null) // 선택된 기물이 없으면
+            {
+                return "선택된 기물 없음 / 내 기물을 클릭해 이동 후보를 확인하세요."; // 안내 문구 반환
+            }
+
+            return $"선택: {_selectedPiece.Definition.DisplayName} @ {_selectedPiece.BoardPosition} / 이동 {_pendingMovement.MoveTiles.Count}칸, 공격 {_pendingMovement.AttackTiles.Count}칸"; // 선택 상태 안내 문구 반환
         }
 
         private string BuildCardLabel(string keyLabel, PieceDefinition card) // 카드 상태 텍스트를 만드는 메서드
