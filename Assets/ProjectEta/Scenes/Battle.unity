@@ -486,6 +486,9 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier:
   _camera: {fileID: 0}
+  _boardView: {fileID: 190000003}
+  _kingDefinition: {fileID: 11400000, guid: 4d5e6f708192a3b4c5d6e7f8091a2b3c, type: 2}
+  _pawnDefinition: {fileID: 11400000, guid: 5e6f708192a3b4c5d6e7f8091a2b3c4d, type: 2}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
