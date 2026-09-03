@@ -28,7 +28,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
         {
             var context = CreateBoundContext(); // 공통 초기화 수행
 
-            try
+            try // 테스트 중 예외가 나도 아래 finally에서 오브젝트를 정리하도록 보장하는 블록
             {
                 var kingDefinition = ScriptableObject.CreateInstance<PieceDefinition>(); // 테스트용 킹 정의(기본 이동 타입 King)
                 var origin = new Vector2Int(4, 1); // 아군 영역 안의 시작 좌표
@@ -41,7 +41,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
                 Assert.AreSame(piece, context.Input.SelectedPiece); // 선택된 기물이 정확히 이 인스턴스여야 함
                 CollectionAssert.Contains(context.Input.PendingMovement.MoveTiles, new Vector2Int(4, 2)); // 킹의 8방향 1칸 후보 중 하나가 포함돼야 함
             }
-            finally
+            finally // 성공/실패와 무관하게 테스트 오브젝트를 정리하는 블록
             {
                 Object.DestroyImmediate(context.Root); // 테스트 오브젝트 정리
             }
@@ -52,7 +52,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
         {
             var context = CreateBoundContext(); // 공통 초기화 수행
 
-            try
+            try // 테스트 중 예외가 나도 아래 finally에서 오브젝트를 정리하도록 보장하는 블록
             {
                 var kingDefinition = ScriptableObject.CreateInstance<PieceDefinition>(); // 테스트용 킹 정의
                 var origin = new Vector2Int(4, 1); // 시작 좌표
@@ -70,7 +70,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
                 Assert.IsNull(context.Input.SelectedPiece); // 이동 후에는 선택이 해제돼야 함
                 Assert.AreEqual(TurnState.EnemyTurn, context.TurnManager.CurrentState); // 이동이 플레이어 행동으로 처리돼 적 턴으로 전환돼야 함
             }
-            finally
+            finally // 성공/실패와 무관하게 테스트 오브젝트를 정리하는 블록
             {
                 Object.DestroyImmediate(context.Root); // 테스트 오브젝트 정리
             }
@@ -81,7 +81,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
         {
             var context = CreateBoundContext(); // 공통 초기화 수행
 
-            try
+            try // 테스트 중 예외가 나도 아래 finally에서 오브젝트를 정리하도록 보장하는 블록
             {
                 var kingDefinition = ScriptableObject.CreateInstance<PieceDefinition>(); // 테스트용 킹 정의
                 var origin = new Vector2Int(4, 1); // 시작 좌표
@@ -96,7 +96,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
                 Assert.AreEqual(origin, piece.BoardPosition); // 좌표는 그대로 유지돼야 함
                 Assert.AreEqual(TurnState.PlayerTurn, context.TurnManager.CurrentState); // 턴도 넘어가지 않아야 함
             }
-            finally
+            finally // 성공/실패와 무관하게 테스트 오브젝트를 정리하는 블록
             {
                 Object.DestroyImmediate(context.Root); // 테스트 오브젝트 정리
             }
@@ -107,7 +107,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
         {
             var context = CreateBoundContext(); // 공통 초기화 수행
 
-            try
+            try // 테스트 중 예외가 나도 아래 finally에서 오브젝트를 정리하도록 보장하는 블록
             {
                 var kingDefinition = ScriptableObject.CreateInstance<PieceDefinition>(); // 테스트용 킹 정의
                 var origin = new Vector2Int(4, 1); // 시작 좌표
@@ -120,7 +120,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
                 Assert.IsFalse(selected); // 적 턴에는 CanReceivePlayerInput이 false가 되어 선택 자체가 거부돼야 함
                 Assert.IsNull(context.Input.SelectedPiece); // 선택 상태도 비어 있어야 함
             }
-            finally
+            finally // 성공/실패와 무관하게 테스트 오브젝트를 정리하는 블록
             {
                 Object.DestroyImmediate(context.Root); // 테스트 오브젝트 정리
             }

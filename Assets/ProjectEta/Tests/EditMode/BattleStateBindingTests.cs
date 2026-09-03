@@ -12,7 +12,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
         {
             var boardObject = new GameObject("BoardViewTest"); // 테스트용 오브젝트 생성
 
-            try
+            try // 테스트 중 예외가 나도 아래 finally에서 오브젝트를 정리하도록 보장하는 블록
             {
                 var boardView = boardObject.AddComponent<BoardView>(); // 보드 뷰 생성
                 var runState = new RunState(3); // 실제 전투에서 사용할 것과 같은 런 상태 생성
@@ -21,7 +21,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
 
                 Assert.That(boardView.State, Is.SameAs(runState.Board)); // 복사본이 아니라 정확히 같은 BoardState 인스턴스여야 함
             }
-            finally
+            finally // 성공/실패와 무관하게 테스트 오브젝트를 정리하는 블록
             {
                 Object.DestroyImmediate(boardObject); // 테스트 오브젝트 정리
             }
@@ -32,7 +32,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
         {
             var boardObject = new GameObject("BoardInputTest"); // 테스트용 오브젝트 생성
 
-            try
+            try // 테스트 중 예외가 나도 아래 finally에서 오브젝트를 정리하도록 보장하는 블록
             {
                 var boardView = boardObject.AddComponent<BoardView>(); // 같은 오브젝트에 보드 뷰 추가
                 var boardInput = boardObject.AddComponent<BoardInputController>(); // 입력 컨트롤러 추가
@@ -45,7 +45,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
                 Assert.That(boardInput.HandState, Is.SameAs(runState.Hand)); // 입력 손패가 정확히 RunState.Hand여야 함
                 Assert.That(boardView.State, Is.SameAs(runState.Board)); // 입력과 화면이 같은 런의 보드를 바라봐야 함
             }
-            finally
+            finally // 성공/실패와 무관하게 테스트 오브젝트를 정리하는 블록
             {
                 Object.DestroyImmediate(boardObject); // 테스트 오브젝트 정리
             }

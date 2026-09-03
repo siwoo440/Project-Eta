@@ -412,11 +412,6 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             SelectCell(cell); // 소환한 칸을 선택 상태로 표시
         }
 
-        public PieceRuntimeState SpawnTestEnemyPawn(Vector2Int position) // 13일차: BoardInputController에 이미 연결된 테스트용 폰 정의로 적을 배치하는 편의 진입점
-        {
-            return SpawnTestEnemy(_pawnDefinition, position); // 인스펙터에 연결된 폰 정의를 그대로 적 기물로 재사용(정의 자체는 아군/적군 구분이 없음)
-        }
-
         public void SpawnTestEnemySquad(Vector2Int anchor) // 14일차: 슬라이더 이동까지 실전 테스트할 수 있도록 폰+룩 2종으로 적을 배치하는 편의 진입점
         {
             SpawnTestEnemy(_pawnDefinition, anchor); // 기준 좌표에 폰 배치

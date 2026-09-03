@@ -107,7 +107,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             if (_boardState == null) // 보드 상태가 교체되는 도중이면
             {
                 _highlightedCell = null; // 내부 강조 상태만 비우고 종료
-                return;
+                return; // 메시 접근 없이 안전하게 종료
             }
 
             var cell = _highlightedCell.Value; // 강조 해제할 칸 좌표

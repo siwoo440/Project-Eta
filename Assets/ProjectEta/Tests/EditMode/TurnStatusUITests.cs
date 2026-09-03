@@ -11,7 +11,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
         {
             var host = new GameObject("TurnStatusUITest"); // 테스트용 UI 호스트 오브젝트 생성
 
-            try
+            try // 테스트 중 예외가 나도 아래 finally에서 오브젝트를 정리하도록 보장하는 블록
             {
                 var turnManager = new TurnManager(); // 테스트용 턴 매니저 생성
                 var ui = host.AddComponent<TurnStatusUI>(); // 턴 상태 UI 컴포넌트 추가
@@ -24,7 +24,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
                 Assert.That(ui.DisplayText, Does.Contain("1턴")); // 1턴 텍스트가 표시되는지 검증
                 Assert.That(ui.DisplayText, Does.Contain("플레이어")); // 플레이어 턴 텍스트가 표시되는지 검증
             }
-            finally
+            finally // 성공/실패와 무관하게 테스트 오브젝트를 정리하는 블록
             {
                 Object.DestroyImmediate(host); // 테스트 오브젝트와 자식 Canvas를 정리
             }
@@ -35,7 +35,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
         {
             var host = new GameObject("TurnStatusUIRefreshTest"); // 테스트용 UI 호스트 오브젝트 생성
 
-            try
+            try // 테스트 중 예외가 나도 아래 finally에서 오브젝트를 정리하도록 보장하는 블록
             {
                 var turnManager = new TurnManager(); // 테스트용 턴 매니저 생성
                 var ui = host.AddComponent<TurnStatusUI>(); // 턴 상태 UI 컴포넌트 추가
@@ -48,7 +48,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
                 Assert.That(ui.DisplayText, Does.Contain("2턴")); // 다음 턴 번호가 UI에 반영되는지 검증
                 Assert.That(ui.DisplayText, Does.Contain("플레이어")); // 다음 플레이어 턴 문구가 표시되는지 검증
             }
-            finally
+            finally // 성공/실패와 무관하게 테스트 오브젝트를 정리하는 블록
             {
                 Object.DestroyImmediate(host); // 테스트 오브젝트와 자식 Canvas를 정리
             }

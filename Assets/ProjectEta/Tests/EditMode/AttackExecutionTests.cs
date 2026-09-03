@@ -43,7 +43,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
         {
             var context = CreateBoundContext(); // 공통 초기화 수행
 
-            try
+            try // 테스트 중 예외가 나도 아래 finally에서 오브젝트를 정리하도록 보장하는 블록
             {
                 var enemyDefinition = CreateDefinition(baseHp: 3, baseAtk: 1); // 테스트용 적 정의
                 var position = new Vector2Int(4, 8); // 적 영역 안의 좌표
@@ -55,7 +55,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
                 Assert.AreSame(enemy, context.RunState.Board.GetTile(position).OccupyingPiece); // 보드의 해당 칸이 이 기물로 점유돼야 함
                 Assert.AreEqual(1, context.RunState.Board.CountPieces(isPlayerPiece: false)); // 적군 수가 정확히 1이어야 함
             }
-            finally
+            finally // 성공/실패와 무관하게 테스트 오브젝트를 정리하는 블록
             {
                 Object.DestroyImmediate(context.Root); // 테스트 오브젝트 정리
             }
@@ -66,7 +66,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
         {
             var context = CreateBoundContext(); // 공통 초기화 수행
 
-            try
+            try // 테스트 중 예외가 나도 아래 finally에서 오브젝트를 정리하도록 보장하는 블록
             {
                 var position = new Vector2Int(4, 8); // 배치를 시도할 좌표
                 var blockerDefinition = CreateDefinition(baseHp: 1, baseAtk: 0); // 미리 칸을 막아둘 기물 정의
@@ -79,7 +79,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
                 Assert.IsNull(result); // 소환이 거부돼 null을 반환해야 함
                 Assert.AreSame(blocker, context.RunState.Board.GetTile(position).OccupyingPiece); // 기존 점유 기물이 그대로 유지돼야 함
             }
-            finally
+            finally // 성공/실패와 무관하게 테스트 오브젝트를 정리하는 블록
             {
                 Object.DestroyImmediate(context.Root); // 테스트 오브젝트 정리
             }
@@ -90,7 +90,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
         {
             var context = CreateBoundContext(); // 공통 초기화 수행
 
-            try
+            try // 테스트 중 예외가 나도 아래 finally에서 오브젝트를 정리하도록 보장하는 블록
             {
                 var pawnDefinition = CreateDefinition(baseHp: 1, baseAtk: 1); // 테스트용 폰 정의
                 var rookDefinition = CreateDefinition(baseHp: 3, baseAtk: 2); // 테스트용 룩 정의
@@ -104,7 +104,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
                 Assert.AreSame(rookDefinition, context.RunState.Board.GetTile(anchor + new Vector2Int(2, 0)).OccupyingPiece.Definition); // 오른쪽 2칸에 룩이 배치돼야 함
                 Assert.AreEqual(2, context.RunState.Board.CountPieces(isPlayerPiece: false)); // 적군 수가 정확히 2여야 함
             }
-            finally
+            finally // 성공/실패와 무관하게 테스트 오브젝트를 정리하는 블록
             {
                 Object.DestroyImmediate(context.Root); // 테스트 오브젝트 정리
             }
@@ -115,7 +115,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
         {
             var context = CreateBoundContext(); // 공통 초기화 수행
 
-            try
+            try // 테스트 중 예외가 나도 아래 finally에서 오브젝트를 정리하도록 보장하는 블록
             {
                 var attackerDefinition = CreateDefinition(baseHp: 3, baseAtk: 2); // ATK 2인 공격자 정의
                 var defenderDefinition = CreateDefinition(baseHp: 5, baseAtk: 0); // HP 5(2 피해로는 죽지 않음)인 대상 정의
@@ -142,7 +142,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
                 Assert.IsFalse(observedResult.DefenderDied); // 이벤트로 전달된 결과도 비치명이어야 함
                 Assert.AreEqual(TurnState.EnemyTurn, context.TurnManager.CurrentState); // 공격도 플레이어 행동으로 처리돼 적 턴으로 전환돼야 함
             }
-            finally
+            finally // 성공/실패와 무관하게 테스트 오브젝트를 정리하는 블록
             {
                 Object.DestroyImmediate(context.Root); // 테스트 오브젝트 정리
             }
@@ -153,7 +153,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
         {
             var context = CreateBoundContext(); // 공통 초기화 수행
 
-            try
+            try // 테스트 중 예외가 나도 아래 finally에서 오브젝트를 정리하도록 보장하는 블록
             {
                 var attackerDefinition = CreateDefinition(baseHp: 3, baseAtk: 2); // ATK 2인 공격자 정의
                 var defenderDefinition = CreateDefinition(baseHp: 1, baseAtk: 0); // HP 1(2 피해면 사망)인 대상 정의
@@ -175,7 +175,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
                 Assert.AreSame(attacker, context.RunState.Board.GetTile(defenderOrigin).OccupyingPiece); // 대상 칸은 이제 공격자가 점유해야 함
                 Assert.AreEqual(TurnState.EnemyTurn, context.TurnManager.CurrentState); // 공격도 플레이어 행동으로 처리돼 적 턴으로 전환돼야 함
             }
-            finally
+            finally // 성공/실패와 무관하게 테스트 오브젝트를 정리하는 블록
             {
                 Object.DestroyImmediate(context.Root); // 테스트 오브젝트 정리
             }
@@ -186,7 +186,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
         {
             var context = CreateBoundContext(); // 공통 초기화 수행
 
-            try
+            try // 테스트 중 예외가 나도 아래 finally에서 오브젝트를 정리하도록 보장하는 블록
             {
                 var attackerDefinition = CreateDefinition(baseHp: 3, baseAtk: 5); // 확실히 처치 가능한 ATK 5 공격자
                 var defenderDefinition = CreateDefinition(baseHp: 1, baseAtk: 0); // HP 1인 유일한 적 정의
@@ -203,7 +203,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
 
                 Assert.AreEqual(0, context.RunState.Board.CountPieces(isPlayerPiece: false)); // 남은 적이 0이어야 승리 판정이 정상 동작함
             }
-            finally
+            finally // 성공/실패와 무관하게 테스트 오브젝트를 정리하는 블록
             {
                 Object.DestroyImmediate(context.Root); // 테스트 오브젝트 정리
             }
@@ -214,7 +214,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
         {
             var context = CreateBoundContext(); // 공통 초기화 수행
 
-            try
+            try // 테스트 중 예외가 나도 아래 finally에서 오브젝트를 정리하도록 보장하는 블록
             {
                 var attackerDefinition = CreateDefinition(baseHp: 3, baseAtk: 2); // ATK 2인 공격자 정의
                 var attackerOrigin = new Vector2Int(4, 1); // 공격자 시작 좌표
@@ -230,7 +230,7 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
                 Assert.AreEqual(attackerOrigin, attacker.BoardPosition); // 공격자 위치가 그대로 유지돼야 함
                 Assert.AreEqual(TurnState.PlayerTurn, context.TurnManager.CurrentState); // 턴도 넘어가지 않아야 함
             }
-            finally
+            finally // 성공/실패와 무관하게 테스트 오브젝트를 정리하는 블록
             {
                 Object.DestroyImmediate(context.Root); // 테스트 오브젝트 정리
             }
