@@ -824,7 +824,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             _selectedCard = null; // 일반 턴에 기물을 선택하면 손패 소환 선택을 취소해 행동 종류를 명확히 분리
             _selectedPiece = tileState.OccupyingPiece; // 새로 선택한 기물 저장
             _pendingMovement = MovementResolver.GetReachableTiles( // 이 기물의 이동/공격 후보 칸 계산
-                _selectedPiece.Definition.MovementType, // 기물 이동 유형 전달
+                _selectedPiece.Definition, // 23일차: PieceDefinition의 데이터 기반 이동 규칙을 우선 사용
                 _selectedPiece.BoardPosition, // 현재 좌표 전달
                 _selectedPiece.IsPlayerPiece, // 아군 여부 전달
                 _boardView.State); // 실제 보드 상태 전달

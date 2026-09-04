@@ -20,10 +20,10 @@ namespace ProjectEta.Cards // 카드 관련 타입을 모아두는 네임스페�
             _ownedCardPool.Add(card); // 보유 카드 풀에 카드 추가
         }
 
-        public bool RemoveFromOwnedPool(PieceDefinition card) // 22일차: 합성으로 소모된 재료처럼 보유 카드 자체가 사라질 때 보유 풀에서 1장을 빼는 메서드
+        public bool RemoveFromOwnedPool(PieceDefinition card) // 합성으로 소모된 재료처럼 보유 카드 자체가 사라질 때 보유 풀에서 1장을 빼는 메서드
         {
             if (card == null) return false; // null 카드는 처리하지 않음
-            return _ownedCardPool.Remove(card); // 동일 카드가 여러 장이면 1장만 제거(성공 여부 반환)
+            return _ownedCardPool.Remove(card); // 동일 카드가 여러 장이면 1장만 제거하고 성공 여부 반환
         }
 
         public void AddToDrawPile(PieceDefinition card) // 저장 복원 등에서 드로우 더미를 직접 복원하기 위한 메서드
@@ -32,10 +32,11 @@ namespace ProjectEta.Cards // 카드 관련 타입을 모아두는 네임스페�
             _drawPile.Add(card); // 현재 순서를 유지하며 드로우 더미 끝에 카드 추가
         }
 
-        public void MoveToDeadPile(PieceDefinition card) // 죽은 카드 더미에 카드를 추가하는 메서드
+        public void MoveToDeadPile(PieceDefinition card) // 전투 사망 카드를 보유 풀에서 죽은 카드 더미로 실제 이동시키는 메서드
         {
             if (card == null) return; // null 카드는 상태에 넣지 않고 종료
-            _deadCardPile.Add(card); // 죽은 카드 더미에 카드 추가
+            _ownedCardPool.Remove(card); // 보유 풀에 같은 카드가 있으면 정확히 1장 제거해 라운드 종료 시 중복 복귀를 방지
+            _deadCardPile.Add(card); // 죽은 카드 더미에는 사망한 실제 한 장을 추가
         }
 
         public void RebuildDrawPileFromOwnedPool(Random random = null) // 보유 카드 풀 전체를 복사한 뒤 셔플해 새 드로우 더미를 만드는 메서드
@@ -107,18 +108,18 @@ namespace ProjectEta.Cards // 카드 관련 타입을 모아두는 네임스페�
             return true; // 특정 카드 이동 성공 반환
         }
 
-        public void ReturnDeadPileToOwnedPool() // 죽은 카드 더미를 보유 카드 풀로 되돌리는 기존 메서드
+        public void ReturnDeadPileToOwnedPool() // 죽은 카드 더미를 보유 카드 풀로 되돌리는 메서드
         {
-            _ownedCardPool.AddRange(_deadCardPile); // 죽은 카드 더미의 카드를 보유 풀에 합침
+            _ownedCardPool.AddRange(_deadCardPile); // 사망 중 보유 풀에서 빠져 있던 카드를 다시 보유 풀에 합침
             _deadCardPile.Clear(); // 죽은 카드 더미 비우기
         }
 
-        public bool DiscardToBottom(PieceDefinition card, HandState hand) // 19일차: 배치 턴 손패 정리를 위해 손패 카드를 드로우 더미 맨 아래로 보내는 메서드
+        public bool DiscardToBottom(PieceDefinition card, HandState hand) // 배치 턴 손패 정리를 위해 손패 카드를 드로우 더미 맨 아래로 보내는 메서드
         {
             if (card == null || hand == null) return false; // 필수 정보가 없으면 실패
             if (!hand.RemoveCard(card)) return false; // 실제 손패에 없는 카드는 처리하지 않음
 
-            _drawPile.Insert(0, card); // TryDraw가 맨 위로 쓰는 마지막 인덱스와 반대인 0번 인덱스를 "맨 아래"로 사용해 삽입
+            _drawPile.Insert(0, card); // TryDraw가 맨 위로 쓰는 마지막 인덱스와 반대인 0번 인덱스를 맨 아래로 사용해 삽입
             return true; // 정리 성공 반환
         }
     }
