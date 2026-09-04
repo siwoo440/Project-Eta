@@ -18,7 +18,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
                 target.CurrentHp -= finalAmount; // HP 차감(0 미만 방지는 PieceRuntimeState.CurrentHp가 처리)
             }
 
-            hooks?.RaiseAfterDamage(target, finalAmount); // 실제 적용된 최종 피해량을 통지
+            hooks?.RaiseAfterDamage(target, source, finalAmount); // 실제 적용된 최종 피해량을 발생원과 함께 통지(32일차: 전투 피해와 상태 이상 틱 피해를 구분할 수 있게 발생원 포함)
             return finalAmount; // 호출부가 실제 적용량을 알 수 있도록 반환
         }
     }

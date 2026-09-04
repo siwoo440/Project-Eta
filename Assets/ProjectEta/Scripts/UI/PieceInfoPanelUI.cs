@@ -62,7 +62,7 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             Refresh(piece); // 새로 선택된(또는 null) 기물 기준으로 패널을 다시 그림
         }
 
-        private void HandleAfterDamage(PieceRuntimeState target, int appliedAmount) // 29일차 훅: 누군가 피해를 입을 때마다 호출되는 이벤트 처리 메서드
+        private void HandleAfterDamage(PieceRuntimeState target, PieceRuntimeState source, int appliedAmount) // 29일차 훅: 누군가 피해를 입을 때마다 호출되는 이벤트 처리 메서드(32일차: 발생원 매개변수 추가)
         {
             if (_displayedPiece != null && target == _displayedPiece) // 지금 패널에 표시 중인 바로 그 기물이 피해를 입었으면
             {

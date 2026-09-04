@@ -251,11 +251,11 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             var buttonObject = new GameObject("FusionToggleButton", typeof(RectTransform), typeof(Image), typeof(Button)); // 버튼 GameObject 생성
             buttonObject.transform.SetParent(parent, false); // Canvas 자식으로 연결
             var rect = buttonObject.GetComponent<RectTransform>(); // RectTransform 확보
-            rect.anchorMin = new Vector2(0.5f, 0f); // 하단 중앙 앵커
-            rect.anchorMax = new Vector2(0.5f, 0f); // 하단 중앙 앵커
-            rect.pivot = new Vector2(0.5f, 0f); // 하단 중앙 피벗
-            rect.anchoredPosition = new Vector2(0f, 300f); // 손패 위쪽에 겹치지 않게 띄운 위치
-            rect.sizeDelta = new Vector2(150f, 56f); // 버튼 크기 지정
+            rect.anchorMin = new Vector2(1f, 0f); // 32일차: 우하단 앵커로 변경(죽은 카드 버튼과 같은 기준)
+            rect.anchorMax = new Vector2(1f, 0f); // 우하단 앵커
+            rect.pivot = new Vector2(0.5f, 0f); // 죽은 카드 버튼 중심에 맞춰 가로 중앙 정렬되도록 중앙 피벗 사용
+            rect.anchoredPosition = new Vector2(-99f, 106f); // 32일차: 죽은 카드 버튼(우하단, 폭 150, 중심 -99) 바로 위에 배치
+            rect.sizeDelta = new Vector2(225f, 56f); // 32일차: 기존 150 대비 가로 1.5배로 확장
 
             var image = buttonObject.GetComponent<Image>(); // 버튼 배경 Image 확보
             image.color = new Color(0.5f, 0.32f, 0.12f, 0.92f); // 합성을 연상시키는 청동색 배경 적용

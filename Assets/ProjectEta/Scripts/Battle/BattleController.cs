@@ -26,6 +26,8 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
         public DeckPanelUI DeckPanelUI => _deckPanelUI; // 19일차: 좌하단 뽑을 카드 덱 / 우하단 죽은 카드 덱 버튼·패널 UI
         public FusionPanelUI FusionPanelUI => _fusionPanelUI; // 21일차: 손패 위쪽 합성 버튼·재료 2장·결과 미리보기 패널 UI
         public PieceInfoPanelUI PieceInfoPanelUI => _pieceInfoPanelUI; // 31일차: 우측 상단 선택 기물 정보 패널 UI
+        public CombatLogUI CombatLogUI => _combatLogUI; // 32일차: 뽑을 카드 버튼 위 전투 로그 패널 UI
+        public DeploymentTurnBannerUI DeploymentTurnBannerUI => _deploymentTurnBannerUI; // 32일차: 화면 중앙 배치 턴 알림 배너 UI
 
         private RunState _runState; // 보드·손패·덱·킹 체력 등을 소유하는 단일 상태 객체
         private TurnManager _turnManager; // 플레이어/적/배치 턴과 행동 권한을 관리하는 상태 객체
@@ -35,6 +37,8 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
         private DeckPanelUI _deckPanelUI; // 19일차: 드로우 더미·죽은 카드 더미를 보여주는 좌우 버튼과 목록 패널
         private FusionPanelUI _fusionPanelUI; // 21일차: 합성 버튼과 재료·결과 미리보기 패널
         private PieceInfoPanelUI _pieceInfoPanelUI; // 31일차: 우측 상단 선택 기물 정보 패널
+        private CombatLogUI _combatLogUI; // 32일차: 뽑을 카드 버튼 위 채팅창형 전투 로그 패널
+        private DeploymentTurnBannerUI _deploymentTurnBannerUI; // 32일차: 화면 중앙 배치 턴 알림 배너
         private Coroutine _dummyEnemyTurnCoroutine; // 임시 적 턴 자동 종료 코루틴 참조
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // 씬 로드가 끝난 직후 자동 실행
@@ -187,6 +191,18 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
 
             _turnStatusUI.Bind(_turnManager); // 현재 턴 매니저를 UI에 연결해 즉시 현재 턴 표시
 
+            if (_deploymentTurnBannerUI == null) // 32일차: 배치 턴 알림 배너 컴포넌트가 없다면
+            {
+                _deploymentTurnBannerUI = GetComponent<DeploymentTurnBannerUI>(); // 같은 오브젝트에 기존 컴포넌트가 있는지 먼저 확인
+            }
+
+            if (_deploymentTurnBannerUI == null) // 기존 컴포넌트도 없다면
+            {
+                _deploymentTurnBannerUI = gameObject.AddComponent<DeploymentTurnBannerUI>(); // 화면 중앙 배너 Canvas를 생성할 컴포넌트 자동 추가
+            }
+
+            _deploymentTurnBannerUI.Bind(_turnManager); // 현재 턴 매니저를 배너에 연결해 배치 턴 전환을 감지하게 함
+
             _turnManager.TurnChanged -= HandleTurnChanged; // 중복 구독을 막기 위해 먼저 해제
             _turnManager.TurnChanged += HandleTurnChanged; // 실제 이동·공격·배치 완료 등 모든 턴 변경을 직접 구독
         }
@@ -249,6 +265,21 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
             }
 
             _pieceInfoPanelUI.Bind(_boardInputController); // 실제 기물 선택·피해·턴 이벤트를 UI에 연결
+        }
+
+        private void EnsureCombatLogUI() // 32일차: 뽑을 카드 버튼 위 전투 로그 Canvas를 한 번만 준비하고 실제 BoardInputController에 연결하는 메서드
+        {
+            if (_combatLogUI == null) // 아직 CombatLogUI 참조가 없다면
+            {
+                _combatLogUI = GetComponent<CombatLogUI>(); // 같은 BattleController GameObject에 기존 컴포넌트가 있는지 먼저 확인
+            }
+
+            if (_combatLogUI == null) // 기존 컴포넌트도 없다면
+            {
+                _combatLogUI = gameObject.AddComponent<CombatLogUI>(); // 전투 로그 Canvas를 런타임 생성할 컴포넌트 추가
+            }
+
+            _combatLogUI.Bind(_boardInputController); // 실제 이동·공격·피해·턴 훅을 UI에 연결
         }
 
         private void HandleTurnChanged(TurnState state, int turnNumber) // 모든 턴 전환에 대한 전투 컨트롤러 후속 처리를 수행하는 메서드
@@ -315,6 +346,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
             EnsureDeckPanelUI(); // 19일차: 좌하단 뽑을 카드 덱 / 우하단 죽은 카드 덱 버튼·패널을 실제 상태에 연결
             EnsureFusionPanelUI(); // 21일차: 합성 버튼·재료·결과 미리보기 패널을 실제 상태에 연결
             EnsurePieceInfoPanelUI(); // 31일차: 우측 상단 선택 기물 정보 패널을 실제 상태에 연결
+            EnsureCombatLogUI(); // 32일차: 뽑을 카드 버튼 위 전투 로그 패널을 실제 상태에 연결
 
             _boardInputController.AttackResolved -= HandleAttackResolved; // 재연결 시 중복 구독을 막기 위해 먼저 해제
             _boardInputController.AttackResolved += HandleAttackResolved; // 전투 결과를 받아 킹 HP와 승패를 판정
