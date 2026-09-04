@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e9f1a6ef25279a438a7a43e588c0bae, type: 3}
+  m_Name: Cannon
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
+  _pieceId: cannon
+  _displayName: 캐논
+  _category: 2
+  _grade: 2
+  _movementType: 9
+  _roleTags: 130
+  _movementRules:
+  - _kind: 6
+    _vectors:
+    - {x: 1, y: 0}
+    - {x: -1, y: 0}
+    - {x: 0, y: 1}
+    - {x: 0, y: -1}
+    _maxSteps: 10
+    _condition: 0
+  _baseHp: 3
+  _baseAtk: 3
+  _occupancySize: {x: 1, y: 1}
+  _cardArtwork: {fileID: 0}
+  _description: 이동은 상하좌우 1칸. 공격은 같은 행·열의 첫 적을 룩처럼 원거리 공격하며 처치해도 대상 칸으로 이동하지 않음. HP·ATK는 초기 프로토타입 임시값.

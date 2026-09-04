@@ -885,10 +885,19 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
             if (result.DefenderDied) // 대상이 사망했으면
             {
-                RemovePieceFromBoard(defender); // 대상을 보드와 화면에서 제거
-                MovePieceTo(attacker, target); // 공격자가 대상 칸을 점유
-                Debug.Log($"{attacker.Definition.DisplayName}이(가) {target} 칸을 점유했습니다."); // 점유 결과 출력
+                RemovePieceFromBoard(defender); // 사망한 대상을 보드와 화면에서 제거
+
+                if (CombatMovementPolicy.ShouldOccupyDefenderTileAfterKill(attacker.Definition)) // 근접 계열이면 처치한 칸을 점유
+                {
+                    MovePieceTo(attacker, target); // 공격자를 대상 칸으로 이동
+                    Debug.Log($"{attacker.Definition.DisplayName}이(가) {target} 칸을 점유했습니다."); // 근접 처치 결과 출력
+                }
+                else // Cannon 같은 원거리 기물이면
+                {
+                    Debug.Log($"{attacker.Definition.DisplayName} 원거리 처치 — 원위치를 유지합니다."); // 원거리 공격자는 이동하지 않음
+                }
             }
+
             else // 대상이 생존했으면
             {
                 Debug.Log($"{defender.Definition.DisplayName} 생존 — {attacker.Definition.DisplayName}은(는) 원위치를 유지합니다."); // 비치명 결과 출력
