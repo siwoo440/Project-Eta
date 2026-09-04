@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
   _pieceId: king
   _displayName: 킹
-  _category: 0
+  _category: 2
   _grade: 1
   _movementType: 0
   _roleTags: 0

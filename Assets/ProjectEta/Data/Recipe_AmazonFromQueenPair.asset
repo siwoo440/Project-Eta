@@ -10,11 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 75cc2415635c30648838849e5fc25c27, type: 3}
-  m_Name: Recipe_AmazonFromQueenKnight
+  m_Name: Recipe_AmazonFromQueenPair
   m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Fusion.FusionRecipe
-  _recipeId: amazon_from_queen_knight
+  _recipeId: amazon_from_queen_pair
   _materialA: {fileID: 11400000, guid: 370e340ecb2455f699c27cafac2faa9e, type: 2}
-  _materialB: {fileID: 11400000, guid: 16bb80c3c0bd3c14588eeac3e19a0875, type: 2}
+  _materialB: {fileID: 11400000, guid: 370e340ecb2455f699c27cafac2faa9e, type: 2}
   _result: {fileID: 11400000, guid: f34fdc0e48fa84d2b470e889e59d513a, type: 2}
-  _isHiddenRecipe: 0
+  _isHiddenRecipe: 1
   _ignoresGradeStepRule: 0

@@ -4,6 +4,7 @@ using UnityEngine.InputSystem.UI; // 새 Input System 기반 UI 포인터 입력
 using UnityEngine.UI; // Canvas, Button, Image, Text 등을 사용하기 위한 네임스페이스
 using ProjectEta.Battle; // TurnState를 사용하기 위한 네임스페이스
 using ProjectEta.Board; // BoardInputController를 사용하기 위한 네임스페이스
+using ProjectEta.Fusion; // 22일차: FusionRecipe, FusionBlockReason, FusionRuleValidator를 사용하기 위한 네임스페이스
 using ProjectEta.Pieces; // PieceDefinition, PieceMovementType을 사용하기 위한 네임스페이스
 
 namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 네임스페이스
@@ -19,22 +20,30 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
         private GameObject _panelRoot; // 재료·결과 미리보기 패널 루트(토글에 따라 켜고 끔, 전체 화면을 가리지 않음)
         private Image _materialSlotAImage; // 재료 A 슬롯 초상화 이미지
         private Text _materialSlotAText; // 재료 A 슬롯 이름 텍스트
+        private Button _materialSlotAButton; // 22일차: 재료 A 슬롯을 눌러 해당 재료만 빼기 위한 버튼
+        private Text _materialSlotAHintText; // 22일차: 재료 A 슬롯 하단의 "클릭하여 제외" 안내 텍스트
         private Image _materialSlotBImage; // 재료 B 슬롯 초상화 이미지
         private Text _materialSlotBText; // 재료 B 슬롯 이름 텍스트
+        private Button _materialSlotBButton; // 22일차: 재료 B 슬롯을 눌러 해당 재료만 빼기 위한 버튼
+        private Text _materialSlotBHintText; // 22일차: 재료 B 슬롯 하단의 "클릭하여 제외" 안내 텍스트
         private Image _resultSlotImage; // 결과 슬롯 초상화 이미지
         private Text _resultNameText; // 결과 슬롯 이름 텍스트
         private Text _resultStatsText; // 결과 슬롯 등급·ATK·HP 텍스트
         private Text _resultDescriptionText; // 결과 슬롯 설명 텍스트
+        private Text _discoveryNoticeText; // 22일차: 숨김 합성식을 처음 발견했을 때 잠깐 뜨는 알림 텍스트
+        private float _discoveryNoticeRemainingSeconds; // 22일차: 발견 알림이 화면에 남아 있을 시간(초)
         private Button _confirmButton; // "합성" 확정 버튼
         private Text _confirmButtonText; // 확정 버튼 문구(재료 부족/합성 가능/불가 안내 겸용)
         private EventSystem _createdEventSystem; // 이 컴포넌트가 직접 만든 EventSystem 참조
         private static Font _runtimeFont; // 한글 표시용 런타임 폰트 캐시
+        private const float DiscoveryNoticeDurationSeconds = 3f; // 22일차: 숨김 합성식 발견 알림을 유지할 시간(초)
 
         public void Bind(BoardInputController boardInput) // 실제 BoardInputController와 합성 상태를 이 UI에 연결하는 메서드
         {
             if (_boardInput != null) // 이전에 연결된 입력 컨트롤러가 있었다면
             {
                 _boardInput.FusionSelectionChanged -= HandleFusionSelectionChanged; // 이전 합성 선택 이벤트 구독 해제
+                _boardInput.HiddenRecipeDiscovered -= HandleHiddenRecipeDiscovered; // 22일차: 이전 숨김 레시피 발견 이벤트 구독 해제
                 if (_boardInput.TurnManager != null) _boardInput.TurnManager.TurnChanged -= HandleTurnChanged; // 이전 턴 이벤트 구독 해제
             }
 
@@ -44,6 +53,7 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             if (_boardInput != null) // 정상 입력 컨트롤러가 전달됐다면
             {
                 _boardInput.FusionSelectionChanged += HandleFusionSelectionChanged; // 합성 모드·재료 선택 변화 이벤트 구독
+                _boardInput.HiddenRecipeDiscovered += HandleHiddenRecipeDiscovered; // 22일차: 숨김 합성식을 처음 발견했을 때 알림을 띄우기 위해 구독
                 if (_boardInput.TurnManager != null) _boardInput.TurnManager.TurnChanged += HandleTurnChanged; // 배치 턴 진입/이탈에 따라 버튼 상태 갱신
             }
 
@@ -54,6 +64,27 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
         private void HandleFusionSelectionChanged() // 합성 모드 On/Off, 재료 선택, 결과 미리보기가 바뀔 때 호출되는 이벤트 처리 메서드
         {
             RefreshPanel(); // 패널 표시 상태와 내용을 실제 상태에 맞춰 다시 그림
+        }
+
+        private void HandleHiddenRecipeDiscovered(FusionRecipe recipe) // 22일차: 숨김 합성식을 이번 합성으로 처음 발견했을 때 호출되는 이벤트 처리 메서드
+        {
+            if (recipe == null || recipe.Result == null || _discoveryNoticeText == null) return; // 표시할 정보나 텍스트가 없으면 종료
+
+            string resultName = string.IsNullOrEmpty(recipe.Result.DisplayName) ? recipe.Result.name : recipe.Result.DisplayName; // 결과 기물 표시 이름 결정
+            _discoveryNoticeText.text = $"숨김 합성식 발견! {resultName}"; // 발견 알림 문구 표시
+            _discoveryNoticeRemainingSeconds = DiscoveryNoticeDurationSeconds; // 일정 시간 뒤 자동으로 사라지도록 남은 시간 설정
+            _discoveryNoticeText.gameObject.SetActive(true); // 알림 텍스트를 화면에 표시
+        }
+
+        private void Update() // 22일차: 숨김 합성식 발견 알림을 일정 시간 뒤 자동으로 지우기 위한 매 프레임 처리
+        {
+            if (_discoveryNoticeRemainingSeconds <= 0f) return; // 표시 중인 알림이 없으면 처리하지 않음
+
+            _discoveryNoticeRemainingSeconds -= Time.unscaledDeltaTime; // 타임스케일과 무관하게 남은 표시 시간을 감소
+            if (_discoveryNoticeRemainingSeconds > 0f) return; // 아직 표시 시간이 남아 있으면 유지
+
+            _discoveryNoticeRemainingSeconds = 0f; // 남은 시간을 0으로 고정
+            if (_discoveryNoticeText != null) _discoveryNoticeText.gameObject.SetActive(false); // 알림 텍스트를 숨김
         }
 
         private void HandleTurnChanged(TurnState state, int turnNumber) // 턴 상태가 바뀔 때 호출되는 이벤트 처리 메서드
@@ -67,6 +98,16 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             bool nextActive = !_boardInput.IsFusionModeActive; // 현재 상태의 반대로 전환 시도
             _boardInput.SetFusionModeActive(nextActive); // 실제 합성 모드 전환 요청(배치 턴이 아니면 내부에서 거부됨)
             RefreshPanel(); // 전환 결과를 즉시 화면에 반영
+        }
+
+        private void OnMaterialSlotClicked(int slotIndex) // 22일차: 재료 슬롯을 눌러 그 자리의 재료 1장만 선택 해제하는 메서드
+        {
+            if (_boardInput == null) return; // 연결이 없으면 처리하지 않음
+
+            var materials = _boardInput.FusionMaterials; // 현재 선택된 재료 목록 참조
+            if (slotIndex < 0 || slotIndex >= materials.Count) return; // 빈 슬롯을 눌렀으면 아무 것도 하지 않음
+
+            _boardInput.TryToggleFusionMaterial(materials[slotIndex]); // 이미 선택된 재료이므로 같은 토글 진입점이 선택 해제로 동작(손패 카드 강조도 같은 이벤트로 함께 갱신됨)
         }
 
         private void OnConfirmButtonClicked() // "합성" 확정 버튼을 눌렀을 때 호출되는 메서드
@@ -92,26 +133,79 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             var materials = _boardInput.FusionMaterials; // 현재 선택된 재료 목록 참조
             RefreshMaterialSlot(_materialSlotAImage, _materialSlotAText, materials.Count > 0 ? materials[0] : null); // 재료 A 슬롯 갱신
             RefreshMaterialSlot(_materialSlotBImage, _materialSlotBText, materials.Count > 1 ? materials[1] : null); // 재료 B 슬롯 갱신
+            RefreshSlotRemoveAffordance(_materialSlotAButton, _materialSlotAHintText, materials.Count > 0); // 22일차: 재료 A 슬롯의 클릭 제외 가능 여부 갱신
+            RefreshSlotRemoveAffordance(_materialSlotBButton, _materialSlotBHintText, materials.Count > 1); // 22일차: 재료 B 슬롯의 클릭 제외 가능 여부 갱신
 
             var recipe = _boardInput.CurrentFusionRecipe; // 현재 매칭된 합성 결과 레시피 확인
-            if (recipe != null && recipe.Result != null) // 유효한 결과가 있으면
-            {
-                RefreshMaterialSlot(_resultSlotImage, null, recipe.Result); // 결과 슬롯에 실제 결과 초상화 표시
-                _resultNameText.text = string.IsNullOrEmpty(recipe.Result.DisplayName) ? recipe.Result.name : recipe.Result.DisplayName; // 결과 이름 표시
-                _resultStatsText.text = $"{Mathf.Max(1, (int)recipe.Result.Grade)}성 · ATK {recipe.Result.BaseAtk} · HP {recipe.Result.BaseHp}"; // 등급·공격력·체력 요약 표시
-                _resultDescriptionText.text = recipe.Result.Description; // 결과 설명 표시
-                _confirmButton.interactable = true; // 합성 확정 가능
-                _confirmButtonText.text = "합성"; // 정상 확정 문구
-            }
-            else // 결과가 아직 없으면
+            if (recipe == null || recipe.Result == null) // 규칙 위반이나 조합 없음으로 결과가 없으면
             {
                 RefreshMaterialSlot(_resultSlotImage, null, null); // 결과 슬롯을 빈 상태로 표시
-                _resultNameText.text = materials.Count < 2 ? "재료를 선택하세요" : "합성 가능한 조합이 아닙니다"; // 현재 상태에 맞는 안내 문구
+                _resultNameText.text = FusionRuleValidator.DescribeBlockReason(_boardInput.CurrentFusionBlockReason); // 22일차: 등급 위반·수량 제한 등 구체적인 차단 사유를 그대로 안내
                 _resultStatsText.text = ""; // 스탯 요약은 비움
                 _resultDescriptionText.text = ""; // 설명도 비움
                 _confirmButton.interactable = false; // 합성 확정 불가
                 _confirmButtonText.text = "합성"; // 버튼 문구는 유지(비활성화로 안내)
+                return; // 결과 표시를 끝냄
             }
+
+            if (_boardInput.IsCurrentFusionRecipeUndiscovered) // 22일차: 아직 발견하지 못한 숨김 합성식이면
+            {
+                RefreshMaterialSlot(_resultSlotImage, null, null); // 결과 초상화를 가림
+                _resultNameText.text = "???"; // 결과 이름을 가림
+                _resultStatsText.text = "숨김 합성식"; // 숨김 합성식임을 안내
+                _resultDescriptionText.text = "합성해야 결과를 확인할 수 있습니다."; // 발견 전 안내 문구
+                _confirmButton.interactable = true; // 결과는 가리되 합성 자체는 가능
+                _confirmButtonText.text = "합성"; // 정상 확정 문구
+                return; // 결과 상세는 표시하지 않고 끝냄
+            }
+
+            RefreshMaterialSlot(_resultSlotImage, null, recipe.Result); // 결과 슬롯에 실제 결과 초상화 표시
+            _resultNameText.text = string.IsNullOrEmpty(recipe.Result.DisplayName) ? recipe.Result.name : recipe.Result.DisplayName; // 결과 이름 표시
+            _resultStatsText.text = BuildResultComparisonText(recipe, materials); // 22일차: 재료 대비 등급·ATK·HP 증감을 함께 표시
+            _resultDescriptionText.text = recipe.Result.Description; // 결과 설명 표시
+            _confirmButton.interactable = true; // 합성 확정 가능
+            _confirmButtonText.text = "합성"; // 정상 확정 문구
+        }
+
+        private static string BuildResultComparisonText(FusionRecipe recipe, System.Collections.Generic.IReadOnlyList<PieceDefinition> materials) // 22일차: 결과 스탯을 재료 최고치와 비교해 증감까지 보여주는 문구를 만드는 메서드
+        {
+            var result = recipe.Result; // 비교 기준이 되는 합성 결과
+            int resultGrade = Mathf.Max(1, (int)result.Grade); // 결과 등급(최소 1성으로 보정)
+
+            int bestMaterialGrade = 0; // 재료 중 가장 높은 등급
+            int bestMaterialAtk = 0; // 재료 중 가장 높은 공격력
+            int bestMaterialHp = 0; // 재료 중 가장 높은 체력
+
+            for (int i = 0; i < materials.Count; i++) // 선택된 재료를 순회하며
+            {
+                var material = materials[i]; // 이번 순회의 재료
+                if (material == null) continue; // 빈 슬롯은 건너뜀
+
+                int materialGrade = Mathf.Max(1, (int)material.Grade); // 재료 등급(최소 1성으로 보정)
+                if (materialGrade > bestMaterialGrade) bestMaterialGrade = materialGrade; // 최고 등급 갱신
+                if (material.BaseAtk > bestMaterialAtk) bestMaterialAtk = material.BaseAtk; // 최고 공격력 갱신
+                if (material.BaseHp > bestMaterialHp) bestMaterialHp = material.BaseHp; // 최고 체력 갱신
+            }
+
+            if (bestMaterialGrade <= 0) // 비교할 재료 정보가 없으면
+            {
+                return $"{resultGrade}성 · ATK {result.BaseAtk} · HP {result.BaseHp}"; // 결과 스탯만 그대로 표시
+            }
+
+            string gradeText = bestMaterialGrade == resultGrade ? $"{resultGrade}성" : $"{bestMaterialGrade}성 → {resultGrade}성"; // 등급 상승을 화살표로 표기
+            return $"{gradeText} · ATK {result.BaseAtk}{FormatDelta(result.BaseAtk - bestMaterialAtk)} · HP {result.BaseHp}{FormatDelta(result.BaseHp - bestMaterialHp)}"; // 등급·공격력·체력 증감을 한 줄로 표시
+        }
+
+        private static string FormatDelta(int delta) // 22일차: 재료 대비 증감을 (+2)/(-1) 형태로 표기하는 메서드
+        {
+            if (delta == 0) return ""; // 변화가 없으면 표기하지 않음
+            return delta > 0 ? $" (+{delta})" : $" ({delta})"; // 증가는 +, 감소는 그대로 표기
+        }
+
+        private static void RefreshSlotRemoveAffordance(Button slotButton, Text hintText, bool hasMaterial) // 22일차: 재료가 들어 있는 슬롯만 클릭으로 뺄 수 있도록 버튼·안내 상태를 갱신하는 메서드
+        {
+            if (slotButton != null) slotButton.interactable = hasMaterial; // 빈 슬롯은 클릭해도 반응하지 않도록 비활성화
+            if (hintText != null) hintText.gameObject.SetActive(hasMaterial); // 재료가 있을 때만 "클릭하여 제외" 안내 표시
         }
 
         private void RefreshMaterialSlot(Image slotImage, Text slotText, PieceDefinition definition) // 재료·결과 슬롯 하나의 초상화와 이름을 갱신하는 공통 메서드
@@ -184,12 +278,14 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             bodyBlocker.transition = Selectable.Transition.None; // 시각적 변화 없이 클릭만 차단하는 용도
             AddOutline(body.gameObject, new Color(0.55f, 0.42f, 0.22f, 0.9f), new Vector2(2f, -2f)); // 청동색 외곽선으로 손패 카드 프레임과 톤 맞춤
 
-            var materialA = BuildSlot(body.rect, new Vector2(-290f, 30f), out _materialSlotAImage, out _materialSlotAText); // 재료 A 슬롯 생성
+            var materialA = BuildSlot(body.rect, new Vector2(-290f, 30f), out _materialSlotAImage, out _materialSlotAText, out _materialSlotAButton, out _materialSlotAHintText); // 재료 A 슬롯 생성
+            _materialSlotAButton.onClick.AddListener(() => OnMaterialSlotClicked(0)); // 22일차: A 슬롯 클릭 시 첫 번째 재료만 선택 해제
             CreateText("PlusSign", body.rect, 26, FontStyle.Bold, TextAnchor.MiddleCenter, Color.white).rectTransform.anchoredPosition = new Vector2(-190f, 30f); // 재료 A/B 사이 "+" 표시
             var plusText = materialA.transform.parent.Find("PlusSign")?.GetComponent<Text>(); // 방금 생성한 "+" 텍스트 재조회(위치만 지정했으므로 문구를 직접 채움)
             if (plusText != null) plusText.text = "+"; // "+" 문구 적용
 
-            var materialB = BuildSlot(body.rect, new Vector2(-90f, 30f), out _materialSlotBImage, out _materialSlotBText); // 재료 B 슬롯 생성
+            var materialB = BuildSlot(body.rect, new Vector2(-90f, 30f), out _materialSlotBImage, out _materialSlotBText, out _materialSlotBButton, out _materialSlotBHintText); // 재료 B 슬롯 생성
+            _materialSlotBButton.onClick.AddListener(() => OnMaterialSlotClicked(1)); // 22일차: B 슬롯 클릭 시 두 번째 재료만 선택 해제
             var arrowText = CreateText("ArrowSign", body.rect, 26, FontStyle.Bold, TextAnchor.MiddleCenter, Color.white); // 재료→결과 화살표 텍스트 생성
             arrowText.rectTransform.anchoredPosition = new Vector2(10f, 30f); // 재료 B와 결과 슬롯 사이에 배치
             arrowText.text = "→"; // 화살표 문구 적용
@@ -209,6 +305,10 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             var cancelObject = new GameObject("FusionCancelButton", typeof(RectTransform), typeof(Image), typeof(Button)); // 합성 모드 취소 버튼 생성
             cancelObject.transform.SetParent(body.rect, false); // 패널 자식으로 연결
             SetRect(cancelObject.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(-40f, -78f), new Vector2(100f, 44f)); // 확정 버튼 옆에 배치
+
+            _discoveryNoticeText = CreateText("DiscoveryNotice", body.rect, 18, FontStyle.Bold, TextAnchor.MiddleCenter, new Color(1f, 0.86f, 0.35f, 1f)); // 22일차: 숨김 합성식 발견 알림 텍스트 생성
+            SetRect(_discoveryNoticeText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, 26f), new Vector2(760f, 30f)); // 패널 위쪽에 한 줄로 배치
+            _discoveryNoticeText.gameObject.SetActive(false); // 발견 전에는 숨겨둠
             cancelObject.GetComponent<Image>().color = new Color(0.4f, 0.15f, 0.15f, 1f); // 취소 버튼 배경(붉은 계열)
             var cancelButton = cancelObject.GetComponent<Button>(); // Button 컴포넌트 확보
             cancelButton.onClick.AddListener(() => _boardInput?.SetFusionModeActive(false)); // 클릭 시 합성 모드 전체 종료
@@ -219,11 +319,22 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             body.gameObject.SetActive(false); // 처음에는 합성 모드가 꺼져 있으므로 패널을 숨긴 채 시작
         }
 
-        private RectTransform BuildSlot(Transform parent, Vector2 position, out Image slotImage, out Text slotText) // 재료 슬롯 1개(초상화 배경 + 이름 텍스트)를 만드는 공통 메서드
+        private RectTransform BuildSlot(Transform parent, Vector2 position, out Image slotImage, out Text slotText, out Button slotButton, out Text slotHintText) // 재료 슬롯 1개(초상화 배경 + 이름 텍스트 + 클릭 제외 버튼)를 만드는 공통 메서드
         {
             var slot = CreatePanel("MaterialSlot", parent, new Color(0.18f, 0.2f, 0.25f, 1f)); // 슬롯 배경 패널 생성
             SetRect(slot.rect, new Vector2(0.5f, 0.5f), position, new Vector2(150f, 120f)); // 지정한 위치·크기로 배치
             AddOutline(slot.gameObject, new Color(0.5f, 0.5f, 0.55f, 0.8f), new Vector2(1.5f, -1.5f)); // 옅은 외곽선으로 슬롯 경계 표시
+
+            slot.image.raycastTarget = true; // 22일차: 슬롯 배경이 클릭을 직접 받도록 Raycast 대상 유지
+            slotButton = slot.gameObject.AddComponent<Button>(); // 22일차: 슬롯 자체를 눌러 해당 재료만 빼는 버튼으로 사용
+            slotButton.targetGraphic = slot.image; // 슬롯 배경 이미지에 색상 전환 적용
+            var slotColors = slotButton.colors; // 기본 색상 전환 설정 복사
+            slotColors.normalColor = Color.white; // 평상시에는 배경 색을 그대로 사용
+            slotColors.highlightedColor = new Color(1f, 0.92f, 0.72f, 1f); // 마우스를 올리면 "뺄 수 있다"는 뜻으로 밝게 표시
+            slotColors.pressedColor = new Color(0.85f, 0.7f, 0.45f, 1f); // 누르는 동안 더 진하게 표시
+            slotColors.disabledColor = Color.white; // 빈 슬롯은 색 변화 없이 그대로 표시
+            slotButton.colors = slotColors; // 변경한 색상 전환 설정 적용
+            slotButton.interactable = false; // 재료가 들어오기 전까지는 클릭 반응 없음
 
             var artObject = new GameObject("SlotArt", typeof(RectTransform), typeof(Image)); // 슬롯 초상화 이미지 생성
             artObject.transform.SetParent(slot.rect, false); // 슬롯 배경 자식으로 연결
@@ -233,8 +344,15 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             slotImage.enabled = false; // Artwork가 없을 때는 숨김 상태로 시작
 
             slotText = CreateText("SlotName", slot.rect, 13, FontStyle.Bold, TextAnchor.MiddleCenter, Color.white); // 슬롯 이름 텍스트 생성
-            SetRect(slotText.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 18f), new Vector2(140f, 30f)); // 슬롯 하단에 배치
+            SetRect(slotText.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 22f), new Vector2(140f, 30f)); // 슬롯 하단에 배치(안내 문구 자리를 위해 살짝 올림)
             slotText.text = "빈 슬롯"; // 기본 문구
+            slotText.raycastTarget = false; // 22일차: 이름 텍스트가 슬롯 클릭을 가로채지 않도록 Raycast 비활성화
+
+            slotHintText = CreateText("SlotRemoveHint", slot.rect, 10, FontStyle.Normal, TextAnchor.MiddleCenter, new Color(0.8f, 0.78f, 0.7f, 1f)); // 22일차: 클릭 제외 안내 텍스트 생성
+            SetRect(slotHintText.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 7f), new Vector2(140f, 16f)); // 이름 텍스트 아래에 배치
+            slotHintText.text = "클릭하여 제외"; // 안내 문구
+            slotHintText.raycastTarget = false; // 안내 텍스트도 슬롯 클릭을 가로채지 않도록 Raycast 비활성화
+            slotHintText.gameObject.SetActive(false); // 재료가 들어오기 전까지는 숨김
 
             return slot.rect; // 슬롯 RectTransform 반환(위치 재사용 용도)
         }
@@ -335,6 +453,7 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             if (_boardInput != null) // 입력 컨트롤러가 연결돼 있으면
             {
                 _boardInput.FusionSelectionChanged -= HandleFusionSelectionChanged; // 합성 선택 이벤트 구독 해제
+                _boardInput.HiddenRecipeDiscovered -= HandleHiddenRecipeDiscovered; // 22일차: 숨김 레시피 발견 이벤트 구독 해제
                 if (_boardInput.TurnManager != null) _boardInput.TurnManager.TurnChanged -= HandleTurnChanged; // 턴 이벤트 구독 해제
             }
 

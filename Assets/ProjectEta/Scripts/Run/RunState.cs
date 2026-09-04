@@ -1,6 +1,7 @@
 using UnityEngine; // Vector2Int를 사용하기 위한 네임스페이스
 using ProjectEta.Board; // BoardState를 사용하기 위한 네임스페이스
 using ProjectEta.Cards; // DeckState, HandState를 사용하기 위한 네임스페이스
+using ProjectEta.Fusion; // 22일차: FusionDiscoveryLog를 사용하기 위한 네임스페이스
 using ProjectEta.Pieces; // PieceDefinition, PieceRuntimeState, PieceDatabase를 사용하기 위한 네임스페이스
 
 namespace ProjectEta.Run // 런(플레이 세션) 관련 타입을 모아두는 네임스페이스
@@ -12,6 +13,7 @@ namespace ProjectEta.Run // 런(플레이 세션) 관련 타입을 모아두는 
         public BoardState Board { get; } // 이 런이 사용하는 보드 상태
         public DeckState Deck { get; } // 이 런이 사용하는 덱 상태
         public HandState Hand { get; } // 이 런이 사용하는 손패 상태
+        public FusionDiscoveryLog FusionDiscovery { get; } // 22일차: 이 런에서 발견한 숨김 합성식 기록
         public int CurrentRound { get; set; } // 현재 라운드 번호
         public int MetaCurrency { get; set; } // 보유한 메타 재화
         public bool IsDefeated => _kingHp <= 0; // 킹 체력이 0 이하이면 패배로 판정
@@ -28,6 +30,7 @@ namespace ProjectEta.Run // 런(플레이 세션) 관련 타입을 모아두는 
             Board = new BoardState(); // 새 보드 상태 생성
             Deck = new DeckState(); // 새 덱 상태 생성
             Hand = new HandState(); // 새 손패 상태 생성
+            FusionDiscovery = new FusionDiscoveryLog(); // 22일차: 숨김 합성식 발견 기록을 빈 상태로 생성
             CurrentRound = 1; // 첫 라운드로 초기화
         }
 
@@ -39,6 +42,11 @@ namespace ProjectEta.Run // 런(플레이 세션) 관련 타입을 모아두는 
                 currentRound = CurrentRound, // 현재 라운드 기록
                 metaCurrency = MetaCurrency // 메타 재화 기록
             };
+
+            foreach (var recipeId in FusionDiscovery.DiscoveredRecipeIds) // 22일차: 이번 런에서 발견한 숨김 합성식을 순회하며
+            {
+                data.discoveredRecipeIds.Add(recipeId); // RecipeId를 저장 목록에 추가
+            }
 
             foreach (var card in Hand.Hand) // 손패의 카드를 순회하며
             {
@@ -92,6 +100,8 @@ namespace ProjectEta.Run // 런(플레이 세션) 관련 타입을 모아두는 
                 CurrentRound = data.currentRound, // 저장된 라운드 복원
                 MetaCurrency = data.metaCurrency // 저장된 메타 재화 복원
             };
+
+            runState.FusionDiscovery.Restore(data.discoveredRecipeIds); // 22일차: 저장된 숨김 합성식 발견 기록을 복원(목록이 없는 구버전 저장도 안전하게 처리)
 
             foreach (var pieceId in data.handCardIds) // 저장된 손패 id 목록을 순회하며
             {
@@ -150,6 +160,39 @@ namespace ProjectEta.Run // 런(플레이 세션) 관련 타입을 모아두는 
             }
 
             return runState; // 복원된 런 상태 반환
+        }
+
+        public int CountOwnedCopies(PieceDefinition definition) // 22일차: 4·5성 수량 제한 판정에 쓰는 동일 기물 보유 수를 세는 메서드
+        {
+            if (definition == null) return 0; // 기준 기물이 없으면 0개
+
+            int count = 0; // 누적 보유 수
+
+            foreach (var card in Deck.OwnedCardPool) // 보유 카드 풀만 순회하며
+            {
+                if (card == definition) count++; // 같은 기물이면 누적
+            }
+
+            return count; // 최종 보유 수 반환
+        }
+
+        public int CountDeployedCopies(PieceDefinition definition) // 22일차: 보드 위 아군 기물 중 동일 기물이 몇 개 배치돼 있는지 세는 메서드
+        {
+            if (definition == null) return 0; // 기준 기물이 없으면 0개
+
+            int count = 0; // 누적 배치 수
+
+            for (int x = 0; x < BoardState.Width; x++) // 보드 가로 방향으로 순회
+            {
+                for (int y = 0; y < BoardState.Height; y++) // 보드 세로 방향으로 순회
+                {
+                    var occupyingPiece = Board.GetTile(new Vector2Int(x, y)).OccupyingPiece; // 해당 칸의 점유 기물 조회
+                    if (occupyingPiece == null || !occupyingPiece.IsPlayerPiece) continue; // 빈 칸이거나 적 기물이면 건너뜀
+                    if (occupyingPiece.Definition == definition) count++; // 같은 기물이면 누적
+                }
+            }
+
+            return count; // 최종 배치 수 반환
         }
     }
 }

@@ -12,7 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75cc2415635c30648838849e5fc25c27, type: 3}
   m_Name: Recipe_ChancellorFromRookKnight
   m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Fusion.FusionRecipe
+  _recipeId: chancellor_from_rook_knight
   _materialA: {fileID: 11400000, guid: 1e41dd6ade3acf030325934763587f1d, type: 2}
   _materialB: {fileID: 11400000, guid: 16bb80c3c0bd3c14588eeac3e19a0875, type: 2}
   _result: {fileID: 11400000, guid: 5668696403d66ec2a1b5fb45461bfdb6, type: 2}
   _isHiddenRecipe: 0
+  _ignoresGradeStepRule: 0

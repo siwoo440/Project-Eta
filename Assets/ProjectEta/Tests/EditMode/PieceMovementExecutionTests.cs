@@ -20,6 +20,9 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
             boardView.Bind(runState.Board); // 보드 뷰에 실제 보드 연결
             boardInput.Bind(runState, boardView, turnManager); // 입력에 실제 런 상태와 턴 매니저 연결
 
+            turnManager.MarkInitialKingPlaced(); // 17일차 자유 배치 턴 도입 이후 시작 배치는 킹을 놓아야만 끝나므로 필수 조건을 먼저 충족
+            turnManager.TryEndDeploymentTurn(); // 이 테스트들은 일반 턴의 이동·공격을 검증하므로 시작 배치 턴을 명시적으로 종료해 PlayerTurn에서 시작
+
             return (root, boardInput, runState, turnManager); // 테스트에서 바로 쓸 수 있도록 묶어서 반환
         }
 

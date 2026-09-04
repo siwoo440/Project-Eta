@@ -20,6 +20,12 @@ namespace ProjectEta.Cards // 카드 관련 타입을 모아두는 네임스페�
             _ownedCardPool.Add(card); // 보유 카드 풀에 카드 추가
         }
 
+        public bool RemoveFromOwnedPool(PieceDefinition card) // 22일차: 합성으로 소모된 재료처럼 보유 카드 자체가 사라질 때 보유 풀에서 1장을 빼는 메서드
+        {
+            if (card == null) return false; // null 카드는 처리하지 않음
+            return _ownedCardPool.Remove(card); // 동일 카드가 여러 장이면 1장만 제거(성공 여부 반환)
+        }
+
         public void AddToDrawPile(PieceDefinition card) // 저장 복원 등에서 드로우 더미를 직접 복원하기 위한 메서드
         {
             if (card == null) return; // null 카드는 상태에 넣지 않고 종료

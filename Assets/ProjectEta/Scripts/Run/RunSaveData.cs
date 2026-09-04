@@ -14,6 +14,7 @@ namespace ProjectEta.Run // 런(플레이 세션) 관련 타입을 모아두는 
         public List<string> drawPileIds = new List<string>(); // 16일차: 저장 시점의 드로우 순서를 유지할 PieceId 목록
         public List<string> deadCardPileIds = new List<string>(); // 죽은 카드 더미의 PieceId 목록
         public List<PieceSaveData> boardPieces = new List<PieceSaveData>(); // 보드 위 기물 스냅샷 목록
+        public List<string> discoveredRecipeIds = new List<string>(); // 22일차: 이번 런에서 발견한 숨김 합성식의 RecipeId 목록
     }
 
     [Serializable] // JsonUtility로 직렬화 가능하게 하는 속성

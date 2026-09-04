@@ -39,6 +39,8 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         public bool IsFusionModeActive => _isFusionModeActive; // 21일차: 합성 버튼으로 진입한 재료 선택 모드인지 여부
         public IReadOnlyList<PieceDefinition> FusionMaterials => _fusionMaterials; // 21일차: 현재 합성 재료로 선택된 손패 카드 목록(최대 2장)
         public FusionRecipe CurrentFusionRecipe => _currentFusionRecipe; // 21일차: 현재 선택된 재료 2장으로 미리 계산된 합성 결과 레시피(없으면 null)
+        public FusionBlockReason CurrentFusionBlockReason => _currentFusionBlockReason; // 22일차: 현재 재료 조합이 합성 불가라면 그 구체적인 사유
+        public bool IsCurrentFusionRecipeUndiscovered => _currentFusionRecipe != null && _runState != null && !_runState.FusionDiscovery.IsDiscovered(_currentFusionRecipe); // 22일차: 아직 발견하지 못한 숨김 레시피라서 결과를 가려야 하는지 여부
         public PieceDefinition SelectedCard => _selectedCard; // 현재 손패에서 숫자키로 선택된 카드
         public PieceRuntimeState SelectedPiece => _selectedPiece; // 현재 선택된 이동 대기 기물
         public MovementResult PendingMovement => _pendingMovement; // 현재 선택된 기물의 이동/공격 후보 칸
@@ -50,6 +52,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         public event Action HandChanged; // 18일차: Draw·소환 등 실제 플레이어 손패가 바뀔 때 카드 UI에 알리는 이벤트
         public event Action DeckChanged; // 19일차: 보유 풀·드로우 더미·죽은 카드 더미 구성이 바뀔 때 덱/무덤 패널 UI에 알리는 이벤트
         public event Action FusionSelectionChanged; // 21일차: 합성 모드 On/Off, 재료 선택, 결과 미리보기가 바뀔 때 합성 패널 UI에 알리는 이벤트
+        public event Action<FusionRecipe> HiddenRecipeDiscovered; // 22일차: 숨김 합성식을 이번 합성으로 처음 발견했을 때 알리는 이벤트
 
         private const int PrototypeInitialHandSize = 5; // 기본 6종 중 5장을 초기 손패로 뽑는 테스트 값
         private const int EnemyInitialHandSize = 3; // 20일차: 적 카드 5종 중 3장만 먼저 손패로 뽑고 나머지는 드로우 더미에 남겨 이후 다시 뽑히게 하는 테스트 값
@@ -73,6 +76,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         private bool _isFusionModeActive; // 21일차: 합성 버튼으로 진입한 재료 선택 모드 여부
         private readonly List<PieceDefinition> _fusionMaterials = new List<PieceDefinition>(2); // 21일차: 현재 합성 재료로 클릭 선택된 손패 카드(최대 2장)
         private FusionRecipe _currentFusionRecipe; // 21일차: 현재 선택된 재료 2장에 대한 미리보기 레시피(없으면 null)
+        private FusionBlockReason _currentFusionBlockReason = FusionBlockReason.NotEnoughMaterials; // 22일차: 현재 재료 조합의 합성 차단 사유(재료 미선택이 기본값)
 
         private void Awake() // 씬 시작 시 자동 호출되는 초기화 메서드
         {
@@ -288,30 +292,70 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             return _fusionRecipeDatabase.TryFindRecipe(materialA, materialB, out recipe); // 실제 레시피 데이터베이스에 위임
         }
 
-        public bool TryFuseCards(PieceDefinition materialA, PieceDefinition materialB) // 21일차: 손패의 재료 카드 2장을 실제로 합성해 결과 카드를 손패에 넣는 진입점
+        public FusionBlockReason EvaluateFusion(PieceDefinition materialA, PieceDefinition materialB, out FusionRecipe recipe) // 22일차: 등급 규칙·재료 분류·손패 보유·수량 제한을 한 번에 판정해 합성 가능 여부와 사유를 돌려주는 메서드
         {
+            recipe = null; // 기본값은 매칭 결과 없음
+
             if (!CanUseFusionInput || _handState == null) // 배치 턴이 아니거나 손패가 연결되지 않았으면
             {
-                return false; // 합성을 실행하지 않고 실패 반환
+                return FusionBlockReason.NotDeploymentTurn; // 턴 조건 위반으로 차단
             }
 
-            if (!TryFindFusionRecipe(materialA, materialB, out var recipe)) // 일치하는 레시피가 없으면
+            if (materialA == null || materialB == null) // 재료가 아직 2장 모이지 않았으면
             {
-                return false; // 합성 불가로 실패 반환
+                return FusionBlockReason.NotEnoughMaterials; // 재료 부족으로 차단
+            }
+
+            if (!TryFindFusionRecipe(materialA, materialB, out recipe)) // 일치하는 레시피가 없으면
+            {
+                return FusionBlockReason.NoRecipe; // 조합 없음으로 차단
+            }
+
+            var recipeReason = FusionRuleValidator.ValidateRecipe(recipe); // 레시피 자체의 재료 분류·등급 상승 규칙 검증
+            if (recipeReason != FusionBlockReason.None) // 규칙을 위반한 레시피면
+            {
+                return recipeReason; // 위반 사유를 그대로 반환해 매칭을 거부
             }
 
             if (!HasCardsAvailableForFusion(materialA, materialB)) // 실제 손패에 재료 2장(동일 카드면 2장 모두)이 없으면
             {
-                return false; // 카드 유실을 방지하기 위해 실행하지 않고 실패 반환
+                return FusionBlockReason.MaterialsMissingInHand; // 손패 부족으로 차단
+            }
+
+            int ownedCount = _runState != null ? _runState.CountOwnedCopies(recipe.Result) : 0; // 결과 기물을 이미 몇 개 보유 중인지 확인
+            return FusionRuleValidator.ValidateOwnedLimit(recipe.Result, ownedCount); // 4·5성 보유 수량 제한까지 판정한 최종 결과 반환
+        }
+
+        public bool TryFuseCards(PieceDefinition materialA, PieceDefinition materialB) // 21일차: 손패의 재료 카드 2장을 실제로 합성해 결과 카드를 손패에 넣는 진입점
+        {
+            var blockReason = EvaluateFusion(materialA, materialB, out var recipe); // 22일차: 턴·레시피·등급·손패·수량 규칙을 한 번에 검증
+            if (blockReason != FusionBlockReason.None) // 하나라도 위반했으면
+            {
+                Debug.Log($"합성 불가: {FusionRuleValidator.DescribeBlockReason(blockReason)}"); // 차단 사유를 개발 로그로 안내
+                return false; // 카드 상태를 바꾸지 않고 실패 반환
             }
 
             _handState.RemoveCard(materialA); // 재료 A를 손패에서 제거
             _handState.RemoveCard(materialB); // 재료 B를 손패에서 제거(동일 카드면 남은 두 번째 장이 제거됨)
             _handState.TryAddCard(recipe.Result); // 결과 카드를 손패에 추가(같은 배치 턴에 바로 배치 가능)
 
+            if (_runState != null) // 22일차: 보유 카드 풀이 4·5성 수량 제한의 단일 기준이므로 합성 결과를 여기에도 반영
+            {
+                _runState.Deck.RemoveFromOwnedPool(materialA); // 소모한 재료 A를 보유 풀에서 제거(다음 라운드에 되살아나지 않도록)
+                _runState.Deck.RemoveFromOwnedPool(materialB); // 소모한 재료 B를 보유 풀에서 제거
+                _runState.Deck.AddToOwnedPool(recipe.Result); // 새로 얻은 합성 결과를 보유 풀에 등록
+            }
+
             if (_selectedCard == materialA || _selectedCard == materialB) _selectedCard = null; // 합성에 쓰인 카드가 숫자키로 선택돼 있었다면 선택 해제
 
             Debug.Log($"합성: {materialA.DisplayName} + {materialB.DisplayName} -> {recipe.Result.DisplayName}"); // 합성 결과를 콘솔에 출력
+
+            if (_runState != null && _runState.FusionDiscovery.TryMarkDiscovered(recipe)) // 22일차: 숨김 레시피를 이번 합성으로 처음 성공시켰으면
+            {
+                Debug.Log($"숨김 합성식 발견: {recipe.RecipeId} ({materialA.DisplayName} + {materialB.DisplayName} -> {recipe.Result.DisplayName})"); // 발견 사실을 개발 로그로 기록
+                HiddenRecipeDiscovered?.Invoke(recipe); // 발견 알림을 UI에 전달
+            }
+
             HandChanged?.Invoke(); // 손패 구성이 바뀌었음을 카드 UI에 알림
             return true; // 합성 성공 반환
         }
@@ -391,19 +435,23 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             return true; // 선택 처리 성공 반환
         }
 
-        private void RecomputeFusionPreview() // 21일차: 현재 선택된 재료로 결과 레시피를 다시 계산하는 메서드
+        private void RecomputeFusionPreview() // 21일차: 현재 선택된 재료로 결과 레시피를 다시 계산하는 메서드(22일차에 규칙 검증과 차단 사유 계산을 추가)
         {
             _currentFusionRecipe = null; // 기본값은 미리보기 없음
 
-            if (_fusionMaterials.Count == 2) // 재료가 정확히 2장 모였으면
+            if (_fusionMaterials.Count != 2) // 재료가 아직 2장 모이지 않았으면
             {
-                TryFindFusionRecipe(_fusionMaterials[0], _fusionMaterials[1], out _currentFusionRecipe); // 실제 데이터베이스에서 매칭 레시피 조회(없으면 null 유지)
+                _currentFusionBlockReason = FusionBlockReason.NotEnoughMaterials; // 재료 부족 상태로 표시하고
+                return; // 미리보기 계산을 종료
             }
+
+            _currentFusionBlockReason = EvaluateFusion(_fusionMaterials[0], _fusionMaterials[1], out var previewRecipe); // 등급·수량 규칙까지 포함해 합성 가능 여부 판정
+            _currentFusionRecipe = _currentFusionBlockReason == FusionBlockReason.None ? previewRecipe : null; // 규칙을 통과한 경우에만 결과를 미리보기로 노출(위반 레시피는 매칭 거부)
         }
 
         public bool TryConfirmFusionSelection() // 21일차: 합성 패널의 "합성" 버튼이 호출하는 실제 확정 진입점
         {
-            if (!_isFusionModeActive || _fusionMaterials.Count != 2 || _currentFusionRecipe == null) // 모드가 꺼져 있거나 재료가 덜 모였거나 매칭 결과가 없으면
+            if (!_isFusionModeActive || _fusionMaterials.Count != 2 || _currentFusionRecipe == null || _currentFusionBlockReason != FusionBlockReason.None) // 모드가 꺼져 있거나 재료가 덜 모였거나 규칙 위반으로 미리보기가 없으면
             {
                 return false; // 합성을 실행하지 않고 실패 반환
             }
@@ -425,6 +473,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         {
             _fusionMaterials.Clear(); // 선택된 재료 목록 비움
             _currentFusionRecipe = null; // 미리보기 결과도 함께 초기화
+            _currentFusionBlockReason = FusionBlockReason.NotEnoughMaterials; // 22일차: 차단 사유도 재료 미선택 상태로 되돌림
         }
 
         private void Update() // 매 프레임 자동 호출되는 메서드
@@ -519,7 +568,15 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             if (!CanUseCardSummonInput || _handState == null || card == null) return false; // 현재 소환 가능한 턴이 아니거나 데이터가 없으면 실패
             if (!_handState.Hand.Contains(card)) return false; // 실제 플레이어 손패에 없는 카드는 사용할 수 없음
             if (_turnManager != null && _turnManager.IsInitialDeployment && !_turnManager.IsInitialKingPlaced && card.MovementType != PieceMovementType.King) return false; // 첫 배치에서는 킹만 허용
+            if (!IsWithinDeployLimit(card)) return false; // 22일차: 4·5성 기물은 보드에 동시에 배치할 수 있는 수가 제한됨
             return true; // 모든 소환 사전 조건을 만족하면 사용 가능
+        }
+
+        public bool IsWithinDeployLimit(PieceDefinition card) // 22일차: 4·5성 기물의 동시 배치 수량 제한을 만족하는지 확인하는 메서드
+        {
+            if (card == null || _runState == null) return true; // 판정에 필요한 데이터가 없으면 제한을 걸지 않음
+            if (!FusionRuleValidator.HasOwnedLimit(card.Grade)) return true; // 1~3성은 배치 수량 제한이 없음
+            return _runState.CountDeployedCopies(card) < FusionRuleValidator.GetOwnedLimit(card.Grade); // 보유 상한과 같은 값을 보드 동시 배치 상한으로 사용
         }
 
         public bool TryGetBoardCellFromScreenPoint(Vector2 screenPosition, out Vector2Int cell) // UI 드래그 화면 좌표를 실제 3D 보드 셀로 변환하는 메서드

@@ -12,7 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75cc2415635c30648838849e5fc25c27, type: 3}
   m_Name: Recipe_ArchbishopFromBishopKnight
   m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Fusion.FusionRecipe
+  _recipeId: archbishop_from_bishop_knight
   _materialA: {fileID: 11400000, guid: e2dcfbfceb842e5680670a88b04778c9, type: 2}
   _materialB: {fileID: 11400000, guid: 16bb80c3c0bd3c14588eeac3e19a0875, type: 2}
   _result: {fileID: 11400000, guid: 144fc2cd6bdd8398091ea84041986d8a, type: 2}
   _isHiddenRecipe: 0
+  _ignoresGradeStepRule: 0
