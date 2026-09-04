@@ -76,6 +76,7 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
                 _statusEffects.Add(new RuntimeStatusEffect(statusDefinition)); // 새 상태 이상 추가
             }
 
+            RefreshActionFlags(); // 28일차: 기절·속박 여부에 따라 CanMove/CanAttack 갱신
             return true; // 부여 성공
         }
 
@@ -100,6 +101,7 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
         public void RemoveStatus(StatusEffectType statusType) // 특정 상태 이상을 강제로 제거하는 메서드
         {
             _statusEffects.RemoveAll(effect => effect.Definition.StatusType == statusType); // 종류가 일치하는 상태를 모두 제거
+            RefreshActionFlags(); // 28일차: 상태 제거 후 CanMove/CanAttack 갱신
         }
 
         public void TickStatusEffects() // 턴 종료 시 모든 상태 이상의 지속 턴을 감소시키고 만료된 항목을 제거하는 메서드
@@ -111,6 +113,8 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
                     _statusEffects.RemoveAt(i); // 목록에서 제거
                 }
             }
+
+            RefreshActionFlags(); // 28일차: 만료로 상태가 사라졌을 수 있으므로 CanMove/CanAttack 갱신
         }
 
         public void RestoreStatusEffect(StatusEffectDefinition statusDefinition, int remainingTurns, int stackCount) // 저장 데이터로부터 상태 이상 1건을 그대로 복원하는 메서드
@@ -120,6 +124,16 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
             var effect = new RuntimeStatusEffect(statusDefinition); // 기본값으로 상태 생성
             effect.RestoreState(remainingTurns, stackCount); // 저장된 지속 턴·중첩 수로 덮어쓰기
             _statusEffects.Add(effect); // 목록에 추가
+            RefreshActionFlags(); // 28일차: 복원된 상태를 반영해 CanMove/CanAttack 갱신
+        }
+
+        private void RefreshActionFlags() // 28일차: 현재 걸린 상태 이상을 기준으로 이동·공격 가능 여부를 다시 계산하는 메서드
+        {
+            bool isStunned = HasStatus(StatusEffectType.Stun); // 기절 여부
+            bool isRooted = HasStatus(StatusEffectType.Root); // 속박 여부
+
+            CanAttack = !isStunned; // 기절 중에는 공격도 불가
+            CanMove = !isStunned && !isRooted; // 기절 또는 속박 중에는 이동 불가(속박은 공격은 허용)
         }
     }
 }

@@ -21,6 +21,13 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         {
             if (piece == null) return new MovementResult(); // 런타임 기물이 없으면 빈 결과 반환
 
+            if (!piece.CanMove && !piece.CanAttack) // 28일차: 기절 등으로 이동·공격이 모두 불가능하면
+            {
+                return new MovementResult(); // 후보 없이 빈 결과 반환(행동 자체를 스킵)
+            }
+
+            MovementResult result; // 기절이 아닐 때 실제로 계산할 이동·공격 후보
+
             if (piece.Definition != null && piece.Definition.PieceId == "chameleon") // Chameleon이면 현재 순환 단계 직접 반영
             {
                 PieceMovementType movementType; // 현재 단계에 대응할 기존 체스 이동 타입
@@ -32,10 +39,19 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                     default: movementType = PieceMovementType.Knight; break; // 초기 및 순환 복귀는 Knight
                 }
 
-                return GetReachableTiles(movementType, piece.BoardPosition, piece.IsPlayerPiece, board); // 선택된 기존 이동 규칙으로 계산
+                result = GetReachableTiles(movementType, piece.BoardPosition, piece.IsPlayerPiece, board); // 선택된 기존 이동 규칙으로 계산
+            }
+            else // Chameleon이 아닌 일반 기물
+            {
+                result = GetReachableTiles(piece.Definition, piece.BoardPosition, piece.IsPlayerPiece, board); // 일반 기물은 PieceDefinition 데이터 경로 사용
             }
 
-            return GetReachableTiles(piece.Definition, piece.BoardPosition, piece.IsPlayerPiece, board); // 일반 기물은 PieceDefinition 데이터 경로 사용
+            if (!piece.CanMove) // 28일차: 속박 등으로 이동만 불가능하면
+            {
+                result.MoveTiles.Clear(); // 이동 후보만 제거하고 공격 후보는 그대로 유지
+            }
+
+            return result; // 상태 이상이 반영된 최종 이동·공격 후보 반환
         }
     }
 }

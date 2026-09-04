@@ -353,6 +353,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
             if (_turnManager != null && _turnManager.CompleteEnemyTurn()) // 아직 적 턴이면 다음 상태로 정상 전환
             {
                 Debug.Log($"Enemy turn completed -> {_turnManager.CurrentState} / Turn {_turnManager.TurnNumber}"); // 배치 턴 포함 실제 전환 결과 출력
+                _boardInputController?.ApplyTurnEndStatusEffects(); // 28일차: 플레이어+적 행동이 모두 끝난 시점에 독·화상 틱과 상태 지속 턴 정산
             }
 
             _dummyEnemyTurnCoroutine = null; // 코루틴 완료 후 참조 초기화

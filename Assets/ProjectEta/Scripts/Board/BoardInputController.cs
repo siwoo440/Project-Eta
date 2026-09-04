@@ -930,6 +930,37 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             }
         }
 
+        public void ApplyTurnEndStatusEffects() // 28일차: 1턴(플레이어+적 행동)이 끝날 때 보드 위 모든 기물의 독·화상 피해와 상태 지속 턴을 정산하는 메서드
+        {
+            if (_boardView == null || !_boardView.IsBound) // 보드가 아직 연결되지 않았으면
+            {
+                return; // 정산할 대상이 없으므로 종료
+            }
+
+            for (int x = 0; x < BoardState.Width; x++) // 보드 가로 순회
+            {
+                for (int y = 0; y < BoardState.Height; y++) // 보드 세로 순회
+                {
+                    var tile = _boardView.GetTile(new Vector2Int(x, y)); // 현재 칸 조회
+                    var piece = tile?.OccupyingPiece; // 점유 기물 조회
+                    if (piece == null) continue; // 빈 칸은 건너뜀
+
+                    int damage = StatusEffectTickResolver.ResolveTurnEndDamage(piece); // 독·화상 등 이번 턴 틱 피해 정산
+                    if (damage > 0) // 실제 피해가 있었다면
+                    {
+                        Debug.Log($"{piece.Definition.DisplayName} 상태 이상 피해 {damage}, 남은 HP {piece.CurrentHp}"); // 결과 출력
+                    }
+
+                    piece.TickStatusEffects(); // 지속 턴 감소 및 만료된 상태 제거(기절·속박 해제 포함)
+
+                    if (piece.IsDead) // 틱 피해로 사망했다면
+                    {
+                        RemovePieceFromBoard(piece); // 기존 사망 처리(보드 해제·화면 제거·죽은 카드 더미 이동) 재사용
+                    }
+                }
+            }
+        }
+
         private void RemovePieceFromBoard(PieceRuntimeState piece) // 사망한 기물을 보드 점유와 화면에서 제거하는 메서드
         {
             var tile = _boardView.GetTile(piece.BoardPosition); // 이 기물이 있던 칸 조회

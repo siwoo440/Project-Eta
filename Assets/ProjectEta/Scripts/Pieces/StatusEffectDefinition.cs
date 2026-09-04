@@ -14,6 +14,9 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
         [SerializeField] private int _maxStacks = 1; // 최대 중첩 수 (RefreshDuration 상태는 사실상 1 고정)
         [SerializeField] private int _defaultDurationTurns = 1; // 최초 적용 시 기본 지속 턴 수
 
+        [Header("틱 피해")] // 28일차: 독·화상처럼 턴 종료 시 피해를 주는 상태 전용 구분선
+        [SerializeField] private int _tickDamagePerStack; // 중첩 1당 턴 종료 시 입히는 고정 피해(기절·속박처럼 피해가 없는 상태는 0 유지)
+
         [Header("설명")] // 인스펙터 설명 구분선
         [TextArea] // 여러 줄 설명 편집 허용
         [SerializeField] private string _description; // 상태 이상 상세 설명
@@ -23,6 +26,7 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
         public StatusStackMode StackMode => _stackMode; // 외부에서 읽는 중첩 방식
         public int MaxStacks => Mathf.Max(1, _maxStacks); // 최소 1 이상으로 보정된 최대 중첩 수
         public int DefaultDurationTurns => Mathf.Max(1, _defaultDurationTurns); // 최소 1 이상으로 보정된 기본 지속 턴
+        public int TickDamagePerStack => Mathf.Max(0, _tickDamagePerStack); // 28일차: 음수 방지된 중첩당 틱 피해
         public string Description => _description; // 외부에서 읽는 설명
     }
 }
