@@ -1,3 +1,5 @@
+using System; // Action 콜백을 사용하기 위한 네임스페이스
+using System.Collections; // IEnumerator 코루틴을 사용하기 위한 네임스페이스
 using System.Collections.Generic; // List<T>를 사용하기 위한 네임스페이스
 using UnityEngine; // MonoBehaviour, GameObject, PrimitiveType 등을 사용하기 위한 네임스페이스
 using ProjectEta.Board; // BoardView.BoardToLocalPosition을 사용하기 위한 네임스페이스
@@ -9,21 +11,198 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
         [SerializeField] private Color _playerColor = new Color(0.15f, 0.4f, 0.9f); // 아군 기물 색상
         [SerializeField] private Color _enemyColor = new Color(0.9f, 0.2f, 0.2f); // 적군 기물 색상
 
+        [Header("연출 임시값(30일차)")] // 인스펙터 연출 값 구분선(모두 테스트용 임시값)
+        [SerializeField] private float _moveRiseDuration = 0.08f; // 이동 시작 시 떠오르는 데 걸리는 시간
+        [SerializeField] private float _moveTranslateDuration = 0.16f; // 뜬 채로 목표 칸까지 이동하는 시간
+        [SerializeField] private float _moveLandDuration = 0.07f; // 목표 칸 위에서 착지하며 내려앉는 시간
+        [SerializeField] private float _moveHopHeight = 0.18f; // 이동 중 공중에 떠 있는 높이
+        [SerializeField] private float _strikeHopHeight = 0.4f; // 근접 공격 연출에서 높게 떠오르는 높이
+        [SerializeField] private float _strikeApproachFraction = 0.55f; // 목표 쪽으로 다가가는 비율(목표 칸까지는 가지 않음)
+
+        private Coroutine _positionAnimationCoroutine; // 이동·타격 연출처럼 위치를 다루는 코루틴(동시에 하나만 실행)
+        private Coroutine _reactionCoroutine; // 피격 흔들림 연출 코루틴
+
         public PieceRuntimeState RuntimeState { get; private set; } // 이 뷰가 표시하는 런타임 상태
 
         public void Initialize(PieceRuntimeState runtimeState, float tileSize) // 외부에서 데이터를 주입해 초기화하는 메서드
         {
             RuntimeState = runtimeState; // 런타임 상태 저장
-            ApplyBoardPosition(runtimeState.BoardPosition, tileSize); // 계층창 이름과 3D 위치를 현재 좌표에 맞춤
+            ApplyBoardPosition(runtimeState.BoardPosition, tileSize); // 계층창 이름과 3D 위치를 현재 좌표에 맞춤(최초 배치는 연출 없이 즉시)
 
             var material = CreatePieceMaterial(runtimeState.IsPlayerPiece ? _playerColor : _enemyColor); // 아군/적군에 따라 머티리얼 생성
             BuildModel(runtimeState.Definition, material); // PieceId 기준으로 어울리는 3D 모델 생성
             AttachSelectionCollider(); // 클릭 판정용 단일 콜라이더 부착
         }
 
-        public void MoveTo(Vector2Int boardPosition, float tileSize) // 실제 이동 실행 시 화면 위치를 새 좌표로 갱신하는 메서드
+        public void MoveTo(Vector2Int boardPosition, float tileSize) // 실제 이동 실행 시 화면 위치를 새 좌표로 갱신하는 메서드(살짝 떠서 이동한 뒤 착지하는 연출)
         {
-            ApplyBoardPosition(boardPosition, tileSize); // 이름과 3D 위치를 새 좌표 기준으로 갱신
+            string displayName = RuntimeState != null && RuntimeState.Definition != null ? RuntimeState.Definition.DisplayName : "Piece"; // 안전한 표시 이름 계산
+            name = $"Piece_{displayName}_{boardPosition.x}_{boardPosition.y}"; // 계층창 이름은 연출과 무관하게 최종 좌표 기준으로 즉시 갱신
+
+            Vector3 targetLocalPosition = BoardView.BoardToLocalPosition(boardPosition, tileSize); // 최종 로컬 위치 계산
+            RestartPositionCoroutine(AnimateHoveringMove(targetLocalPosition)); // 기존 위치 연출을 멈추고 부양 이동 시작
+        }
+
+        public void SnapTo(Vector2Int boardPosition, float tileSize) // 카드 드래그 고스트처럼 매 프레임 마우스를 그대로 따라가야 할 때 연출 없이 즉시 위치를 갱신하는 메서드
+        {
+            if (_positionAnimationCoroutine != null) // 혹시 위치 연출이 재생 중이었다면
+            {
+                StopCoroutine(_positionAnimationCoroutine); // 즉시 위치 갱신과 겹치지 않도록 먼저 중단
+                _positionAnimationCoroutine = null; // 참조 정리
+            }
+
+            ApplyBoardPosition(boardPosition, tileSize); // 이름과 3D 위치를 새 좌표 기준으로 즉시 갱신(연출 없음)
+        }
+
+        public void PlayNonLethalStrikeAndReturn(Vector2Int targetBoardPosition, float tileSize) // 30일차: 비치명 공격 시 목표 쪽으로 다가가 타격한 뒤 원위치로 복귀하는 연출
+        {
+            RestartPositionCoroutine(AnimateNonLethalStrike(targetBoardPosition, tileSize)); // 기존 위치 연출을 멈추고 타격 연출 시작
+        }
+
+        public void PlayHitReaction(float duration = 0.18f) // 30일차: 공격을 받고 생존했을 때 짧게 흔들리는 피격 반응 연출
+        {
+            if (_reactionCoroutine != null) // 이전 피격 반응이 아직 재생 중이면
+            {
+                StopCoroutine(_reactionCoroutine); // 중복 재생을 막기 위해 먼저 중단
+            }
+
+            _reactionCoroutine = StartCoroutine(AnimateHitReaction(duration)); // 새 피격 반응 시작
+        }
+
+        public void PlayDeathTogglingThenDestroy(Action onDestroyed, float duration = 0.35f) // 30일차: 사망 시 무작위 방향으로 쓰러진 뒤 콜백으로 실제 제거를 위임하는 연출
+        {
+            StartCoroutine(AnimateDeathToppling(onDestroyed, duration)); // 쓰러짐 연출 시작(완료 후 콜백 호출)
+        }
+
+        private void RestartPositionCoroutine(IEnumerator routine) // 위치를 다루는 연출을 안전하게 교체 실행하는 공통 도우미
+        {
+            if (_positionAnimationCoroutine != null) // 이전 위치 연출이 아직 재생 중이면
+            {
+                StopCoroutine(_positionAnimationCoroutine); // 서로 다른 두 연출이 같은 위치를 동시에 제어하지 않도록 먼저 중단
+            }
+
+            _positionAnimationCoroutine = StartCoroutine(routine); // 새 위치 연출 시작
+        }
+
+        private IEnumerator AnimateHoveringMove(Vector3 targetLocalPosition) // 살짝 떠오른 뒤 그 높이를 유지한 채 이동하고 마지막에 착지하는 코루틴
+        {
+            Vector3 startLocalPosition = transform.localPosition; // 이동 시작 시점의 현재 위치
+
+            float elapsed = 0f; // 1) 상승 구간: 제자리에서 떠오름
+            while (elapsed < _moveRiseDuration)
+            {
+                elapsed += Time.deltaTime; // 경과 시간 누적
+                float t = _moveRiseDuration <= 0f ? 1f : Mathf.Clamp01(elapsed / _moveRiseDuration); // 0~1 진행률
+                transform.localPosition = startLocalPosition + Vector3.up * (_moveHopHeight * t); // 제자리에서 서서히 상승
+                yield return null; // 다음 프레임까지 대기
+            }
+
+            Vector3 hoverStart = startLocalPosition + Vector3.up * _moveHopHeight; // 뜬 높이에서의 출발 위치
+            Vector3 hoverEnd = targetLocalPosition + Vector3.up * _moveHopHeight; // 뜬 높이에서의 도착 위치(목표 칸 바로 위)
+
+            elapsed = 0f; // 2) 이동 구간: 뜬 높이를 유지한 채 수평 이동
+            while (elapsed < _moveTranslateDuration)
+            {
+                elapsed += Time.deltaTime; // 경과 시간 누적
+                float t = _moveTranslateDuration <= 0f ? 1f : Mathf.Clamp01(elapsed / _moveTranslateDuration); // 0~1 진행률
+                transform.localPosition = Vector3.Lerp(hoverStart, hoverEnd, t); // 같은 높이를 유지하며 목표 칸 위까지 이동
+                yield return null; // 다음 프레임까지 대기
+            }
+
+            elapsed = 0f; // 3) 착지 구간: 목표 칸 위에서 내려앉음
+            while (elapsed < _moveLandDuration)
+            {
+                elapsed += Time.deltaTime; // 경과 시간 누적
+                float t = _moveLandDuration <= 0f ? 1f : Mathf.Clamp01(elapsed / _moveLandDuration); // 0~1 진행률
+                transform.localPosition = Vector3.Lerp(hoverEnd, targetLocalPosition, t); // 목표 칸 위에서 바닥까지 하강
+                yield return null; // 다음 프레임까지 대기
+            }
+
+            transform.localPosition = targetLocalPosition; // 오차 누적 방지를 위해 최종 위치를 정확히 고정("착" 착지)
+            _positionAnimationCoroutine = null; // 완료 후 참조 정리
+        }
+
+        private IEnumerator AnimateNonLethalStrike(Vector2Int targetBoardPosition, float tileSize) // 상승→접근→타격→복귀 단계를 실제로 재생하는 코루틴
+        {
+            var stateMachine = new AttackAnimationStateMachine(); // 30일차: 단계 전이만 담당하는 순수 상태 머신
+            stateMachine.Start(); // 상승 단계부터 시작
+
+            Vector3 originLocalPosition = transform.localPosition; // 복귀 기준이 되는 현재(원래) 위치
+            Vector3 targetLocalPosition = BoardView.BoardToLocalPosition(targetBoardPosition, tileSize); // 목표 칸의 3D 위치
+            Vector3 approachLocalPosition = Vector3.Lerp(originLocalPosition, targetLocalPosition, _strikeApproachFraction); // 실제로 다가갈 지점(목표 칸까지는 가지 않음)
+
+            while (!stateMachine.IsComplete) // 연출이 모두 끝날 때까지
+            {
+                stateMachine.Advance(Time.deltaTime); // 상태 머신에 경과 시간 전달
+                float progress = stateMachine.GetPhaseProgress01(); // 현재 단계 안에서의 진행률
+
+                switch (stateMachine.CurrentPhase) // 현재 단계에 따라 위치 계산
+                {
+                    case AttackAnimationPhase.Rising: // 제자리에서 높이 떠오르는 단계
+                        transform.localPosition = originLocalPosition + Vector3.up * (_strikeHopHeight * progress); // 원위치 기준으로 서서히 최고 높이까지 상승
+                        break;
+                    case AttackAnimationPhase.Approaching: // 목표 쪽으로 포물선을 그리며 내려찍는 단계
+                        float diveHeight = _strikeHopHeight * (1f - progress * progress); // 최고 높이에서 목표 지점까지 가속하며 하강(포물선의 내려오는 절반)
+                        transform.localPosition = Vector3.Lerp(originLocalPosition, approachLocalPosition, progress) + Vector3.up * diveHeight; // 접근하면서 동시에 하강
+                        break;
+                    case AttackAnimationPhase.Striking: // 접근 지점(바닥)에서 짧게 멈춰 타격하는 단계
+                        transform.localPosition = approachLocalPosition; // 완전히 내려찍은 상태로 타격 순간을 표현
+                        break;
+                    case AttackAnimationPhase.Recovering: // 원위치까지 다시 포물선으로 뛰어 복귀하는 단계
+                        float returnArc = _strikeHopHeight * 4f * progress * (1f - progress); // 0에서 시작해 중간에 최고 높이를 찍고 다시 0으로 내려오는 완전한 포물선
+                        transform.localPosition = Vector3.Lerp(approachLocalPosition, originLocalPosition, progress) + Vector3.up * returnArc; // 복귀 이동과 포물선 궤적을 함께 적용
+                        break;
+                }
+
+                yield return null; // 다음 프레임까지 대기
+            }
+
+            transform.localPosition = originLocalPosition; // 오차 누적 방지를 위해 정확히 원위치로 고정
+            _positionAnimationCoroutine = null; // 완료 후 참조 정리
+        }
+
+        private IEnumerator AnimateHitReaction(float duration) // 짧게 기울었다 돌아오는 피격 반응을 재생하는 코루틴
+        {
+            Quaternion originalRotation = transform.localRotation; // 원래 회전값
+            Quaternion tiltRotation = originalRotation * Quaternion.Euler(0f, 0f, 12f); // 살짝 기우는 흔들림(임시값)
+            float half = duration * 0.5f; // 기울어지는 절반과 돌아오는 절반으로 구성
+            float elapsed = 0f; // 경과 시간
+
+            while (elapsed < half) // 기우는 절반 구간
+            {
+                elapsed += Time.deltaTime; // 경과 시간 누적
+                transform.localRotation = Quaternion.Slerp(originalRotation, tiltRotation, Mathf.Clamp01(elapsed / half)); // 원래 회전에서 기운 회전으로 보간
+                yield return null; // 다음 프레임까지 대기
+            }
+
+            elapsed = 0f; // 돌아오는 절반을 위해 경과 시간 재사용
+            while (elapsed < half) // 돌아오는 절반 구간
+            {
+                elapsed += Time.deltaTime; // 경과 시간 누적
+                transform.localRotation = Quaternion.Slerp(tiltRotation, originalRotation, Mathf.Clamp01(elapsed / half)); // 기운 회전에서 원래 회전으로 보간
+                yield return null; // 다음 프레임까지 대기
+            }
+
+            transform.localRotation = originalRotation; // 오차 누적 방지를 위해 정확히 원래 회전으로 고정
+            _reactionCoroutine = null; // 완료 후 참조 정리
+        }
+
+        private IEnumerator AnimateDeathToppling(Action onDestroyed, float duration) // 무작위 방향으로 쓰러진 뒤 콜백을 호출하는 코루틴
+        {
+            Vector3[] fallAxes = { Vector3.forward, Vector3.back, Vector3.left, Vector3.right }; // 기획서 8.6: 여러 방향 중 하나로 쓰러지는 애니메이션
+            Vector3 axis = fallAxes[UnityEngine.Random.Range(0, fallAxes.Length)]; // 4방향 중 무작위 전도 축 선택
+            Quaternion startRotation = transform.localRotation; // 쓰러지기 전 원래 회전값
+            Quaternion fallenRotation = startRotation * Quaternion.AngleAxis(85f, axis); // 완전히 쓰러진 회전값(임시값)
+            float elapsed = 0f; // 경과 시간
+
+            while (elapsed < duration) // 목표 소요 시간에 도달할 때까지
+            {
+                elapsed += Time.deltaTime; // 경과 시간 누적
+                transform.localRotation = Quaternion.Slerp(startRotation, fallenRotation, Mathf.Clamp01(elapsed / duration)); // 서서히 쓰러지도록 보간
+                yield return null; // 다음 프레임까지 대기
+            }
+
+            onDestroyed?.Invoke(); // 쓰러짐 연출이 끝난 뒤 실제 제거를 호출부에 위임
         }
 
         private void ApplyBoardPosition(Vector2Int boardPosition, float tileSize) // 좌표에 맞춰 이름과 3D 위치를 함께 갱신하는 공통 메서드
@@ -411,8 +590,8 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
             var collider = part.GetComponent<Collider>(); // 기본으로 붙는 콜라이더 확보
             if (collider != null)
             {
-                if (Application.isPlaying) Object.Destroy(collider); // 플레이 중이면 Destroy 사용
-                else Object.DestroyImmediate(collider); // 에디터 상태면 DestroyImmediate 사용
+                if (Application.isPlaying) UnityEngine.Object.Destroy(collider); // 플레이 중이면 Destroy 사용(30일차: System.Action 추가로 Object가 모호해져 명시적 한정)
+                else UnityEngine.Object.DestroyImmediate(collider); // 에디터 상태면 DestroyImmediate 사용
             }
 
             return part; // 생성한 파츠 반환

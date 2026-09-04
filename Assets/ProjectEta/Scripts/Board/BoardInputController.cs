@@ -108,6 +108,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             if (_battleHooks != null) // 29일차: 이전 훅 버스가 연결돼 있었다면
             {
                 _battleHooks.TurnEnd -= HandleBattleHooksTurnEnd; // 재연결 전에 턴 종료 정산 구독 해제
+                _battleHooks.AfterAttack -= HandleBattleHooksAfterAttackVisual; // 30일차: 재연결 전에 공격 연출 구독 해제
             }
 
             if (boardView != null) // 외부에서 보드 뷰를 명시했으면
@@ -143,12 +144,34 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             {
                 _battleHooks.TurnEnd -= HandleBattleHooksTurnEnd; // 중복 구독을 방지하기 위해 먼저 해제
                 _battleHooks.TurnEnd += HandleBattleHooksTurnEnd; // 턴 종료 훅에 28일차 상태 이상 정산을 구독
+                _battleHooks.AfterAttack -= HandleBattleHooksAfterAttackVisual; // 30일차: 중복 구독을 방지하기 위해 먼저 해제
+                _battleHooks.AfterAttack += HandleBattleHooksAfterAttackVisual; // 30일차: 공격 결과 훅에 연출 재생을 구독
             }
         }
 
         private void HandleBattleHooksTurnEnd(TurnState state, int turnNumber) // 29일차: TurnEnd 훅을 구독해 28일차 상태 이상 정산을 실행하는 메서드
         {
             ApplyTurnEndStatusEffects(); // 독·화상 피해 적용과 지속 턴 감소를 실제로 수행
+        }
+
+        private void HandleBattleHooksAfterAttackVisual(CombatResult result) // 30일차: 판정 결과에 따라 생존 시 공격자·방어자 연출을 재생하는 메서드(치명타는 RemovePieceFromBoard·MovePieceTo가 이미 처리)
+        {
+            if (result == null || result.DefenderDied) // 결과가 없거나 이미 치명타로 처리됐으면
+            {
+                return; // 생존 케이스에서만 별도 연출이 필요함(치명 처치의 전진·쓰러짐은 다른 경로에서 이미 재생)
+            }
+
+            bool attackerIsMelee = result.Attacker.Definition != null && (result.Attacker.Definition.RoleTags & PieceRoleTag.Ranged) == 0; // 원거리 공격자는 오늘 범위에서 접근 연출을 재생하지 않음(투사체 연출은 이후 일차)
+
+            if (attackerIsMelee && _pieceViews.TryGetValue(result.Attacker, out var attackerView) && attackerView != null) // 근접 공격자의 화면 표시를 찾았으면
+            {
+                attackerView.PlayNonLethalStrikeAndReturn(result.Defender.BoardPosition, _boardView.TileSize); // 목표 쪽으로 다가가 타격한 뒤 원위치로 복귀
+            }
+
+            if (_pieceViews.TryGetValue(result.Defender, out var defenderView) && defenderView != null) // 생존한 대상의 화면 표시를 찾았으면
+            {
+                defenderView.PlayHitReaction(); // 짧게 흔들리는 피격 반응 재생
+            }
         }
 
         public void EnsurePrototypeStartingHand() // 기존 호출부 호환을 유지하면서 실제 DeckState→HandState 시작 흐름을 구성하는 메서드
@@ -671,7 +694,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             }
             else // 같은 카드 고스트를 계속 이동시키는 경우
             {
-                _cardDropGhostView.MoveTo(cell, _boardView.TileSize); // 새 목표 셀 위치로 고스트만 이동
+                _cardDropGhostView.SnapTo(cell, _boardView.TileSize); // 연출 없이 즉시 마우스를 따라가도록 고스트만 이동
             }
 
             if (_cardDropGhost != null) _cardDropGhost.name = $"CardDropGhost_{card.DisplayName}_{cell.x}_{cell.y}"; // Hierarchy에서 목표 카드와 셀을 쉽게 확인할 수 있게 이름 지정
@@ -999,10 +1022,10 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
             if (_pieceViews.TryGetValue(piece, out var pieceView) && pieceView != null) // 연결된 화면 표시가 있으면
             {
-                Destroy(pieceView.gameObject); // 화면에서 기물 오브젝트 제거
+                pieceView.PlayDeathTogglingThenDestroy(() => Destroy(pieceView.gameObject)); // 30일차: 즉시 제거 대신 무작위 방향으로 쓰러진 뒤 제거(전투 사망·상태 이상 사망 모두 공통 적용)
             }
 
-            _pieceViews.Remove(piece); // 화면 연결 정보 정리
+            _pieceViews.Remove(piece); // 화면 연결 정보는 지금 정리(실제 오브젝트 파괴는 연출 완료 후 콜백에서 수행)
 
             if (piece.IsPlayerPiece && _runState != null) // 19일차: 아군 기물이 죽었으면
             {
@@ -1275,6 +1298,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             if (_battleHooks != null) // 29일차: 연결된 훅 버스가 남아 있으면
             {
                 _battleHooks.TurnEnd -= HandleBattleHooksTurnEnd; // 턴 종료 정산 구독 해제
+                _battleHooks.AfterAttack -= HandleBattleHooksAfterAttackVisual; // 30일차: 공격 연출 구독 해제
             }
         }
     }
