@@ -1,4 +1,5 @@
 using System.Collections.Generic; // 현재 화면에 생성된 CardView 목록을 관리하기 위한 네임스페이스
+using System.Linq; // IReadOnlyList<PieceDefinition>.Contains 확장 메서드를 사용하기 위한 네임스페이스
 using UnityEngine; // MonoBehaviour, GameObject, Vector2Int 등을 사용하기 위한 네임스페이스
 using UnityEngine.EventSystems; // EventSystem을 런타임 생성하기 위한 네임스페이스
 using UnityEngine.InputSystem.UI; // 새 Input System 기반 UI 포인터 입력 모듈을 사용하기 위한 네임스페이스
@@ -13,6 +14,7 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
         public int CardCount => _cardViews.Count; // 현재 화면에 표시 중인 손패 카드 UI 수
         public Transform DragLayer => _canvasTransform; // CardView가 드래그 중 사용할 Canvas 최상위 레이어
         public bool IsHandLowered => _isHandLowered; // 카드가 보드 쪽으로 올라가 손패가 화면 아래로 내려간 상태인지 여부
+        public bool IsFusionModeActive => _boardInput != null && _boardInput.IsFusionModeActive; // 21일차: 현재 카드 좌클릭이 드래그 대신 합성 재료 선택으로 동작해야 하는지 여부
         public Vector2 HandAnchoredPosition => _handRoot != null ? _handRoot.anchoredPosition : Vector2.zero; // 테스트와 디버그에서 현재 손패 위치를 확인하는 프로퍼티
 
         private BoardInputController _boardInput; // 실제 HandState와 카드 소환 규칙을 제공하는 입력 컨트롤러
@@ -32,6 +34,7 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             if (_boardInput != null) // 이전 BoardInputController가 연결돼 있었다면
             {
                 _boardInput.HandChanged -= HandleHandChanged; // 이전 손패 변경 이벤트 구독 해제
+                _boardInput.FusionSelectionChanged -= HandleFusionSelectionChanged; // 21일차: 이전 합성 선택 이벤트 구독 해제
                 if (_boardInput.TurnManager != null) _boardInput.TurnManager.TurnChanged -= HandleTurnChanged; // 이전 턴 이벤트 구독 해제
             }
 
@@ -41,6 +44,7 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             if (_boardInput != null) // 정상 입력 컨트롤러가 전달됐다면
             {
                 _boardInput.HandChanged += HandleHandChanged; // Draw·소환 등 실제 손패 변화 이벤트 구독
+                _boardInput.FusionSelectionChanged += HandleFusionSelectionChanged; // 21일차: 합성 모드·재료 선택 변화 이벤트 구독
                 if (_boardInput.TurnManager != null) _boardInput.TurnManager.TurnChanged += HandleTurnChanged; // 턴 상태 변화 이벤트 구독
             }
 
@@ -50,6 +54,22 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
         public bool CanDragCard(PieceDefinition card) // CardView가 현재 카드 드래그 가능 여부를 묻는 메서드
         {
             return _boardInput != null && _boardInput.CanSummonCard(card); // 실제 턴·킹 필수·손패 검증 결과 사용
+        }
+
+        public bool TryToggleFusionCard(CardView cardView) // 21일차: 합성 모드에서 카드 좌클릭을 재료 선택 토글로 연결하는 메서드
+        {
+            if (cardView == null || _boardInput == null || cardView.Definition == null) return false; // 필수 정보가 없으면 실패
+            return _boardInput.TryToggleFusionMaterial(cardView.Definition); // 실제 재료 선택/해제 시도
+        }
+
+        private void HandleFusionSelectionChanged() // 21일차: 합성 모드·재료 선택이 바뀔 때마다 카드별 강조 표시를 갱신하는 이벤트 처리 메서드
+        {
+            foreach (var cardView in _cardViews) // 현재 화면의 모든 손패 카드를 순회하며
+            {
+                if (cardView == null) continue; // 이미 제거된 카드는 건너뜀
+                bool isSelected = _boardInput != null && _boardInput.FusionMaterials.Contains(cardView.Definition); // 이 카드가 현재 합성 재료로 선택돼 있는지 확인
+                cardView.SetFusionSelected(isSelected); // 선택 여부에 맞춰 금색 테두리 강조 갱신
+            }
         }
 
         public void BeginCardDrag(CardView cardView, Vector2 screenPosition) // 카드 드래그 시작 시 손패·Drop 미리보기를 준비하는 메서드
@@ -254,6 +274,7 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             if (_boardInput != null) // 입력 컨트롤러가 연결돼 있으면
             {
                 _boardInput.HandChanged -= HandleHandChanged; // 손패 변경 이벤트 해제
+                _boardInput.FusionSelectionChanged -= HandleFusionSelectionChanged; // 21일차: 합성 선택 이벤트 해제
                 if (_boardInput.TurnManager != null) _boardInput.TurnManager.TurnChanged -= HandleTurnChanged; // 턴 이벤트 해제
             }
 

@@ -7,6 +7,7 @@ using UnityEngine.InputSystem; // 새 Input System(Mouse, Keyboard)을 사용하
 using UnityEngine.Rendering; // 드래그 중 기물 고스트 머티리얼의 투명 블렌딩을 설정하기 위한 네임스페이스
 using ProjectEta.Battle; // TurnManager, TurnState를 사용하기 위한 네임스페이스
 using ProjectEta.Cards; // HandState, DeckState를 사용하기 위한 네임스페이스
+using ProjectEta.Fusion; // 21일차: FusionRecipe, FusionRecipeDatabase를 사용하기 위한 네임스페이스
 using ProjectEta.Pieces; // PieceDefinition, PieceRuntimeState, PieceView를 사용하기 위한 네임스페이스
 using ProjectEta.Run; // RunState를 사용하기 위한 네임스페이스
 
@@ -22,6 +23,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         [SerializeField] private PieceDefinition _bishopDefinition; // 프로토타입 시작 풀에 넣을 비숍 카드 데이터
         [SerializeField] private PieceDefinition _rookDefinition; // 프로토타입 시작 풀에 넣을 룩 카드 데이터
         [SerializeField] private PieceDefinition _queenDefinition; // 프로토타입 시작 풀에 넣을 퀸 카드 데이터
+        [SerializeField] private FusionRecipeDatabase _fusionRecipeDatabase; // 21일차: 재료 2장으로 합성 레시피를 조회할 데이터베이스
 
         public RunState RunState => _runState; // 현재 입력이 변경하는 실제 런 상태
         public HandState HandState => _handState; // 현재 입력이 변경하는 실제 플레이어 손패 상태
@@ -33,6 +35,10 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         public bool CanUseCombatInput => IsBound && (_turnManager == null || _turnManager.CanPlayerAct); // 기물 선택·이동·공격 같은 일반 전투 입력 가능 여부
         public bool CanUseDeploymentInput => IsBound && (_turnManager == null || _turnManager.CanDeploy); // 자유 배치 턴 입력 가능 여부
         public bool CanUseCardSummonInput => IsBound && (_turnManager == null || _turnManager.CurrentState == TurnState.DeploymentTurn || _turnManager.CanPlayerAct); // 배치 턴 또는 일반 플레이어 턴의 카드 소환 입력 가능 여부
+        public bool CanUseFusionInput => IsBound && (_turnManager == null || _turnManager.CanDeploy); // 21일차: 합성은 배치 턴에만 가능(확정 규칙)
+        public bool IsFusionModeActive => _isFusionModeActive; // 21일차: 합성 버튼으로 진입한 재료 선택 모드인지 여부
+        public IReadOnlyList<PieceDefinition> FusionMaterials => _fusionMaterials; // 21일차: 현재 합성 재료로 선택된 손패 카드 목록(최대 2장)
+        public FusionRecipe CurrentFusionRecipe => _currentFusionRecipe; // 21일차: 현재 선택된 재료 2장으로 미리 계산된 합성 결과 레시피(없으면 null)
         public PieceDefinition SelectedCard => _selectedCard; // 현재 손패에서 숫자키로 선택된 카드
         public PieceRuntimeState SelectedPiece => _selectedPiece; // 현재 선택된 이동 대기 기물
         public MovementResult PendingMovement => _pendingMovement; // 현재 선택된 기물의 이동/공격 후보 칸
@@ -43,6 +49,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         public event Action<CombatResult> AttackResolved; // 공격 판정이 끝날 때마다 외부 전투 시스템에 알리는 이벤트
         public event Action HandChanged; // 18일차: Draw·소환 등 실제 플레이어 손패가 바뀔 때 카드 UI에 알리는 이벤트
         public event Action DeckChanged; // 19일차: 보유 풀·드로우 더미·죽은 카드 더미 구성이 바뀔 때 덱/무덤 패널 UI에 알리는 이벤트
+        public event Action FusionSelectionChanged; // 21일차: 합성 모드 On/Off, 재료 선택, 결과 미리보기가 바뀔 때 합성 패널 UI에 알리는 이벤트
 
         private const int PrototypeInitialHandSize = 5; // 기본 6종 중 5장을 초기 손패로 뽑는 테스트 값
         private const int EnemyInitialHandSize = 3; // 20일차: 적 카드 5종 중 3장만 먼저 손패로 뽑고 나머지는 드로우 더미에 남겨 이후 다시 뽑히게 하는 테스트 값
@@ -63,6 +70,9 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         private PieceDefinition _cardDropGhostDefinition; // 현재 고스트가 표현 중인 카드 정의
         private Vector2Int? _cardDropPreviewCell; // 현재 마우스가 가리키는 보드 셀
         private bool _isCardDropPreviewValid; // 현재 프리뷰 셀의 실제 소환 가능 여부
+        private bool _isFusionModeActive; // 21일차: 합성 버튼으로 진입한 재료 선택 모드 여부
+        private readonly List<PieceDefinition> _fusionMaterials = new List<PieceDefinition>(2); // 21일차: 현재 합성 재료로 클릭 선택된 손패 카드(최대 2장)
+        private FusionRecipe _currentFusionRecipe; // 21일차: 현재 선택된 재료 2장에 대한 미리보기 레시피(없으면 null)
 
         private void Awake() // 씬 시작 시 자동 호출되는 초기화 메서드
         {
@@ -267,11 +277,166 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             DeckChanged?.Invoke(); // 19일차: 죽은 카드 더미가 비워졌음을 덱/무덤 패널 UI에 알림
         }
 
+        public bool TryFindFusionRecipe(PieceDefinition materialA, PieceDefinition materialB, out FusionRecipe recipe) // 21일차: 재료 2장(순서 무관)으로 매칭되는 합성 레시피를 조회하는 진입점
+        {
+            recipe = null; // 기본값은 매칭 없음
+            if (_fusionRecipeDatabase == null || materialA == null || materialB == null) // 데이터베이스나 재료가 없으면
+            {
+                return false; // 조회하지 않고 실패 반환
+            }
+
+            return _fusionRecipeDatabase.TryFindRecipe(materialA, materialB, out recipe); // 실제 레시피 데이터베이스에 위임
+        }
+
+        public bool TryFuseCards(PieceDefinition materialA, PieceDefinition materialB) // 21일차: 손패의 재료 카드 2장을 실제로 합성해 결과 카드를 손패에 넣는 진입점
+        {
+            if (!CanUseFusionInput || _handState == null) // 배치 턴이 아니거나 손패가 연결되지 않았으면
+            {
+                return false; // 합성을 실행하지 않고 실패 반환
+            }
+
+            if (!TryFindFusionRecipe(materialA, materialB, out var recipe)) // 일치하는 레시피가 없으면
+            {
+                return false; // 합성 불가로 실패 반환
+            }
+
+            if (!HasCardsAvailableForFusion(materialA, materialB)) // 실제 손패에 재료 2장(동일 카드면 2장 모두)이 없으면
+            {
+                return false; // 카드 유실을 방지하기 위해 실행하지 않고 실패 반환
+            }
+
+            _handState.RemoveCard(materialA); // 재료 A를 손패에서 제거
+            _handState.RemoveCard(materialB); // 재료 B를 손패에서 제거(동일 카드면 남은 두 번째 장이 제거됨)
+            _handState.TryAddCard(recipe.Result); // 결과 카드를 손패에 추가(같은 배치 턴에 바로 배치 가능)
+
+            if (_selectedCard == materialA || _selectedCard == materialB) _selectedCard = null; // 합성에 쓰인 카드가 숫자키로 선택돼 있었다면 선택 해제
+
+            Debug.Log($"합성: {materialA.DisplayName} + {materialB.DisplayName} -> {recipe.Result.DisplayName}"); // 합성 결과를 콘솔에 출력
+            HandChanged?.Invoke(); // 손패 구성이 바뀌었음을 카드 UI에 알림
+            return true; // 합성 성공 반환
+        }
+
+        private bool HasCardsAvailableForFusion(PieceDefinition materialA, PieceDefinition materialB) // 손패에 재료 2장을 실제로 소모할 수 있는지 확인하는 메서드(동일 카드 합성 시 2장 보유 여부까지 확인)
+        {
+            if (_handState == null) return false; // 손패가 없으면 불가
+
+            if (materialA != materialB) // 서로 다른 재료면
+            {
+                return _handState.Hand.Contains(materialA) && _handState.Hand.Contains(materialB); // 두 카드가 각각 손패에 있는지만 확인
+            }
+
+            int count = 0; // 동일 카드가 손패에 몇 장 있는지 셀 변수
+            foreach (var card in _handState.Hand) // 손패를 순회하며
+            {
+                if (card == materialA) count++; // 같은 카드일 때마다 증가
+            }
+
+            return count >= 2; // 동일 카드 합성은 최소 2장이 있어야 가능
+        }
+
+        public bool SetFusionModeActive(bool active) // 21일차: 합성 버튼으로 재료 선택 모드를 켜고 끄는 진입점
+        {
+            if (active && !CanUseFusionInput) // 배치 턴이 아닐 때 켜려고 하면
+            {
+                return false; // 합성 모드 진입을 거부
+            }
+
+            if (_isFusionModeActive == active) // 이미 같은 상태면
+            {
+                return true; // 추가 처리 없이 성공 반환(멱등)
+            }
+
+            _isFusionModeActive = active; // 합성 모드 상태 갱신
+            ClearFusionMaterialsInternal(); // 모드 전환 시 이전에 남아 있던 재료 선택은 항상 비움
+
+            if (active) // 합성 모드로 진입하는 경우
+            {
+                _selectedCard = null; // 숫자키 보조 소환 선택과 동시에 활성화되지 않도록 해제
+                DeselectPiece(); // 기물 이동/공격 선택도 함께 해제
+                DeselectCurrentCell(); // 일반 칸 강조도 함께 해제
+            }
+
+            FusionSelectionChanged?.Invoke(); // 합성 패널 UI에 모드 전환을 알림
+            return true; // 정상 전환 반환
+        }
+
+        public bool TryToggleFusionMaterial(PieceDefinition card) // 21일차: 합성 모드에서 손패 카드를 재료로 선택/해제하는 진입점(카드 좌클릭에서 호출)
+        {
+            if (!_isFusionModeActive || !CanUseFusionInput || _handState == null || card == null) // 합성 모드가 아니거나 배치 턴이 아니거나 데이터가 없으면
+            {
+                return false; // 처리하지 않고 실패 반환
+            }
+
+            if (!_handState.Hand.Contains(card)) // 실제 손패에 없는 카드면
+            {
+                return false; // 선택하지 않고 실패 반환
+            }
+
+            if (_fusionMaterials.Contains(card)) // 이미 재료로 선택된 카드를 다시 클릭했으면
+            {
+                _fusionMaterials.Remove(card); // 선택 해제(토글 동작)
+            }
+            else // 아직 선택되지 않은 카드면
+            {
+                if (_fusionMaterials.Count >= 2) // 이미 재료 2장이 다 찼으면
+                {
+                    return false; // 세 번째 재료는 받지 않고 실패 반환
+                }
+
+                _fusionMaterials.Add(card); // 새 재료로 추가
+            }
+
+            RecomputeFusionPreview(); // 재료 2장이 모였는지 확인해 결과 미리보기 갱신
+            FusionSelectionChanged?.Invoke(); // 합성 패널 UI에 선택 변경을 알림
+            return true; // 선택 처리 성공 반환
+        }
+
+        private void RecomputeFusionPreview() // 21일차: 현재 선택된 재료로 결과 레시피를 다시 계산하는 메서드
+        {
+            _currentFusionRecipe = null; // 기본값은 미리보기 없음
+
+            if (_fusionMaterials.Count == 2) // 재료가 정확히 2장 모였으면
+            {
+                TryFindFusionRecipe(_fusionMaterials[0], _fusionMaterials[1], out _currentFusionRecipe); // 실제 데이터베이스에서 매칭 레시피 조회(없으면 null 유지)
+            }
+        }
+
+        public bool TryConfirmFusionSelection() // 21일차: 합성 패널의 "합성" 버튼이 호출하는 실제 확정 진입점
+        {
+            if (!_isFusionModeActive || _fusionMaterials.Count != 2 || _currentFusionRecipe == null) // 모드가 꺼져 있거나 재료가 덜 모였거나 매칭 결과가 없으면
+            {
+                return false; // 합성을 실행하지 않고 실패 반환
+            }
+
+            bool fused = TryFuseCards(_fusionMaterials[0], _fusionMaterials[1]); // 기존 합성 실행 로직에 위임(카드 제거·결과 추가·HandChanged까지 처리)
+            if (!fused) // 그 사이 손패 상태가 바뀌는 등의 이유로 실패했으면
+            {
+                ClearFusionMaterialsInternal(); // 더 이상 유효하지 않은 선택을 정리
+                FusionSelectionChanged?.Invoke(); // 합성 패널 UI에도 반영
+                return false; // 실패 반환
+            }
+
+            ClearFusionMaterialsInternal(); // 합성에 사용된 재료 선택을 비움(합성 모드 자체는 유지해 연속 합성 가능)
+            FusionSelectionChanged?.Invoke(); // 합성 패널 UI를 빈 재료 상태로 갱신
+            return true; // 합성 확정 성공 반환
+        }
+
+        private void ClearFusionMaterialsInternal() // 21일차: 합성 재료 선택과 미리보기 결과를 함께 비우는 내부 메서드
+        {
+            _fusionMaterials.Clear(); // 선택된 재료 목록 비움
+            _currentFusionRecipe = null; // 미리보기 결과도 함께 초기화
+        }
+
         private void Update() // 매 프레임 자동 호출되는 메서드
         {
             if (!IsBound) // 실제 런 상태가 아직 연결되지 않았으면
             {
                 return; // 입력으로 임시 데이터를 만들지 않고 기다림
+            }
+
+            if (_isFusionModeActive && !CanUseFusionInput) // 21일차: 배치 턴을 벗어났는데 합성 모드가 여전히 켜져 있으면
+            {
+                SetFusionModeActive(false); // 합성 모드를 자동으로 종료(패널 UI도 이벤트로 함께 닫힘)
             }
 
             if (!CanReceivePlayerInput) // 현재 적 턴 또는 전투 종료 상태라면
@@ -327,6 +492,11 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
         public bool TrySelectHandSlot(int handIndex) // 현재 손패 인덱스를 기준으로 숫자키 보조 선택을 처리하는 테스트 가능한 진입점
         {
+            if (_isFusionModeActive) // 21일차: 합성 재료 선택 중에는 일반 소환용 숫자키 선택과 섞이지 않도록 차단
+            {
+                return false; // 선택하지 않고 실패 반환
+            }
+
             if (_handState == null || handIndex < 0 || handIndex >= _handState.Hand.Count) // 손패가 없거나 요청 슬롯이 범위를 벗어나면
             {
                 Debug.Log($"손패 {handIndex + 1}번 슬롯에는 카드가 없습니다."); // 비어 있는 슬롯임을 개발 로그로 출력
@@ -908,11 +1078,12 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             _selectedCell = null; // 선택 상태 초기화
         }
 
-        private void ClearInteractiveSelection() // 턴이 잠겼을 때 카드·기물·칸 선택을 한 번에 정리하는 메서드
+        private void ClearInteractiveSelection() // 턴이 잠겼을 때 카드·기물·칸·합성 선택을 한 번에 정리하는 메서드
         {
             _selectedCard = null; // 배치 카드 선택 해제
             DeselectPiece(); // 기물 선택과 이동/공격 후보 해제
             DeselectCurrentCell(); // 일반 칸 선택 강조 해제
+            if (_isFusionModeActive) SetFusionModeActive(false); // 21일차: 입력이 잠기면 합성 모드도 함께 종료
         }
 
         private void OnGUI() // 18일차 이후 실제 카드 손패는 Canvas로 표시하고 좌상단에는 최소 디버그 정보만 남기는 메서드

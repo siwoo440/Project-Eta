@@ -32,6 +32,7 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
         private Text _healthText; // 우하단 체력 수치
         private Text _slotText; // 우상단 숫자키 보조 입력 표시
         private GameObject _lockOverlay; // 사용할 수 없는 카드를 어둡게 표시하는 오버레이
+        private GameObject _fusionSelectedOverlay; // 21일차: 합성 재료로 선택된 카드에 표시하는 금색 테두리 오버레이
         private bool _isInteractable; // 현재 카드 드래그 가능 상태
         private bool _isDragging; // 현재 드래그 중인지 여부
         private Transform _originalParent; // 드래그 전 손패 부모
@@ -54,9 +55,15 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             if (_rootImage != null) _rootImage.color = interactable ? Color.white : new Color(0.72f, 0.72f, 0.72f, 1f); // 잠긴 카드 명도 감소
         }
 
+        public void SetFusionSelected(bool selected) // 21일차: 합성 재료로 선택된 카드에 금색 테두리 강조를 켜고 끄는 메서드
+        {
+            if (_fusionSelectedOverlay != null) _fusionSelectedOverlay.SetActive(selected); // 선택 상태에 맞춰 강조 오버레이만 표시
+        }
+
         public void OnBeginDrag(PointerEventData eventData) // 카드 드래그 시작 이벤트
         {
             if (eventData.button != PointerEventData.InputButton.Left) return; // 좌클릭 드래그만 카드 소환 입력으로 허용
+            if (_owner != null && _owner.IsFusionModeActive) return; // 21일차: 합성 재료 선택 중에는 드래그 소환 대신 클릭 선택만 허용
             if (!_isInteractable || _owner == null || _definition == null) return; // 사용할 수 없는 카드는 드래그하지 않음
             EnsureRequiredComponents(); // 부분 초기화된 런타임 카드라도 CanvasGroup과 RectTransform을 반드시 보장
             _isDragging = true; // 드래그 상태 시작
@@ -92,10 +99,17 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             ReturnToHand(); // 잘못된 Drop이면 카드가 원래 손패 위치로 돌아감
         }
 
-        public void OnPointerClick(PointerEventData eventData) // 19일차: 배치 턴에 카드를 우클릭해 드로우 더미 맨 아래로 정리하는 이벤트
+        public void OnPointerClick(PointerEventData eventData) // 19일차 우클릭 손패 정리 + 21일차 합성 재료 좌클릭 선택을 함께 처리하는 이벤트
         {
-            if (eventData.button != PointerEventData.InputButton.Right) return; // 우클릭이 아니면 처리하지 않음(좌클릭은 드래그로 이미 처리)
             if (_owner == null || _definition == null) return; // 연결이 없으면 종료
+
+            if (eventData.button == PointerEventData.InputButton.Left && _owner.IsFusionModeActive) // 21일차: 합성 모드에서는 좌클릭이 드래그 대신 재료 선택으로 동작
+            {
+                _owner.TryToggleFusionCard(this); // 성공/실패와 무관하게 시각 갱신은 BoardInputController.FusionSelectionChanged 구독으로 처리
+                return; // 합성 모드 중에는 우클릭 정리와 동시에 처리하지 않음
+            }
+
+            if (eventData.button != PointerEventData.InputButton.Right) return; // 우클릭이 아니면 이후 처리 없음(좌클릭 드래그는 OnBeginDrag가 이미 처리)
             if (_owner.TryDiscardCard(this)) gameObject.SetActive(false); // 정리 성공 시 다음 프레임 손패 재구성 전까지 즉시 숨김
         }
 
@@ -214,6 +228,14 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             Stretch(lockPanel.rect, 0f, 0f, 0f, 0f); // 카드 전체를 덮게 설정
             lockPanel.image.sprite = GetRoundedSprite(); // 카드 외형과 같은 둥근 Sprite 적용
             lockPanel.image.type = Image.Type.Sliced; // 모서리 형태 유지
+
+            var fusionPanel = CreatePanel("FusionSelectedOverlay", transform, new Color(1f, 0.82f, 0.2f, 0f)); // 21일차: 합성 재료 선택 강조용 금색 테두리 오버레이 생성(배경은 투명 유지)
+            _fusionSelectedOverlay = fusionPanel.gameObject; // 오버레이 참조 저장
+            Stretch(fusionPanel.rect, 0f, 0f, 0f, 0f); // 카드 전체를 덮게 설정
+            fusionPanel.image.sprite = GetRoundedSprite(); // 카드 외형과 같은 둥근 Sprite 적용
+            fusionPanel.image.type = Image.Type.Sliced; // 모서리 형태 유지
+            AddOutline(fusionPanel.gameObject, new Color(1f, 0.85f, 0.25f, 1f), new Vector2(4f, -4f)); // 실제로 보이는 금색 테두리는 Outline으로 표현
+            _fusionSelectedOverlay.SetActive(false); // 평소에는 숨김 상태로 시작
         }
 
         private void RefreshVisual(int handIndex) // PieceDefinition 값을 실제 카드 UI에 반영하는 메서드

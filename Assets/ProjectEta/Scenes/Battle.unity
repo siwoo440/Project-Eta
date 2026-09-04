@@ -512,6 +512,7 @@ MonoBehaviour:
   _bishopDefinition: {fileID: 11400000, guid: e2dcfbfceb842e5680670a88b04778c9, type: 2}
   _rookDefinition: {fileID: 11400000, guid: 1e41dd6ade3acf030325934763587f1d, type: 2}
   _queenDefinition: {fileID: 11400000, guid: 370e340ecb2455f699c27cafac2faa9e, type: 2}
+  _fusionRecipeDatabase: {fileID: 11400000, guid: db3790a79d2e66e176d39281407198ac, type: 2}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e9f1a6ef25279a438a7a43e588c0bae, type: 3}
+  m_Name: Amazon
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
+  _pieceId: amazon
+  _displayName: 아마존
+  _category: 1
+  _grade: 5
+  _movementType: 8
+  _roleTags: 12
+  _baseHp: 5
+  _baseAtk: 5
+  _occupancySize: {x: 1, y: 1}
+  _description: Queen+Knight 합성. 직선+대각선 슬라이더 + 나이트 도약 복합 이동. 5성 최상위 기물, HP·ATK는 초기 프로토타입 임시값.
