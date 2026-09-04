@@ -17,7 +17,7 @@ namespace ProjectEta.Run // 런(플레이 세션) 관련 타입을 모아두는 
             File.WriteAllText(SavePath, json); // JSON 문자열을 파일에 기록
         }
 
-        public static bool TryLoad(PieceDatabase database, out RunState runState) // 파일에서 런 상태를 불러오는 메서드
+        public static bool TryLoad(PieceDatabase database, out RunState runState, StatusEffectDatabase statusEffectDatabase = null) // 파일에서 런 상태를 불러오는 메서드(27일차: 상태 이상 복원을 위한 선택적 DB 매개변수 추가)
         {
             if (!File.Exists(SavePath)) // 저장 파일이 없으면
             {
@@ -27,7 +27,7 @@ namespace ProjectEta.Run // 런(플레이 세션) 관련 타입을 모아두는 
 
             var json = File.ReadAllText(SavePath); // 저장 파일 내용을 문자열로 읽기
             var data = JsonUtility.FromJson<RunSaveData>(json); // JSON 문자열을 저장용 데이터로 변환
-            runState = RunState.FromSaveData(data, database); // 저장용 데이터로 런 상태 복원
+            runState = RunState.FromSaveData(data, database, statusEffectDatabase); // 저장용 데이터로 런 상태 복원
             return true; // 불러오기 성공 반환
         }
     }

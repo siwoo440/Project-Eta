@@ -16,6 +16,9 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
         [SerializeField] private PieceMovementType _movementType; // 기존 9종과 저장 데이터 호환을 위한 구형 이동 타입
         [SerializeField] private PieceRoleTag _roleTags; // 기물 역할 태그
 
+        [Header("상태 면역")] // 27일차 상태 효과 면역 구분선
+        [SerializeField] private StatusEffectType _immuneStatusTags; // 이 기물이 걸리지 않는 상태 이상 태그(일반 기물은 None, 보스 등은 필요한 만큼 체크)
+
         [Header("이동 규칙")] // 23일차 데이터 기반 이동 규칙 구분선
         [SerializeField] private MovementRuleData[] _movementRules = Array.Empty<MovementRuleData>(); // 새 기물이 코드 수정 없이 조합할 이동 규칙 목록
 
@@ -39,6 +42,7 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
         public PieceGrade Grade => _grade; // 외부에서 읽는 등급
         public PieceMovementType MovementType => _movementType; // 기존 코드가 읽는 구형 이동 타입
         public PieceRoleTag RoleTags => _roleTags; // 외부에서 읽는 역할 태그
+        public StatusEffectType ImmuneStatusTags => _immuneStatusTags; // 27일차: 외부에서 읽는 상태 이상 면역 태그
         public MovementRuleData[] MovementRules => _movementRules ?? Array.Empty<MovementRuleData>(); // 데이터 기반 이동 규칙을 null 없이 반환
         public int BaseHp => _baseHp; // 외부에서 읽는 기본 체력
         public int BaseAtk => _baseAtk; // 외부에서 읽는 기본 공격력

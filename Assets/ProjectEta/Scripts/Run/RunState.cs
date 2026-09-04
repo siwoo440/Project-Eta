@@ -57,7 +57,7 @@ namespace ProjectEta.Run // 런 관련 타입을 모아두는 네임스페이스
                     var occupyingPiece = Board.GetTile(boardPosition).OccupyingPiece; // 점유 기물 조회
                     if (occupyingPiece == null) continue; // 빈 칸은 저장하지 않음
 
-                    data.boardPieces.Add(new PieceSaveData // 기물 스냅샷 추가
+                    var pieceSaveData = new PieceSaveData // 기물 스냅샷 생성
                     {
                         x = x, // X 좌표
                         y = y, // Y 좌표
@@ -65,14 +65,26 @@ namespace ProjectEta.Run // 런 관련 타입을 모아두는 네임스페이스
                         currentHp = occupyingPiece.CurrentHp, // 현재 체력
                         isPlayerPiece = occupyingPiece.IsPlayerPiece, // 진영
                         movementCycleIndex = occupyingPiece.MovementCycleIndex // Chameleon 순환 단계
-                    });
+                    };
+
+                    foreach (var statusEffect in occupyingPiece.StatusEffects) // 27일차: 걸려 있는 상태 이상을 순회
+                    {
+                        pieceSaveData.statusEffects.Add(new StatusEffectSaveData // 상태 이상 스냅샷 추가
+                        {
+                            statusType = (int)statusEffect.Definition.StatusType, // 상태 종류
+                            remainingTurns = statusEffect.RemainingTurns, // 남은 지속 턴
+                            stackCount = statusEffect.StackCount // 현재 중첩 수
+                        });
+                    }
+
+                    data.boardPieces.Add(pieceSaveData); // 완성된 기물 스냅샷 등록
                 }
             }
 
             return data; // 완성된 저장 데이터 반환
         }
 
-        public static RunState FromSaveData(RunSaveData data, PieceDatabase database) // 저장 데이터로 런 상태 복원
+        public static RunState FromSaveData(RunSaveData data, PieceDatabase database, StatusEffectDatabase statusEffectDatabase = null) // 저장 데이터로 런 상태 복원(27일차: 상태 이상 복원을 위한 선택적 DB 매개변수 추가, 생략 시 상태 이상 없이 복원)
         {
             var runState = new RunState(data.kingHp) // 저장 킹 체력으로 런 생성
             {
@@ -120,6 +132,18 @@ namespace ProjectEta.Run // 런 관련 타입을 모아두는 네임스페이스
                     CurrentHp = pieceData.currentHp // 저장 체력 복원
                 };
                 runtimePiece.RestoreMovementCycleIndex(pieceData.movementCycleIndex); // 25일차: Chameleon 순환 단계 복원
+
+                if (statusEffectDatabase != null && pieceData.statusEffects != null) // 27일차: 상태 이상 DB가 주어졌을 때만 복원 시도
+                {
+                    foreach (var statusData in pieceData.statusEffects) // 저장된 상태 이상을 순회
+                    {
+                        var statusDefinition = statusEffectDatabase.FindByType((StatusEffectType)statusData.statusType); // 종류로 정의 조회
+                        if (statusDefinition != null) // 정의를 찾았으면
+                        {
+                            runtimePiece.RestoreStatusEffect(statusDefinition, statusData.remainingTurns, statusData.stackCount); // 지속 턴·중첩 수 그대로 복원
+                        }
+                    }
+                }
 
                 runState.Board.GetTile(boardPosition).OccupyingPiece = runtimePiece; // 보드 점유 복원
             }

@@ -26,5 +26,14 @@ namespace ProjectEta.Run // 런 관련 타입을 모아두는 네임스페이스
         public int currentHp; // 저장 시점 현재 체력
         public bool isPlayerPiece; // 아군 기물 여부
         public int movementCycleIndex; // 25일차: Chameleon의 Knight/Bishop/Rook/Queen 현재 순환 단계
+        public List<StatusEffectSaveData> statusEffects = new List<StatusEffectSaveData>(); // 27일차: 저장 시점에 걸려 있던 상태 이상 목록
+    }
+
+    [Serializable] // JsonUtility로 직렬화 가능하게 지정
+    public class StatusEffectSaveData // 27일차: 상태 이상 1건의 저장용 스냅샷
+    {
+        public int statusType; // StatusEffectType 비트값
+        public int remainingTurns; // 저장 시점 남은 지속 턴 수
+        public int stackCount; // 저장 시점 중첩 수
     }
 }
