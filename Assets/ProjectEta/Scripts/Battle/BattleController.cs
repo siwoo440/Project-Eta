@@ -25,6 +25,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
         public HandUI HandUI => _handUI; // 화면 하단 중앙의 카드 이미지 손패 UI
         public DeckPanelUI DeckPanelUI => _deckPanelUI; // 19일차: 좌하단 뽑을 카드 덱 / 우하단 죽은 카드 덱 버튼·패널 UI
         public FusionPanelUI FusionPanelUI => _fusionPanelUI; // 21일차: 손패 위쪽 합성 버튼·재료 2장·결과 미리보기 패널 UI
+        public PieceInfoPanelUI PieceInfoPanelUI => _pieceInfoPanelUI; // 31일차: 우측 상단 선택 기물 정보 패널 UI
 
         private RunState _runState; // 보드·손패·덱·킹 체력 등을 소유하는 단일 상태 객체
         private TurnManager _turnManager; // 플레이어/적/배치 턴과 행동 권한을 관리하는 상태 객체
@@ -33,6 +34,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
         private HandUI _handUI; // 18일차: 실제 HandState를 카드 이미지와 드래그 Drop으로 표시하는 하단 UI
         private DeckPanelUI _deckPanelUI; // 19일차: 드로우 더미·죽은 카드 더미를 보여주는 좌우 버튼과 목록 패널
         private FusionPanelUI _fusionPanelUI; // 21일차: 합성 버튼과 재료·결과 미리보기 패널
+        private PieceInfoPanelUI _pieceInfoPanelUI; // 31일차: 우측 상단 선택 기물 정보 패널
         private Coroutine _dummyEnemyTurnCoroutine; // 임시 적 턴 자동 종료 코루틴 참조
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // 씬 로드가 끝난 직후 자동 실행
@@ -234,6 +236,21 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
             _fusionPanelUI.Bind(_boardInputController); // 실제 합성 상태·규칙과 변경 이벤트를 UI에 연결
         }
 
+        private void EnsurePieceInfoPanelUI() // 31일차: 우측 상단 정보 패널 Canvas를 한 번만 준비하고 실제 BoardInputController에 연결하는 메서드
+        {
+            if (_pieceInfoPanelUI == null) // 아직 PieceInfoPanelUI 참조가 없다면
+            {
+                _pieceInfoPanelUI = GetComponent<PieceInfoPanelUI>(); // 같은 BattleController GameObject에 기존 컴포넌트가 있는지 먼저 확인
+            }
+
+            if (_pieceInfoPanelUI == null) // 기존 컴포넌트도 없다면
+            {
+                _pieceInfoPanelUI = gameObject.AddComponent<PieceInfoPanelUI>(); // 정보 패널 Canvas를 런타임 생성할 컴포넌트 추가
+            }
+
+            _pieceInfoPanelUI.Bind(_boardInputController); // 실제 기물 선택·피해·턴 이벤트를 UI에 연결
+        }
+
         private void HandleTurnChanged(TurnState state, int turnNumber) // 모든 턴 전환에 대한 전투 컨트롤러 후속 처리를 수행하는 메서드
         {
             if (state == TurnState.PlayerTurn) // 29일차: 새 일반 턴이 시작됐으면
@@ -297,6 +314,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
             EnsureHandUI(); // 실제 손패를 화면 하단 판타지 카드 UI와 드래그 Drop 소환으로 연결
             EnsureDeckPanelUI(); // 19일차: 좌하단 뽑을 카드 덱 / 우하단 죽은 카드 덱 버튼·패널을 실제 상태에 연결
             EnsureFusionPanelUI(); // 21일차: 합성 버튼·재료·결과 미리보기 패널을 실제 상태에 연결
+            EnsurePieceInfoPanelUI(); // 31일차: 우측 상단 선택 기물 정보 패널을 실제 상태에 연결
 
             _boardInputController.AttackResolved -= HandleAttackResolved; // 재연결 시 중복 구독을 막기 위해 먼저 해제
             _boardInputController.AttackResolved += HandleAttackResolved; // 전투 결과를 받아 킹 HP와 승패를 판정

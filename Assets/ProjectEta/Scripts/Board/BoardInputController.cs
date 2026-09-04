@@ -30,6 +30,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         public HandState EnemyHandState => _enemyHandState; // 17일차 추가: 적 턴 자동 소환에 사용하는 프로토타입 적 손패
         public DeckState EnemyDeck => _enemyDeck; // 20일차 추가: 플레이어와 동일한 구조의 적 보유 풀·드로우·죽은 카드 더미
         public TurnManager TurnManager => _turnManager; // 현재 입력 권한을 판단하는 실제 턴 매니저
+        public BattleHooks BattleHooks => _battleHooks; // 31일차: 정보 패널 UI 등이 피해·턴 훅을 구독할 수 있도록 공개하는 접근자
         public bool IsBound => _runState != null && _handState != null && _boardView != null && _boardView.IsBound; // 전투 상태 연결 여부
         public bool CanReceivePlayerInput => IsBound && (_turnManager == null || _turnManager.CanPlayerInput); // 일반 턴 또는 배치 턴에서 플레이어 입력을 받을 수 있는지 여부
         public bool CanUseCombatInput => IsBound && (_turnManager == null || _turnManager.CanPlayerAct); // 기물 선택·이동·공격 같은 일반 전투 입력 가능 여부
@@ -53,6 +54,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         public event Action DeckChanged; // 19일차: 보유 풀·드로우 더미·죽은 카드 더미 구성이 바뀔 때 덱/무덤 패널 UI에 알리는 이벤트
         public event Action FusionSelectionChanged; // 21일차: 합성 모드 On/Off, 재료 선택, 결과 미리보기가 바뀔 때 합성 패널 UI에 알리는 이벤트
         public event Action<FusionRecipe> HiddenRecipeDiscovered; // 22일차: 숨김 합성식을 이번 합성으로 처음 발견했을 때 알리는 이벤트
+        public event Action<PieceRuntimeState> SelectionChanged; // 31일차: 보드 위 기물 선택이 바뀌거나 해제될 때(null) 정보 패널 UI에 알리는 이벤트
 
         private const int PrototypeInitialHandSize = 5; // 기본 6종 중 5장을 초기 손패로 뽑는 테스트 값
         private const int EnemyInitialHandSize = 3; // 20일차: 적 카드 5종 중 3장만 먼저 손패로 뽑고 나머지는 드로우 더미에 남겨 이후 다시 뽑히게 하는 테스트 값
@@ -864,12 +866,9 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
             _selectedCard = null; // 일반 턴에 기물을 선택하면 손패 소환 선택을 취소해 행동 종류를 명확히 분리
             _selectedPiece = tileState.OccupyingPiece; // 새로 선택한 기물 저장
-            _pendingMovement = MovementResolver.GetReachableTiles( // 이 기물의 이동/공격 후보 칸 계산
-                _selectedPiece.Definition, // 23일차: PieceDefinition의 데이터 기반 이동 규칙을 우선 사용
-                _selectedPiece.BoardPosition, // 현재 좌표 전달
-                _selectedPiece.IsPlayerPiece, // 아군 여부 전달
-                _boardView.State); // 실제 보드 상태 전달
+            _pendingMovement = MovementResolver.GetReachableTiles(_selectedPiece, _boardView.State); // 31일차: 런타임 상태 기반 오버로드로 교체 — 기절·속박 게이팅과 카멜레온 순환 단계를 실제 하이라이트에 반영
             _boardView.HighlightMoveCandidates(_pendingMovement.MoveTiles, _pendingMovement.AttackTiles); // 계산한 후보 칸을 화면에 강조 표시
+            SelectionChanged?.Invoke(_selectedPiece); // 31일차: 정보 패널 UI에 새로 선택된 기물을 통지
 
             Debug.Log($"{_selectedPiece.Definition.DisplayName} 선택: 이동 {_pendingMovement.MoveTiles.Count}칸 / 공격 {_pendingMovement.AttackTiles.Count}칸"); // 선택 결과 출력
             return true; // 정상적으로 선택했음을 반환
@@ -1014,6 +1013,11 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
         private void RemovePieceFromBoard(PieceRuntimeState piece) // 사망한 기물을 보드 점유와 화면에서 제거하는 메서드
         {
+            if (_selectedPiece == piece) // 31일차: 지금 선택 중인 기물이 죽었으면
+            {
+                DeselectPiece(); // 정보 패널이 죽은 기물을 계속 보여주지 않도록 선택도 함께 해제
+            }
+
             var tile = _boardView.GetTile(piece.BoardPosition); // 이 기물이 있던 칸 조회
             if (tile != null && tile.OccupyingPiece == piece) // 아직 그 칸을 이 기물이 점유하면
             {
@@ -1051,6 +1055,8 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             {
                 _boardView.ClearMoveCandidates(); // 화면의 이동/공격 후보 강조 해제
             }
+
+            SelectionChanged?.Invoke(null); // 31일차: 정보 패널 UI에 선택 해제를 통지
         }
 
         public bool TryDeploySelectedCardTo(Vector2Int cell) // 기존 숫자키 선택→보드 클릭 소환 방식을 유지하는 호환 진입점
