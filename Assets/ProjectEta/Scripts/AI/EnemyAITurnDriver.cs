@@ -12,7 +12,7 @@ namespace ProjectEta.AI // 적 AI 관련 타입을 모아두는 네임스페이�
         private BoardInputController _boardInput; // 기존 적 카드·보드 시스템 접근용 입력 컨트롤러
         private BoardView _boardView; // AI 이동 화면 연출에 사용할 실제 보드 뷰
         private TurnManager _turnManager; // 적 턴 시작 이벤트를 구독할 턴 매니저
-        private readonly EnemyAIRolePlanner _planner = new EnemyAIRolePlanner(); // 34일차: 33일차 공통 점수에 근접·슬라이더·도약형 성격을 더하는 역할 플래너
+        private readonly EnemyAIAdvancedPlanner _planner = new EnemyAIAdvancedPlanner(); // 35일차: Base·Role·Threat·Special 네 점수 계층을 사용하는 최종 플래너
         private Coroutine _enemyTurnCoroutine; // 한 EnemyTurn에 AI 실행이 중복되지 않도록 관리하는 코루틴
         private bool _isBound; // 실제 전투 객체와 이벤트 연결이 끝났는지 여부
 
@@ -61,7 +61,7 @@ namespace ProjectEta.AI // 적 AI 관련 타입을 모아두는 네임스페이�
             _turnManager.TurnChanged += HandleTurnChanged; // EnemyTurn 시작 이벤트 구독
             _isBound = true; // 연결 완료 기록
 
-            Debug.Log("34일차 Enemy AI 역할 평가 연결 완료: 근접·슬라이더·도약형 성격 점수를 적용합니다."); // 개발 로그 출력
+            Debug.Log("35일차 Enemy AI 연결 완료: 역할·위협·특수 기물 점수를 함께 적용합니다."); // 개발 로그 출력
         }
 
         private void DisableLegacyEnemyCardSummon() // 기존 프로토타입 적 손패/드로우를 비워 BattleController의 자동 소환이 실행되지 않게 하는 메서드

@@ -4,7 +4,7 @@ using ProjectEta.Pieces; // PieceRuntimeState를 사용하기 위한 네임스�
 
 namespace ProjectEta.AI // AI 점수와 디버그 로그 데이터를 기존 AI 네임스페이스에 함께 배치
 {
-    public sealed class AIDebugScoreEntry // 디버그 창 한 줄에 표시할 AI 행동 후보 점수 정보
+    public sealed class AIDebugScoreEntry // F1 디버그 창 한 줄에 표시할 AI 행동 후보 점수 정보
     {
         public PieceRuntimeState Actor { get; } // 행동을 수행하려는 적 기물
         public Vector2Int Origin { get; } // 행동 시작 좌표
@@ -13,7 +13,9 @@ namespace ProjectEta.AI // AI 점수와 디버그 로그 데이터를 기존 AI 
         public EnemyAIBasicRole Role { get; } // 34일차 기본 역할 분류
         public int BaseScore { get; } // 33일차 공통 AI 점수
         public int RoleBonus { get; } // 34일차 역할별 추가 점수
-        public int FinalScore { get; } // 공통 점수와 역할 점수를 합친 최종 점수
+        public int ThreatScore { get; } // 35일차 플레이어 위협 맵에 따른 안전/위험 점수
+        public int SpecialBonus { get; } // 35일차 특수 기물 활용 보너스
+        public int FinalScore { get; } // Base + Role + Threat + Special 최종 점수
         public bool IsSelected { get; } // 실제 AI가 현재 선택할 최우선 행동인지 여부
 
         public AIDebugScoreEntry( // 디버그 로그 한 줄의 모든 값을 한 번에 받는 생성자
@@ -24,6 +26,8 @@ namespace ProjectEta.AI // AI 점수와 디버그 로그 데이터를 기존 AI 
             EnemyAIBasicRole role, // 기본 AI 역할
             int baseScore, // 공통 점수
             int roleBonus, // 역할 보너스
+            int threatScore, // 위협 점수
+            int specialBonus, // 특수 점수
             int finalScore, // 최종 점수
             bool isSelected) // 선택 여부
         {
@@ -34,6 +38,8 @@ namespace ProjectEta.AI // AI 점수와 디버그 로그 데이터를 기존 AI 
             Role = role; // 역할 저장
             BaseScore = baseScore; // 공통 점수 저장
             RoleBonus = roleBonus; // 역할 점수 저장
+            ThreatScore = threatScore; // 위협 점수 저장
+            SpecialBonus = specialBonus; // 특수 점수 저장
             FinalScore = finalScore; // 최종 점수 저장
             IsSelected = isSelected; // 선택 상태 저장
         }
