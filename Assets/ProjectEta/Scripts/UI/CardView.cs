@@ -105,11 +105,11 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
 
             if (eventData.button == PointerEventData.InputButton.Left && _owner.IsFusionModeActive) // 21일차: 합성 모드에서는 좌클릭이 드래그 대신 재료 선택으로 동작
             {
-                _owner.TryToggleFusionCard(this); // 성공/실패와 무관하게 시각 갱신은 BoardInputController.FusionSelectionChanged 구독으로 처리
-                return; // 합성 모드 중에는 우클릭 정리와 동시에 처리하지 않음
+                _owner.TryToggleFusionCard(this); // 실제 합성 재료 선택/해제 시도
+                return; // 합성 모드에서는 여기서 처리 종료
             }
 
-            if (eventData.button != PointerEventData.InputButton.Right) return; // 우클릭이 아니면 이후 처리 없음(좌클릭 드래그는 OnBeginDrag가 이미 처리)
+            if (eventData.button != PointerEventData.InputButton.Right) return; // 우클릭이 아니면 이후 처리 없음
             if (_owner.TryDiscardCard(this)) gameObject.SetActive(false); // 정리 성공 시 다음 프레임 손패 재구성 전까지 즉시 숨김
         }
 
@@ -139,14 +139,13 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
 
         private void EnsureRequiredComponents() // 드래그 처리에서 항상 필요한 핵심 컴포넌트를 개별적으로 보장하는 메서드
         {
-            // 버그 수정: "a ?? b" 형태는 파괴된(그러나 C# 참조는 남아있는) Unity 컴포넌트를 null로 인식하지 못해
-            // MissingComponentException으로 이어질 수 있다. Unity의 오버로드된 == 연산자가 실제로 호출되는
-            // 명시적 null 비교로 바꿔 파괴된 컴포넌트도 항상 다시 확보되도록 한다.
+            // UnityEngine.Object는 파괴된 컴포넌트가 C# 참조상 남아 있어도 Unity의 == null 비교에서는 null처럼 처리될 수 있다.
+            // 따라서 ?? 연산자 대신 Unity의 오버로드된 null 비교가 실행되는 명시적 if 문으로 컴포넌트를 다시 확보한다.
             if (_rectTransform == null) _rectTransform = gameObject.GetComponent<RectTransform>(); // 기존 RectTransform 재확보 시도
-            if (_rectTransform == null) _rectTransform = gameObject.AddComponent<RectTransform>(); // 여전히 없으면 새로 추가
+            if (_rectTransform == null) _rectTransform = gameObject.AddComponent<RectTransform>(); // 실제로 없으면 새 RectTransform 추가
 
             if (_canvasGroup == null) _canvasGroup = gameObject.GetComponent<CanvasGroup>(); // 기존 CanvasGroup 재확보 시도
-            if (_canvasGroup == null) _canvasGroup = gameObject.AddComponent<CanvasGroup>(); // 여전히 없으면 새로 추가
+            if (_canvasGroup == null) _canvasGroup = gameObject.AddComponent<CanvasGroup>(); // 실제로 없으면 새 CanvasGroup 추가
         }
 
         private void EnsureVisualTree() // 예시 이미지와 비슷한 판타지 카드 프레임 계층을 런타임 생성하는 메서드
@@ -154,14 +153,14 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             EnsureRequiredComponents(); // RectTransform이 이미 있어도 CanvasGroup 등 드래그 필수 컴포넌트를 반드시 보장
             if (_rootImage != null) return; // 실제 카드 시각 트리가 이미 만들어진 경우에만 중복 생성을 건너뜀
             _rectTransform.sizeDelta = new Vector2(CardWidth, CardHeight); // 카드 크기 적용
-            var layout = gameObject.GetComponent<LayoutElement>(); // 손패 레이아웃용 크기 컴포넌트 재확보 시도(버그 수정: ?? 대신 명시적 null 비교 사용)
-            if (layout == null) layout = gameObject.AddComponent<LayoutElement>(); // 여전히 없으면 새로 추가
+            var layout = gameObject.GetComponent<LayoutElement>(); // 손패 레이아웃용 LayoutElement 재확보 시도
+            if (layout == null) layout = gameObject.AddComponent<LayoutElement>(); // 실제로 없으면 새 LayoutElement 추가
             layout.preferredWidth = CardWidth; // 카드 권장 너비 지정
             layout.preferredHeight = CardHeight; // 카드 권장 높이 지정
             layout.flexibleWidth = 0f; // 자동 가로 확장 방지
             layout.flexibleHeight = 0f; // 자동 세로 확장 방지
-            _rootImage = gameObject.GetComponent<Image>(); // 카드 전체 포인터 입력용 Image 재확보 시도(버그 수정: ?? 대신 명시적 null 비교 사용)
-            if (_rootImage == null) _rootImage = gameObject.AddComponent<Image>(); // 여전히 없으면 새로 추가
+            _rootImage = gameObject.GetComponent<Image>(); // 카드 전체 포인터 입력용 Image 재확보 시도
+            if (_rootImage == null) _rootImage = gameObject.AddComponent<Image>(); // 실제로 없으면 새 Image 추가
             _rootImage.sprite = GetRoundedSprite(); // 둥근 카드 Sprite 적용
             _rootImage.type = Image.Type.Sliced; // 모서리 형태 유지
             _rootImage.color = Color.white; // 기본 색상 적용
@@ -229,12 +228,12 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             lockPanel.image.sprite = GetRoundedSprite(); // 카드 외형과 같은 둥근 Sprite 적용
             lockPanel.image.type = Image.Type.Sliced; // 모서리 형태 유지
 
-            var fusionPanel = CreatePanel("FusionSelectedOverlay", transform, new Color(1f, 0.82f, 0.2f, 0f)); // 21일차: 합성 재료 선택 강조용 금색 테두리 오버레이 생성(배경은 투명 유지)
+            var fusionPanel = CreatePanel("FusionSelectedOverlay", transform, new Color(1f, 0.82f, 0.2f, 0f)); // 합성 재료 선택 강조용 금색 테두리 오버레이 생성
             _fusionSelectedOverlay = fusionPanel.gameObject; // 오버레이 참조 저장
             Stretch(fusionPanel.rect, 0f, 0f, 0f, 0f); // 카드 전체를 덮게 설정
             fusionPanel.image.sprite = GetRoundedSprite(); // 카드 외형과 같은 둥근 Sprite 적용
             fusionPanel.image.type = Image.Type.Sliced; // 모서리 형태 유지
-            AddOutline(fusionPanel.gameObject, new Color(1f, 0.85f, 0.25f, 1f), new Vector2(4f, -4f)); // 실제로 보이는 금색 테두리는 Outline으로 표현
+            AddOutline(fusionPanel.gameObject, new Color(1f, 0.85f, 0.25f, 1f), new Vector2(4f, -4f)); // 금색 테두리 표현
             _fusionSelectedOverlay.SetActive(false); // 평소에는 숨김 상태로 시작
         }
 
@@ -254,18 +253,17 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             _slotText.text = handIndex == 9 ? "0" : (handIndex + 1).ToString(); // 숫자키 1~0 보조 입력 표시
         }
 
-        private static string GetPortraitPlaceholder(PieceDefinition definition) // Artwork가 없을 때 초상화 중앙에 표시할 약칭을 만드는 메서드
+        private static string GetPortraitPlaceholder(PieceDefinition definition) // Artwork가 없을 때 초상화 중앙에 표시할 앞 3글자 약칭을 만드는 메서드
         {
-            switch (definition.MovementType) // 이동 타입에 따라 약칭 결정
-            {
-                case PieceMovementType.King: return "K"; // 킹
-                case PieceMovementType.Queen: return "Q"; // 퀸
-                case PieceMovementType.Rook: return "R"; // 룩
-                case PieceMovementType.Bishop: return "B"; // 비숍
-                case PieceMovementType.Knight: return "N"; // 나이트
-                case PieceMovementType.Pawn: return "P"; // 폰
-                default: return "?"; // 아직 약칭이 없는 페어리 기물
-            }
+            if (definition == null) return "?"; // 정의가 없으면 안전한 기본값 반환
+
+            string source = !string.IsNullOrWhiteSpace(definition.PieceId) ? definition.PieceId : definition.name; // PieceId를 우선 사용
+            if (string.IsNullOrWhiteSpace(source)) return "?"; // 이름 정보가 없으면 기본값 반환
+
+            source = source.Trim().ToLowerInvariant(); // 앞 3글자를 일관된 소문자로 표시
+            if (source.Length <= 3) return source; // 3글자 이하이면 그대로 표시
+
+            return source.Substring(0, 3); // 4글자 이상이면 앞 3글자만 표시
         }
 
         private static (GameObject gameObject, RectTransform rect, Image image, Transform transform) CreatePanel(string name, Transform parent, Color color) // 단색 UI 패널 생성 보조 메서드

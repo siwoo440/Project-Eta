@@ -1,4 +1,4 @@
-using System.Collections.Generic; // List<T>를 사용하기 위한 네임스페이스
+using System.Collections.Generic; // List<T>와 IReadOnlyList<T>를 사용하기 위한 네임스페이스
 using UnityEngine; // ScriptableObject, SerializeField 등을 사용하기 위한 네임스페이스
 
 namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페이스
@@ -7,6 +7,8 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
     public class PieceDatabase : ScriptableObject // PieceId로 PieceDefinition을 찾아주는 조회용 데이터 에셋
     {
         [SerializeField] private List<PieceDefinition> _definitions = new List<PieceDefinition>(); // 등록된 기물 정의 목록
+
+        public IReadOnlyList<PieceDefinition> Definitions => _definitions; // 26일차: 전체 로스터 무결성·통합 테스트가 읽을 수 있는 읽기 전용 목록
 
         public PieceDefinition FindById(string pieceId) // pieceId로 기물 정의를 찾는 메서드
         {

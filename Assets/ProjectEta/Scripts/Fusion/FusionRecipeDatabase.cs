@@ -1,4 +1,4 @@
-using System.Collections.Generic; // List<T>를 사용하기 위한 네임스페이스
+using System.Collections.Generic; // List<T>와 IReadOnlyList<T>를 사용하기 위한 네임스페이스
 using UnityEngine; // ScriptableObject, SerializeField 등을 사용하기 위한 네임스페이스
 using ProjectEta.Pieces; // PieceDefinition을 사용하기 위한 네임스페이스
 
@@ -9,6 +9,8 @@ namespace ProjectEta.Fusion // 합성 관련 타입을 모아두는 네임스페
     {
         [SerializeField] private List<FusionRecipe> _recipes = new List<FusionRecipe>(); // 등록된 합성 레시피 목록
 
+        public IReadOnlyList<FusionRecipe> Recipes => _recipes; // 26일차: 등록 레시피 전체 연결 상태를 검증하기 위한 읽기 전용 목록
+
         public bool TryFindRecipe(PieceDefinition materialA, PieceDefinition materialB, out FusionRecipe recipe) // 재료 2장(순서 무관)으로 일치하는 레시피를 찾는 메서드
         {
             for (int i = 0; i < _recipes.Count; i++) // 등록된 레시피를 처음부터 순회
@@ -17,7 +19,7 @@ namespace ProjectEta.Fusion // 합성 관련 타입을 모아두는 네임스페
                 if (candidate == null) continue; // 비어있는 항목은 건너뜀
 
                 bool matchesInOrder = candidate.MaterialA == materialA && candidate.MaterialB == materialB; // 등록된 순서 그대로 일치하는지 확인
-                bool matchesReversed = candidate.MaterialA == materialB && candidate.MaterialB == materialA; // 반대 순서로 일치하는지 확인(재료 선택 순서 무관 요구사항)
+                bool matchesReversed = candidate.MaterialA == materialB && candidate.MaterialB == materialA; // 반대 순서로 일치하는지 확인
                 if (matchesInOrder || matchesReversed) // 둘 중 하나라도 일치하면
                 {
                     recipe = candidate; // 찾은 레시피 반환값에 저장
