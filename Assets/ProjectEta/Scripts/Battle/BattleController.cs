@@ -20,6 +20,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
 
         public RunState RunState => _runState; // 현재 전투가 사용하는 단일 런 상태
         public TurnManager TurnManager => _turnManager; // 현재 전투가 사용하는 턴 매니저
+        public BattleHooks BattleHooks => _battleHooks; // 29일차: 현재 전투가 사용하는 전투 훅 버스
         public TurnStatusUI TurnStatusUI => _turnStatusUI; // 화면 상단 중앙의 색상형 턴 상태 Canvas UI
         public HandUI HandUI => _handUI; // 화면 하단 중앙의 카드 이미지 손패 UI
         public DeckPanelUI DeckPanelUI => _deckPanelUI; // 19일차: 좌하단 뽑을 카드 덱 / 우하단 죽은 카드 덱 버튼·패널 UI
@@ -27,6 +28,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
 
         private RunState _runState; // 보드·손패·덱·킹 체력 등을 소유하는 단일 상태 객체
         private TurnManager _turnManager; // 플레이어/적/배치 턴과 행동 권한을 관리하는 상태 객체
+        private BattleHooks _battleHooks; // 29일차: 이동·공격·피해·턴 시점을 통지하는 전투 훅 버스
         private TurnStatusUI _turnStatusUI; // 현재 턴을 상단 중앙에 표시하는 Canvas UI
         private HandUI _handUI; // 18일차: 실제 HandState를 카드 이미지와 드래그 Drop으로 표시하는 하단 UI
         private DeckPanelUI _deckPanelUI; // 19일차: 드로우 더미·죽은 카드 더미를 보여주는 좌우 버튼과 목록 패널
@@ -166,6 +168,11 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
                 _turnManager = new TurnManager(); // 전투 시작 킹 필수 자유 배치 턴 상태로 새 턴 매니저 생성
             }
 
+            if (_battleHooks == null) // 29일차: 아직 훅 버스가 없다면
+            {
+                _battleHooks = new BattleHooks(); // 이번 전투에서 사용할 훅 버스 생성
+            }
+
             if (_turnStatusUI == null) // 턴 상태 UI 컴포넌트가 없다면
             {
                 _turnStatusUI = GetComponent<TurnStatusUI>(); // 같은 오브젝트에 기존 UI 컴포넌트가 있는지 먼저 확인
@@ -229,6 +236,11 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
 
         private void HandleTurnChanged(TurnState state, int turnNumber) // 모든 턴 전환에 대한 전투 컨트롤러 후속 처리를 수행하는 메서드
         {
+            if (state == TurnState.PlayerTurn) // 29일차: 새 일반 턴이 시작됐으면
+            {
+                _battleHooks?.RaiseTurnStart(state, turnNumber); // 턴 시작을 구독자에게 통지
+            }
+
             if (state == TurnState.EnemyTurn) // 방금 적 턴으로 전환됐으면
             {
                 if (_boardInputController != null && _boardInputController.TryEnemySummonOneCard()) // 적 손패 카드 1장 소환이 가능하면
@@ -281,7 +293,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
             }
 
             _boardView.Bind(_runState.Board); // 화면이 RunState.Board 바로 그 객체를 참조하도록 연결
-            _boardInputController.Bind(_runState, _boardView, _turnManager); // 입력이 실제 RunState와 현재 TurnManager를 함께 참조하도록 연결
+            _boardInputController.Bind(_runState, _boardView, _turnManager, _battleHooks); // 입력이 실제 RunState·TurnManager·전투 훅 버스를 함께 참조하도록 연결(29일차: 훅 버스 전달 추가)
             EnsureHandUI(); // 실제 손패를 화면 하단 판타지 카드 UI와 드래그 Drop 소환으로 연결
             EnsureDeckPanelUI(); // 19일차: 좌하단 뽑을 카드 덱 / 우하단 죽은 카드 덱 버튼·패널을 실제 상태에 연결
             EnsureFusionPanelUI(); // 21일차: 합성 버튼·재료·결과 미리보기 패널을 실제 상태에 연결
@@ -353,7 +365,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
             if (_turnManager != null && _turnManager.CompleteEnemyTurn()) // 아직 적 턴이면 다음 상태로 정상 전환
             {
                 Debug.Log($"Enemy turn completed -> {_turnManager.CurrentState} / Turn {_turnManager.TurnNumber}"); // 배치 턴 포함 실제 전환 결과 출력
-                _boardInputController?.ApplyTurnEndStatusEffects(); // 28일차: 플레이어+적 행동이 모두 끝난 시점에 독·화상 틱과 상태 지속 턴 정산
+                _battleHooks?.RaiseTurnEnd(_turnManager.CurrentState, _turnManager.TurnNumber); // 29일차: 플레이어+적 행동이 모두 끝난 시점을 통지(28일차 상태 이상 정산이 이 훅을 구독)
             }
 
             _dummyEnemyTurnCoroutine = null; // 코루틴 완료 후 참조 초기화

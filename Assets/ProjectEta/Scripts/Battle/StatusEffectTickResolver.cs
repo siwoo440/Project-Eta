@@ -4,7 +4,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
 {
     public static class StatusEffectTickResolver // 28일차: 턴 종료 시 독·화상처럼 피해를 주는 상태 이상을 정산하는 정적 클래스
     {
-        public static int ResolveTurnEndDamage(PieceRuntimeState piece) // 기물 1개의 이번 턴 종료 피해를 계산해 적용하는 메서드
+        public static int ResolveTurnEndDamage(PieceRuntimeState piece, BattleHooks hooks = null) // 기물 1개의 이번 턴 종료 피해를 계산해 적용하는 메서드(29일차: 훅을 통한 피해 적용으로 전환)
         {
             if (piece == null) return 0; // 대상이 없으면 처리할 피해 없음
 
@@ -19,12 +19,7 @@ namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페
                 }
             }
 
-            if (totalDamage > 0) // 실제로 피해가 있었다면
-            {
-                piece.CurrentHp -= totalDamage; // 합산한 피해를 한 번에 적용(HP는 PieceRuntimeState 내부에서 0 미만으로 내려가지 않도록 보정)
-            }
-
-            return totalDamage; // 이번 턴에 실제로 적용된 피해량 반환
+            return DamageResolver.ApplyDamage(piece, totalDamage, null, hooks); // BeforeDamage/AfterDamage 훅과 함께 합산 피해를 한 번에 적용(공격자가 없으므로 source는 null)
         }
     }
 }

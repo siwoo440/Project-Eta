@@ -62,6 +62,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         private readonly DeckState _enemyDeck = new DeckState(); // 20일차: 플레이어와 동일한 구조로 적의 보유 풀·드로우·죽은 카드 더미를 관리
         private readonly List<TileState> _freeEnemyTileBuffer = new List<TileState>(); // 20일차: 적 무작위 소환 위치를 고를 때 재사용하는 빈 칸 후보 목록
         private TurnManager _turnManager; // BattleController가 소유하는 실제 턴 매니저
+        private BattleHooks _battleHooks; // 29일차: BattleController가 소유하는 실제 전투 훅 버스
         private Vector2Int? _selectedCell; // 현재 선택된 칸 좌표
         private PieceDefinition _selectedCard; // 현재 선택된 손패 카드
         private PieceRuntimeState _selectedPiece; // 현재 이동을 위해 선택된 보드 위 기물
@@ -91,7 +92,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             }
         }
 
-        public void Bind(RunState runState, BoardView boardView = null, TurnManager turnManager = null) // BattleController가 실제 RunState와 턴 매니저를 입력 시스템에 연결하는 메서드
+        public void Bind(RunState runState, BoardView boardView = null, TurnManager turnManager = null, BattleHooks battleHooks = null) // BattleController가 실제 RunState와 턴 매니저를 입력 시스템에 연결하는 메서드(29일차: 전투 훅 버스 매개변수 추가)
         {
             if (runState == null) // 잘못된 런 상태가 들어오면
             {
@@ -102,6 +103,11 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             if (_turnManager != null) // 이전 턴 매니저가 연결돼 있었다면
             {
                 _turnManager.TurnChanged -= HandleTurnChangedForCardDraw; // 재연결 전에 자동 드로우 이벤트 구독 해제
+            }
+
+            if (_battleHooks != null) // 29일차: 이전 훅 버스가 연결돼 있었다면
+            {
+                _battleHooks.TurnEnd -= HandleBattleHooksTurnEnd; // 재연결 전에 턴 종료 정산 구독 해제
             }
 
             if (boardView != null) // 외부에서 보드 뷰를 명시했으면
@@ -122,6 +128,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             _runState = runState; // 실제 런 상태 참조 저장
             _handState = runState.Hand; // 별도 HandState 대신 RunState.Hand를 그대로 사용
             _turnManager = turnManager; // 전달받은 턴 매니저를 입력 권한 기준으로 사용
+            _battleHooks = battleHooks; // 29일차: 전달받은 전투 훅 버스를 이동·공격·상태 정산에 사용
             _selectedCard = null; // 상태 교체 시 이전 카드 선택 제거
             DeselectPiece(); // 상태 교체 시 이전 기물 선택도 제거
             DeselectCurrentCell(); // 이전 선택 칸 강조 제거
@@ -131,6 +138,17 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 _turnManager.TurnChanged -= HandleTurnChangedForCardDraw; // 중복 구독을 방지하기 위해 먼저 해제
                 _turnManager.TurnChanged += HandleTurnChangedForCardDraw; // 2턴 이후 플레이어 턴 시작 자동 드로우 구독
             }
+
+            if (_battleHooks != null) // 29일차: 훅 버스가 실제로 전달됐다면
+            {
+                _battleHooks.TurnEnd -= HandleBattleHooksTurnEnd; // 중복 구독을 방지하기 위해 먼저 해제
+                _battleHooks.TurnEnd += HandleBattleHooksTurnEnd; // 턴 종료 훅에 28일차 상태 이상 정산을 구독
+            }
+        }
+
+        private void HandleBattleHooksTurnEnd(TurnState state, int turnNumber) // 29일차: TurnEnd 훅을 구독해 28일차 상태 이상 정산을 실행하는 메서드
+        {
+            ApplyTurnEndStatusEffects(); // 독·화상 피해 적용과 지속 턴 감소를 실제로 수행
         }
 
         public void EnsurePrototypeStartingHand() // 기존 호출부 호환을 유지하면서 실제 DeckState→HandState 시작 흐름을 구성하는 메서드
@@ -879,7 +897,10 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
             var attacker = _selectedPiece; // 현재 선택된 공격자
             var defender = targetTile.OccupyingPiece; // 실제 공격 대상 기물
-            var result = CombatResolver.ResolveAttack(attacker, defender); // 고정 ATK 규칙으로 전투 판정 실행
+
+            _battleHooks?.RaiseBeforeAttack(attacker, defender); // 29일차: 판정 직전 통지
+
+            var result = CombatResolver.ResolveAttack(attacker, defender, _battleHooks); // 고정 ATK 규칙으로 전투 판정 실행(훅을 전달해 BeforeDamage/AfterDamage 발행)
 
             Debug.Log($"{attacker.Definition.DisplayName} 공격 -> {defender.Definition.DisplayName}: {result.DamageDealt} 피해, 남은 HP {defender.CurrentHp}"); // 판정 결과 출력
 
@@ -903,6 +924,8 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 Debug.Log($"{defender.Definition.DisplayName} 생존 — {attacker.Definition.DisplayName}은(는) 원위치를 유지합니다."); // 비치명 결과 출력
             }
 
+            _battleHooks?.RaiseAfterAttack(result); // 29일차: 사망 처리·전진까지 모두 끝난 뒤 통지
+
             AttackResolved?.Invoke(result); // 외부 시스템에 전투 결과 통지
 
             DeselectPiece(); // 선택과 후보 강조 해제
@@ -911,7 +934,10 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
         private void MovePieceTo(PieceRuntimeState piece, Vector2Int destination) // 기물의 보드 좌표와 화면 위치를 함께 갱신하는 공통 메서드
         {
-            var originTile = _boardView.GetTile(piece.BoardPosition); // 기물이 원래 있던 칸 조회
+            var origin = piece.BoardPosition; // 29일차: 훅 전달용으로 원래 좌표를 먼저 저장
+            _battleHooks?.RaiseBeforeMove(piece, origin, destination); // 29일차: 실제 이동 직전 통지
+
+            var originTile = _boardView.GetTile(origin); // 기물이 원래 있던 칸 조회
             if (originTile != null) // 원래 칸이 유효하면
             {
                 originTile.OccupyingPiece = null; // 원래 칸 점유 해제
@@ -928,6 +954,8 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             {
                 pieceView.MoveTo(destination, _boardView.TileSize); // 화면 위치도 같은 좌표로 이동
             }
+
+            _battleHooks?.RaiseAfterMove(piece, origin, destination); // 29일차: 보드·화면 반영이 모두 끝난 뒤 통지
         }
 
         public void ApplyTurnEndStatusEffects() // 28일차: 1턴(플레이어+적 행동)이 끝날 때 보드 위 모든 기물의 독·화상 피해와 상태 지속 턴을 정산하는 메서드
@@ -945,7 +973,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                     var piece = tile?.OccupyingPiece; // 점유 기물 조회
                     if (piece == null) continue; // 빈 칸은 건너뜀
 
-                    int damage = StatusEffectTickResolver.ResolveTurnEndDamage(piece); // 독·화상 등 이번 턴 틱 피해 정산
+                    int damage = StatusEffectTickResolver.ResolveTurnEndDamage(piece, _battleHooks); // 독·화상 등 이번 턴 틱 피해 정산(29일차: BeforeDamage/AfterDamage 훅과 함께)
                     if (damage > 0) // 실제 피해가 있었다면
                     {
                         Debug.Log($"{piece.Definition.DisplayName} 상태 이상 피해 {damage}, 남은 HP {piece.CurrentHp}"); // 결과 출력
@@ -1242,6 +1270,11 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             if (_turnManager != null) // 연결된 턴 매니저가 남아 있으면
             {
                 _turnManager.TurnChanged -= HandleTurnChangedForCardDraw; // 자동 드로우 이벤트 구독 해제
+            }
+
+            if (_battleHooks != null) // 29일차: 연결된 훅 버스가 남아 있으면
+            {
+                _battleHooks.TurnEnd -= HandleBattleHooksTurnEnd; // 턴 종료 정산 구독 해제
             }
         }
     }
