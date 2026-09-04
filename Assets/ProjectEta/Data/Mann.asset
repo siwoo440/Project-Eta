@@ -10,37 +10,29 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8e9f1a6ef25279a438a7a43e588c0bae, type: 3}
-  m_Name: Chancellor
+  m_Name: Mann
   m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
-  _pieceId: chancellor
-  _displayName: 챈슬러
+  _pieceId: mann
+  _displayName: 맨
   _category: 1
   _grade: 2
-  _movementType: 7
-  _roleTags: 12
+  _movementType: 9
+  _roleTags: 1
   _movementRules:
-  - _kind: 1
+  - _kind: 0
     _vectors:
     - {x: 1, y: 0}
     - {x: -1, y: 0}
     - {x: 0, y: 1}
     - {x: 0, y: -1}
-    _maxSteps: 10
-    _condition: 0
-  - _kind: 2
-    _vectors:
-    - {x: 1, y: 2}
-    - {x: 2, y: 1}
-    - {x: -1, y: 2}
-    - {x: -2, y: 1}
-    - {x: 1, y: -2}
-    - {x: 2, y: -1}
-    - {x: -1, y: -2}
-    - {x: -2, y: -1}
+    - {x: 1, y: 1}
+    - {x: 1, y: -1}
+    - {x: -1, y: 1}
+    - {x: -1, y: -1}
     _maxSteps: 1
     _condition: 0
-  _baseHp: 4
-  _baseAtk: 3
+  _baseHp: 3
+  _baseAtk: 2
   _occupancySize: {x: 1, y: 1}
   _cardArtwork: {fileID: 0}
-  _description: Rook+Knight 합성. 직교 Slide + Knight Leap를 PieceDefinition 데이터로 조합. HP·ATK는 초기 프로토타입 임시값.
+  _description: 킹과 같은 인접 8칸 Step을 사용하지만 왕 기물이 아닌 합성형 기물. HP·ATK는 초기 프로토타입 임시값.

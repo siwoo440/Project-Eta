@@ -18,7 +18,33 @@ MonoBehaviour:
   _grade: 2
   _movementType: 8
   _roleTags: 12
+  _movementRules:
+  - _kind: 1
+    _vectors:
+    - {x: 1, y: 0}
+    - {x: -1, y: 0}
+    - {x: 0, y: 1}
+    - {x: 0, y: -1}
+    - {x: 1, y: 1}
+    - {x: 1, y: -1}
+    - {x: -1, y: 1}
+    - {x: -1, y: -1}
+    _maxSteps: 10
+    _condition: 0
+  - _kind: 2
+    _vectors:
+    - {x: 1, y: 2}
+    - {x: 2, y: 1}
+    - {x: -1, y: 2}
+    - {x: -2, y: 1}
+    - {x: 1, y: -2}
+    - {x: 2, y: -1}
+    - {x: -1, y: -2}
+    - {x: -2, y: -1}
+    _maxSteps: 1
+    _condition: 0
   _baseHp: 4
   _baseAtk: 4
   _occupancySize: {x: 1, y: 1}
-  _description: Queen+Knight 합성. 직선+대각선 슬라이더 + 나이트 도약 복합 이동. 5성 최상위 기물, HP·ATK는 초기 프로토타입 임시값.
+  _cardArtwork: {fileID: 0}
+  _description: Queen+Knight 합성. 8방향 Slide + Knight Leap를 PieceDefinition 데이터로 조합. 현재 2성 테스트값이며 HP·ATK는 초기 프로토타입 임시값.

@@ -10,22 +10,26 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8e9f1a6ef25279a438a7a43e588c0bae, type: 3}
-  m_Name: Chancellor
+  m_Name: Centaur
   m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
-  _pieceId: chancellor
-  _displayName: 챈슬러
+  _pieceId: centaur
+  _displayName: 센타우르
   _category: 1
   _grade: 2
-  _movementType: 7
-  _roleTags: 12
+  _movementType: 9
+  _roleTags: 5
   _movementRules:
-  - _kind: 1
+  - _kind: 0
     _vectors:
     - {x: 1, y: 0}
     - {x: -1, y: 0}
     - {x: 0, y: 1}
     - {x: 0, y: -1}
-    _maxSteps: 10
+    - {x: 1, y: 1}
+    - {x: 1, y: -1}
+    - {x: -1, y: 1}
+    - {x: -1, y: -1}
+    _maxSteps: 1
     _condition: 0
   - _kind: 2
     _vectors:
@@ -39,8 +43,8 @@ MonoBehaviour:
     - {x: -2, y: -1}
     _maxSteps: 1
     _condition: 0
-  _baseHp: 4
+  _baseHp: 3
   _baseAtk: 3
   _occupancySize: {x: 1, y: 1}
   _cardArtwork: {fileID: 0}
-  _description: Rook+Knight 합성. 직교 Slide + Knight Leap를 PieceDefinition 데이터로 조합. HP·ATK는 초기 프로토타입 임시값.
+  _description: Mann+Knight. 인접 8칸 Step과 Knight Leap를 함께 사용하는 복합 기물. HP·ATK는 초기 프로토타입 임시값.

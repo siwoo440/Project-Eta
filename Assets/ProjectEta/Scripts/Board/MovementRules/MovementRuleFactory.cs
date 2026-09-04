@@ -65,12 +65,12 @@ namespace ProjectEta.Board // 보드 이동 규칙 타입을 모아두는 네임
                     return new SlideMovementRule(OrthogonalDirections, BoardState.Width); // Slide 규칙으로 변환
                 case PieceMovementType.Queen: // Queen은 8방향 슬라이드
                     return new SlideMovementRule(AllEightDirections, BoardState.Width); // Slide 규칙으로 변환
-                case PieceMovementType.Archbishop: // Archbishop은 Bishop+Knight
-                    return new CompoundMovementRule(new SlideMovementRule(DiagonalDirections, BoardState.Width), new LeapMovementRule(KnightOffsets)); // 두 규칙 조합
-                case PieceMovementType.Chancellor: // Chancellor는 Rook+Knight
-                    return new CompoundMovementRule(new SlideMovementRule(OrthogonalDirections, BoardState.Width), new LeapMovementRule(KnightOffsets)); // 두 규칙 조합
-                case PieceMovementType.Amazon: // Amazon은 Queen+Knight
-                    return new CompoundMovementRule(new SlideMovementRule(AllEightDirections, BoardState.Width), new LeapMovementRule(KnightOffsets)); // 두 규칙 조합
+                case PieceMovementType.Archbishop: // 구형 저장/테스트 호환 Archbishop
+                    return new CompoundMovementRule(new SlideMovementRule(DiagonalDirections, BoardState.Width), new LeapMovementRule(KnightOffsets)); // Bishop+Knight 조합
+                case PieceMovementType.Chancellor: // 구형 저장/테스트 호환 Chancellor
+                    return new CompoundMovementRule(new SlideMovementRule(OrthogonalDirections, BoardState.Width), new LeapMovementRule(KnightOffsets)); // Rook+Knight 조합
+                case PieceMovementType.Amazon: // 구형 저장/테스트 호환 Amazon
+                    return new CompoundMovementRule(new SlideMovementRule(AllEightDirections, BoardState.Width), new LeapMovementRule(KnightOffsets)); // Queen+Knight 조합
                 default: // Custom처럼 별도 데이터가 필요한 타입이면
                     return new CompoundMovementRule(); // 데이터 오버로드 없이 호출된 경우 빈 결과를 유지
             }
@@ -90,6 +90,8 @@ namespace ProjectEta.Board // 보드 이동 규칙 타입을 모아두는 네임
                     return new LeapMovementRule(data.Vectors); // Leap 객체 생성
                 case MovementRuleKind.Conditional: // 조건부 이동이면
                     return new ConditionalMovementRule(data.Condition); // Conditional 객체 생성
+                case MovementRuleKind.Rider: // 같은 도약 벡터를 반복하는 라이더 이동이면
+                    return new RiderMovementRule(data.Vectors, data.MaxSteps); // Rider 객체 생성
                 default: // 알 수 없는 데이터면
                     return null; // 팩토리 목록에서 제외
             }

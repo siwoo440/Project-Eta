@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e9f1a6ef25279a438a7a43e588c0bae, type: 3}
+  m_Name: Camel
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
+  _pieceId: camel
+  _displayName: 카멜
+  _category: 0
+  _grade: 1
+  _movementType: 9
+  _roleTags: 4
+  _movementRules:
+  - _kind: 2
+    _vectors:
+    - {x: 1, y: 3}
+    - {x: 3, y: 1}
+    - {x: -1, y: 3}
+    - {x: -3, y: 1}
+    - {x: 1, y: -3}
+    - {x: 3, y: -1}
+    - {x: -1, y: -3}
+    - {x: -3, y: -1}
+    _maxSteps: 1
+    _condition: 0
+  _baseHp: 2
+  _baseAtk: 2
+  _occupancySize: {x: 1, y: 1}
+  _cardArtwork: {fileID: 0}
+  _description: (1,3) 계열의 장거리 비대칭 도약을 사용하는 Leap 기물. HP·ATK는 초기 프로토타입 임시값.
