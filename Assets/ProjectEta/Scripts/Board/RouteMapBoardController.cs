@@ -87,7 +87,11 @@ namespace ProjectEta.Board // 보드 경로 지도 런타임 네임스페이스
             if (_runState.CurrentBoardMode == BoardMode.Map && !_mapModeActive) EnterMapMode(); // 전투 승리 후 지도 모드 진입
             else if (_runState.CurrentBoardMode == BoardMode.Battle && _mapModeActive) ExitMapMode(); // 이후 전투 복귀 대응
 
-            if (_mapModeActive) HandleMapInput(); // 지도 모드 전용 클릭 처리
+            if (_mapModeActive) // 지도 시각이 유지되는 흐름 확인
+            {
+                if (_runState.CurrentFlowPhase == RunFlowPhase.Map) HandleMapInput(); // 실제 Map 흐름에서만 노드 클릭 허용
+                else SetHoveredNode(null); // Reward·Shop·Event 동안 지도 입력·오버 표시 차단
+            }
         }
 
         private void EnterMapMode() // 기존 체스판을 경로 지도 표시 상태로 전환

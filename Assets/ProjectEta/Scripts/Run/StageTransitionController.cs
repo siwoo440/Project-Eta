@@ -17,7 +17,7 @@ namespace ProjectEta.Run // 로그라이트 스테이지 전환 네임스페이�
         private BoardInputController _boardInputController; // 카드·적 스폰 입력 시스템
         private RouteMapBoardController _routeMapBoardController; // 지도 킹 선택 완료 이벤트 소유자
         private RunState _runState; // 전체 로그라이트 런 상태
-        private StagePlaceholderUI _placeholderUI; // Reward·Shop·Event 임시 진입 화면
+        private StagePlaceholderUI _placeholderUI; // Shop·Event 임시 진입 화면
         private Coroutine _transitionCoroutine; // 현재 스테이지 전환 코루틴
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // Battle 씬 로드 후 자동 생성
@@ -165,15 +165,21 @@ namespace ProjectEta.Run // 로그라이트 스테이지 전환 네임스페이�
             return null; // 킹 카드 없음 반환
         }
 
-        private void EnterNonBattleStage(StageDefinition definition) // Reward·Shop·Event 흐름을 다음 일차 구현 전 임시 화면에 연결
+        private void EnterNonBattleStage(StageDefinition definition) // Reward는 실제 카드 보상, Shop·Event는 다음 일차 임시 흐름으로 연결
         {
             _runState.Round.Begin(); // 선택한 비전투 스테이지 진행 중 상태 지정
 
-            if (definition.StageType == StageType.Reward) _runState.Flow.EnterReward(); // 카드 보상 흐름 진입
-            else if (definition.StageType == StageType.Shop) _runState.Flow.EnterShop(); // 상점 흐름 진입
+            if (definition.StageType == StageType.Reward) // 카드 보상 노드 확인
+            {
+                _runState.Flow.EnterReward(); // CardRewardController가 감지할 실제 보상 흐름 진입
+                Debug.Log($"46일차 카드 보상 스테이지 진입: {definition.DisplayName}"); // 실제 보상 시스템 진입 기록
+                return; // Placeholder UI 표시 차단
+            }
+
+            if (definition.StageType == StageType.Shop) _runState.Flow.EnterShop(); // 상점 흐름 진입
             else _runState.Flow.EnterEvent(); // 이벤트 흐름 진입
 
-            _placeholderUI.Show(definition, CompleteNonBattleStage); // 개발용 완료 버튼으로 다음 경로까지 진행 가능하게 표시
+            _placeholderUI.Show(definition, CompleteNonBattleStage); // 47일차 전까지 Shop·Event 개발용 완료 UI 표시
             Debug.Log($"45일차 비전투 스테이지 진입: {definition.DisplayName} / Type={definition.StageType}"); // 비전투 전환 결과 기록
         }
 
