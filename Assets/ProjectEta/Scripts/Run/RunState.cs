@@ -1,4 +1,6 @@
-using UnityEngine; // Vector2Int를 사용하기 위한 네임스페이스
+using System; // StringComparison을 사용하기 위한 네임스페이스
+using System.Collections.Generic; // HashSet<T>와 IReadOnlyList<T>를 사용하기 위한 네임스페이스
+using UnityEngine; // Vector2Int와 Resources를 사용하기 위한 네임스페이스
 using ProjectEta.Board; // BoardState를 사용하기 위한 네임스페이스
 using ProjectEta.Cards; // DeckState, HandState를 사용하기 위한 네임스페이스
 using ProjectEta.Fusion; // FusionDiscoveryLog를 사용하기 위한 네임스페이스
@@ -49,25 +51,27 @@ namespace ProjectEta.Run // 런 관련 타입을 모아두는 네임스페이스
             foreach (var card in Deck.DrawPile) data.drawPileIds.Add(card.PieceId); // 드로우 순서 기록
             foreach (var card in Deck.DeadCardPile) data.deadCardPileIds.Add(card.PieceId); // 죽은 카드 기록
 
+            var savedPieces = new HashSet<PieceRuntimeState>(); // 2x2 보스처럼 여러 칸을 점유하는 같은 런타임 기물의 중복 저장 방지
+
             for (int x = 0; x < BoardState.Width; x++) // 보드 가로 순회
             {
                 for (int y = 0; y < BoardState.Height; y++) // 보드 세로 순회
                 {
-                    var boardPosition = new Vector2Int(x, y); // 현재 좌표 생성
+                    var boardPosition = new Vector2Int(x, y); // 현재 검사 좌표 생성
                     var occupyingPiece = Board.GetTile(boardPosition).OccupyingPiece; // 점유 기물 조회
-                    if (occupyingPiece == null) continue; // 빈 칸은 저장하지 않음
+                    if (occupyingPiece == null || !savedPieces.Add(occupyingPiece)) continue; // 빈 칸·이미 저장한 대형 기물 점유 칸 제외
 
                     var pieceSaveData = new PieceSaveData // 기물 스냅샷 생성
                     {
-                        x = x, // X 좌표
-                        y = y, // Y 좌표
+                        x = occupyingPiece.BoardPosition.x, // 현재 루프 칸이 아니라 기물 기준 좌표 기록
+                        y = occupyingPiece.BoardPosition.y, // 현재 루프 칸이 아니라 기물 기준 좌표 기록
                         pieceId = occupyingPiece.Definition.PieceId, // 기물 id
                         currentHp = occupyingPiece.CurrentHp, // 현재 체력
                         isPlayerPiece = occupyingPiece.IsPlayerPiece, // 진영
                         movementCycleIndex = occupyingPiece.MovementCycleIndex // Chameleon 순환 단계
                     };
 
-                    foreach (var statusEffect in occupyingPiece.StatusEffects) // 27일차: 걸려 있는 상태 이상을 순회
+                    foreach (var statusEffect in occupyingPiece.StatusEffects) // 현재 상태 이상 순회
                     {
                         pieceSaveData.statusEffects.Add(new StatusEffectSaveData // 상태 이상 스냅샷 추가
                         {
@@ -77,14 +81,14 @@ namespace ProjectEta.Run // 런 관련 타입을 모아두는 네임스페이스
                         });
                     }
 
-                    data.boardPieces.Add(pieceSaveData); // 완성된 기물 스냅샷 등록
+                    data.boardPieces.Add(pieceSaveData); // 기물 한 개당 저장 항목 한 건 등록
                 }
             }
 
             return data; // 완성된 저장 데이터 반환
         }
 
-        public static RunState FromSaveData(RunSaveData data, PieceDatabase database, StatusEffectDatabase statusEffectDatabase = null) // 저장 데이터로 런 상태 복원(27일차: 상태 이상 복원을 위한 선택적 DB 매개변수 추가, 생략 시 상태 이상 없이 복원)
+        public static RunState FromSaveData(RunSaveData data, PieceDatabase database, StatusEffectDatabase statusEffectDatabase = null) // 저장 데이터로 런 상태 복원
         {
             var runState = new RunState(data.kingHp) // 저장 킹 체력으로 런 생성
             {
@@ -96,59 +100,104 @@ namespace ProjectEta.Run // 런 관련 타입을 모아두는 네임스페이스
 
             foreach (var pieceId in data.handCardIds) // 손패 복원
             {
-                var definition = database.FindById(pieceId); // 정의 조회
-                if (definition != null) runState.Hand.TryAddCard(definition); // 손패에 추가
+                var definition = FindDefinition(database, pieceId); // 기물 정의 조회
+                if (definition != null) runState.Hand.TryAddCard(definition); // 손패 추가
             }
 
             foreach (var pieceId in data.ownedCardPoolIds) // 보유 풀 복원
             {
-                var definition = database.FindById(pieceId); // 정의 조회
-                if (definition != null) runState.Deck.AddToOwnedPool(definition); // 보유 풀에 추가
+                var definition = FindDefinition(database, pieceId); // 기물 정의 조회
+                if (definition != null) runState.Deck.AddToOwnedPool(definition); // 보유 풀 추가
             }
 
             if (data.drawPileIds != null) // 구버전 저장 호환
             {
                 foreach (var pieceId in data.drawPileIds) // 드로우 순서 복원
                 {
-                    var definition = database.FindById(pieceId); // 정의 조회
-                    if (definition != null) runState.Deck.AddToDrawPile(definition); // 드로우 더미에 추가
+                    var definition = FindDefinition(database, pieceId); // 기물 정의 조회
+                    if (definition != null) runState.Deck.AddToDrawPile(definition); // 드로우 더미 추가
                 }
             }
 
             foreach (var pieceId in data.deadCardPileIds) // 죽은 카드 복원
             {
-                var definition = database.FindById(pieceId); // 정의 조회
-                if (definition != null) runState.Deck.MoveToDeadPile(definition); // 죽은 카드 더미로 이동
+                var definition = FindDefinition(database, pieceId); // 기물 정의 조회
+                if (definition != null) runState.Deck.MoveToDeadPile(definition); // 죽은 카드 더미 추가
             }
 
-            foreach (var pieceData in data.boardPieces) // 보드 기물 복원
+            if (data.boardPieces != null) // 보드 저장 데이터 존재 여부
             {
-                var definition = database.FindById(pieceData.pieceId); // 정의 조회
-                if (definition == null) continue; // 정의가 없으면 건너뜀
-
-                var boardPosition = new Vector2Int(pieceData.x, pieceData.y); // 저장 좌표 생성
-                var runtimePiece = new PieceRuntimeState(definition, boardPosition, pieceData.isPlayerPiece) // 런타임 기물 생성
+                foreach (var pieceData in data.boardPieces) // 보드 기물 복원
                 {
-                    CurrentHp = pieceData.currentHp // 저장 체력 복원
-                };
-                runtimePiece.RestoreMovementCycleIndex(pieceData.movementCycleIndex); // 25일차: Chameleon 순환 단계 복원
+                    if (pieceData == null) continue; // 잘못된 항목 제외
 
-                if (statusEffectDatabase != null && pieceData.statusEffects != null) // 27일차: 상태 이상 DB가 주어졌을 때만 복원 시도
-                {
-                    foreach (var statusData in pieceData.statusEffects) // 저장된 상태 이상을 순회
+                    var definition = FindDefinition(database, pieceData.pieceId); // PieceDatabase 또는 Resources에서 정의 조회
+                    if (definition == null) continue; // 정의를 찾지 못하면 건너뜀
+
+                    var boardPosition = new Vector2Int(pieceData.x, pieceData.y); // 저장 기준 좌표 생성
+                    var anchorTile = runState.Board.GetTile(boardPosition); // 기준 좌표 타일 조회
+                    if (anchorTile == null || anchorTile.OccupyingPiece != null) continue; // 범위 밖 또는 구버전 2x2 중복 저장 항목 제외
+
+                    var runtimePiece = new PieceRuntimeState(definition, boardPosition, pieceData.isPlayerPiece) // 런타임 기물 생성
                     {
-                        var statusDefinition = statusEffectDatabase.FindByType((StatusEffectType)statusData.statusType); // 종류로 정의 조회
-                        if (statusDefinition != null) // 정의를 찾았으면
+                        CurrentHp = pieceData.currentHp // 저장 체력 복원
+                    };
+
+                    runtimePiece.RestoreMovementCycleIndex(pieceData.movementCycleIndex); // Chameleon 순환 단계 복원
+
+                    if (statusEffectDatabase != null && pieceData.statusEffects != null) // 상태 이상 DB가 있을 때 상태 복원
+                    {
+                        foreach (var statusData in pieceData.statusEffects) // 저장 상태 이상 순회
                         {
-                            runtimePiece.RestoreStatusEffect(statusDefinition, statusData.remainingTurns, statusData.stackCount); // 지속 턴·중첩 수 그대로 복원
+                            var statusDefinition = statusEffectDatabase.FindByType((StatusEffectType)statusData.statusType); // 종류로 상태 정의 조회
+
+                            if (statusDefinition != null) // 정의를 찾았으면
+                            {
+                                runtimePiece.RestoreStatusEffect(statusDefinition, statusData.remainingTurns, statusData.stackCount); // 지속 턴·중첩 복원
+                            }
                         }
                     }
-                }
 
-                runState.Board.GetTile(boardPosition).OccupyingPiece = runtimePiece; // 보드 점유 복원
+                    Vector2Int footprint = GetSafeFootprint(definition); // 1x1 또는 대형 점유 크기 계산
+
+                    if (!runState.Board.TryOccupyArea(boardPosition, footprint, runtimePiece)) // 전체 점유 복원 시도
+                    {
+                        anchorTile.OccupyingPiece = runtimePiece; // 구버전·충돌 세이브는 기준 칸이라도 복원해 데이터 유실 방지
+                    }
+                }
             }
 
             return runState; // 복원된 런 반환
+        }
+
+        private static PieceDefinition FindDefinition(PieceDatabase database, string pieceId) // PieceDatabase에 없는 보스 Resources까지 포함해 기물 정의를 찾는 호환 조회
+        {
+            if (string.IsNullOrWhiteSpace(pieceId)) return null; // 빈 PieceId 제외
+
+            var fromDatabase = database != null ? database.FindById(pieceId) : null; // 기존 PieceDatabase 우선 조회
+            if (fromDatabase != null) return fromDatabase; // 기존 등록 기물 즉시 반환
+
+            var resourceDefinitions = Resources.LoadAll<PieceDefinition>(string.Empty); // Resources에 있는 독립 PieceDefinition 전체 조회
+
+            for (int i = 0; i < resourceDefinitions.Length; i++) // 리소스 기물 순회
+            {
+                var definition = resourceDefinitions[i]; // 현재 정의 조회
+                if (definition == null) continue; // 빈 항목 제외
+
+                if (string.Equals(definition.PieceId, pieceId, StringComparison.OrdinalIgnoreCase)) // PieceId 일치 여부
+                {
+                    return definition; // 보스 등 독립 Resources 기물 반환
+                }
+            }
+
+            return null; // 정의 없음
+        }
+
+        private static Vector2Int GetSafeFootprint(PieceDefinition definition) // 잘못된 구버전 OccupancySize까지 안전하게 복구하는 점유 크기 계산
+        {
+            if (definition == null) return Vector2Int.one; // 정의가 없으면 1x1
+            var size = definition.OccupancySize; // 저장된 점유 크기 읽기
+            return new Vector2Int(Mathf.Max(1, size.x), Mathf.Max(1, size.y)); // 최소 1x1 보정
         }
 
         public int CountOwnedCopies(PieceDefinition definition) // 동일 기물의 영구 보유 수 계산
@@ -157,7 +206,7 @@ namespace ProjectEta.Run // 런 관련 타입을 모아두는 네임스페이스
 
             int count = 0; // 누적 수
             foreach (var card in Deck.OwnedCardPool) if (card == definition) count++; // 정상 보유 풀 포함
-            foreach (var card in Deck.DeadCardPile) if (card == definition) count++; // 사망 카드는 소유권이 유지되므로 포함
+            foreach (var card in Deck.DeadCardPile) if (card == definition) count++; // 사망 카드도 소유권 유지
             return count; // 총 보유 수 반환
         }
 
@@ -165,18 +214,19 @@ namespace ProjectEta.Run // 런 관련 타입을 모아두는 네임스페이스
         {
             if (definition == null) return 0; // 기준이 없으면 0
 
-            int count = 0; // 누적 수
+            var uniquePieces = new HashSet<PieceRuntimeState>(); // 대형 아군 기물의 다중 점유 중복 카운트 방지
+
             for (int x = 0; x < BoardState.Width; x++) // 가로 순회
             {
                 for (int y = 0; y < BoardState.Height; y++) // 세로 순회
                 {
                     var occupyingPiece = Board.GetTile(new Vector2Int(x, y)).OccupyingPiece; // 점유 기물 조회
-                    if (occupyingPiece == null || !occupyingPiece.IsPlayerPiece) continue; // 빈 칸·적은 제외
-                    if (occupyingPiece.Definition == definition) count++; // 동일 기물이면 누적
+                    if (occupyingPiece == null || !occupyingPiece.IsPlayerPiece) continue; // 빈 칸·적 제외
+                    if (occupyingPiece.Definition == definition) uniquePieces.Add(occupyingPiece); // 동일 정의 런타임을 한 번만 등록
                 }
             }
 
-            return count; // 최종 배치 수 반환
+            return uniquePieces.Count; // 실제 배치 기물 수 반환
         }
     }
 }
