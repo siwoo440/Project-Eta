@@ -41,6 +41,10 @@ namespace ProjectEta.Board // 보드 경로 지도 런타임 네임스페이스
         private bool _boardInputWasEnabled; // 지도 전환 전 전투 입력 활성 상태
         private bool _mapModeActive; // 현재 지도 표시 활성 여부
         private bool _kingMoving; // 지도 킹 이동 애니메이션 진행 여부
+        private BoardState _battleBoardAtMapEntry; // 지도 진입 당시 이전 전투 BoardState 참조
+
+        public bool IsMapModeActive => _mapModeActive; // 외부 스테이지 전환기가 지도 표시 여부 확인
+        public event System.Action<StageNode> StageNodeSelected; // 킹 이동 연출 완료 뒤 실제 StageDefinition 진입 요청 이벤트
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // Battle 씬 로드 후 자동 생성
         private static void AutoCreateForBattleScene() // 씬·Inspector 수정 없이 44일차 컨트롤러 자동 주입
@@ -93,6 +97,7 @@ namespace ProjectEta.Board // 보드 경로 지도 런타임 네임스페이스
             _boardView.ClearHighlight(); // 기존 단일 선택 강조 제거
             _boardView.ClearMoveCandidates(); // 기존 이동·공격 강조 제거
 
+            _battleBoardAtMapEntry = _runState.Board; // 지도 진입 당시 이전 전투 보드 참조 저장
             _boardInputWasEnabled = _boardInputController != null && _boardInputController.enabled; // 기존 전투 입력 상태 저장
             if (_boardInputController != null) _boardInputController.enabled = false; // 지도 중 기존 전투 입력 차단
 
@@ -110,11 +115,15 @@ namespace ProjectEta.Board // 보드 경로 지도 런타임 네임스페이스
             _kingMoving = false; // 이동 상태 초기화
             SetHoveredNode(null); // 마우스 오버 표시 해제
             DestroyMapVisuals(); // 지도 전용 시각 오브젝트 제거
-            RestoreBattlePieces(); // 기존 전투 기물 표시 복원
+
+            if (_battleBoardAtMapEntry != null && _runState != null && !ReferenceEquals(_battleBoardAtMapEntry, _runState.Board)) DestroyHiddenBattlePieces(); // 새 BattleState로 교체됐다면 이전 기물 뷰 제거
+            else RestoreBattlePieces(); // 같은 전투 보드라면 기존 기물 표시 복원
+
             RestoreBattleUi(); // 기존 전투 UI 표시 복원
 
             if (_boardInputController != null) _boardInputController.enabled = _boardInputWasEnabled; // 기존 보드 입력 상태 복원
 
+            _battleBoardAtMapEntry = null; // 이전 전투 보드 참조 정리
             _mapModeActive = false; // 지도 모드 비활성 기록
         }
 
@@ -161,11 +170,13 @@ namespace ProjectEta.Board // 보드 경로 지도 런타임 네임스페이스
             marker.transform.localPosition = BoardView.BoardToLocalPosition(node.Position, _boardView.TileSize) + new Vector3(0f, NodeMarkerHeight * 0.5f, 0f); // 노드 보드 좌표 배치
             marker.transform.localScale = new Vector3(_boardView.TileSize * NodeMarkerRadius, NodeMarkerHeight * 0.5f, _boardView.TileSize * NodeMarkerRadius); // 클릭 가능한 원판 크기 적용
 
+            StageDefinition stageDefinition = StageDefinitionCatalog.Resolve(node.StageDefinitionId, node.Depth); // 노드의 실제 스테이지 타입 조회
+            Color stageColor = GetStageColor(stageDefinition != null ? stageDefinition.StageType : StageType.Battle); // 타입별 기본 노드 색상 선택
             var renderer = marker.GetComponent<Renderer>(); // 노드 렌더러 확보
-            renderer.sharedMaterial = CreateMaterial(NodeColor); // 선택 가능 기본 색상 적용
+            renderer.sharedMaterial = CreateMaterial(stageColor); // 스테이지 타입별 선택 가능 색상 적용
 
             var nodeView = marker.AddComponent<RouteMapNodeView>(); // 노드 식별·상태 표시 컴포넌트 추가
-            nodeView.Initialize(node.NodeId, renderer, NodeColor, NodeHoverColor, NodeSelectedColor, NodeDimmedColor); // 노드 ID·색상 연결
+            nodeView.Initialize(node.NodeId, renderer, stageColor, NodeHoverColor, NodeSelectedColor, NodeDimmedColor); // 노드 ID·타입 색상 연결
             _nodeViews[node.NodeId] = nodeView; // 노드 ID별 표시 객체 등록
         }
 
@@ -278,7 +289,15 @@ namespace ProjectEta.Board // 보드 경로 지도 런타임 네임스페이스
             if (_mapKingTransform != null) _mapKingTransform.localPosition = target; // 최종 좌표 오차 제거
             _kingMoving = false; // 이동 상태 종료
 
-            Debug.Log($"44일차 다음 스테이지 선택: Node={targetNode.NodeId} / Depth={targetNode.Depth} / Position={targetNode.Position} / StageDefinition={targetNode.StageDefinitionId}"); // 45일차 연결용 선택 결과 기록
+            Debug.Log($"45일차 다음 스테이지 선택 완료: Node={targetNode.NodeId} / Depth={targetNode.Depth} / Position={targetNode.Position} / StageDefinition={targetNode.StageDefinitionId}"); // 실제 스테이지 진입 직전 선택 결과 기록
+            StageNodeSelected?.Invoke(targetNode); // 킹 이동이 끝난 뒤 StageDefinition 기반 판 전환 요청
+        }
+
+        public void RefreshMapVisuals() // 비전투 스테이지 완료 후 같은 MapMode에서 다음 분기 표시 갱신
+        {
+            if (!_mapModeActive || _runState == null || _runState.CurrentBoardMode != BoardMode.Map) return; // 지도 상태가 아니면 갱신하지 않음
+            BuildMapVisuals(); // 갱신된 RouteMapState 기준 노드·경로·킹 다시 생성
+            Debug.Log($"45일차 경로 지도 갱신: Depth={_runState.RouteMap.CurrentDepth} / Selectable={_runState.RouteMap.GetSelectableNodes().Count}"); // 갱신 결과 기록
         }
 
         private void ApplyNodeSelectionVisuals(string selectedNodeId) // 선택한 다음 스테이지를 판 위에 고정 표시
@@ -323,6 +342,17 @@ namespace ProjectEta.Board // 보드 경로 지도 런타임 네임스페이스
             _hiddenPieceViews.Clear(); // 복원 목록 초기화
         }
 
+        private void DestroyHiddenBattlePieces() // 새 BattleState 진입 시 이전 전투 PieceView를 복원하지 않고 제거
+        {
+            for (int i = 0; i < _hiddenPieceViews.Count; i++) // 이전 전투 기물 뷰 순회
+            {
+                var pieceView = _hiddenPieceViews[i]; // 현재 제거 대상 조회
+                if (pieceView != null) Destroy(pieceView.gameObject); // 새 보드에 이전 기물이 다시 나타나지 않도록 제거
+            }
+
+            _hiddenPieceViews.Clear(); // 제거 목록 초기화
+        }
+
         private void HideBattleUi() // 지도 선택에 불필요한 기존 전투 UI 숨김
         {
             _hiddenUiRoots.Clear(); // 이전 UI 복원 목록 초기화
@@ -333,10 +363,18 @@ namespace ProjectEta.Board // 보드 경로 지도 런타임 네임스페이스
             HideUiRoot(Object.FindFirstObjectByType<DebugCombatSpeedButtons>()); // 전투 배속 개발 버튼 숨김
         }
 
-        private void HideUiRoot(Component component) // 활성 UI 컴포넌트 루트 숨김
+        private void HideUiRoot(Component component) // UI 컴포넌트의 Canvas만 숨기고 시스템 호스트는 활성 상태로 유지
         {
-            if (component == null || !component.gameObject.activeSelf) return; // 빈·이미 비활성 UI 제외
-            if (_hiddenUiRoots.Add(component.gameObject)) component.gameObject.SetActive(false); // 중복 없이 숨김·복원 대상 기록
+            if (component == null || !component.gameObject.activeInHierarchy) return; // 빈·비활성 컴포넌트 제외
+
+            var canvases = component.GetComponentsInChildren<Canvas>(true); // BattleController 같은 공용 호스트 아래 실제 Canvas 조회
+
+            for (int i = 0; i < canvases.Length; i++) // 조회된 Canvas 순회
+            {
+                var canvas = canvases[i]; // 현재 Canvas 조회
+                if (canvas == null || !canvas.gameObject.activeSelf) continue; // 빈·이미 숨겨진 Canvas 제외
+                if (_hiddenUiRoots.Add(canvas.gameObject)) canvas.gameObject.SetActive(false); // Canvas만 숨기고 BattleController 호스트는 유지
+            }
         }
 
         private void RestoreBattleUi() // 지도 진입 전 활성 UI 표시 복원
@@ -347,6 +385,20 @@ namespace ProjectEta.Board // 보드 경로 지도 런타임 네임스페이스
             }
 
             _hiddenUiRoots.Clear(); // 복원 목록 초기화
+        }
+
+        private static Color GetStageColor(StageType stageType) // 지도에서 스테이지 종류를 즉시 구분할 기본 색상 선택
+        {
+            switch (stageType) // 스테이지 타입별 색상 분기
+            {
+                case StageType.Elite: return new Color(0.95f, 0.45f, 0.12f); // 엘리트 주황색
+                case StageType.Reward: return new Color(0.35f, 0.82f, 0.35f); // 보상 녹색
+                case StageType.Shop: return new Color(0.22f, 0.48f, 0.95f); // 상점 파란색
+                case StageType.Event: return new Color(0.65f, 0.34f, 0.92f); // 이벤트 보라색
+                case StageType.MidBoss: return new Color(0.95f, 0.25f, 0.12f); // 중간 보스 붉은 주황색
+                case StageType.FinalBoss: return new Color(0.78f, 0.05f, 0.08f); // 최종 보스 진한 붉은색
+                default: return NodeColor; // 일반 전투 기존 청록색
+            }
         }
 
         private Material CreateMaterial(Color color) // 지도 전용 단색 URP 머티리얼 생성

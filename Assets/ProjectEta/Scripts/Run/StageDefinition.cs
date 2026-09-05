@@ -21,11 +21,22 @@ namespace ProjectEta.Run // 스테이지 데이터 네임스페이스
         [SerializeField] private string _displayName = "Stage"; // 사용자 표시 이름
         [SerializeField] private StageType _stageType = StageType.Battle; // 스테이지 종류
         [SerializeField] private RoundDefinition _roundDefinition; // 전투 스테이지용 라운드 설정
+        [SerializeField] private string _rewardProfileId = "PrototypeReward"; // 이후 보상 시스템이 읽을 프로필 ID
 
         public string StageId => _stageId; // 스테이지 ID 공개
         public string DisplayName => _displayName; // 표시 이름 공개
         public StageType StageType => _stageType; // 스테이지 종류 공개
         public RoundDefinition RoundDefinition => _roundDefinition; // 연결 라운드 데이터 공개
+        public string RewardProfileId => _rewardProfileId; // 보상 프로필 ID 공개
         public bool RequiresBattle => _stageType == StageType.Battle || _stageType == StageType.Elite || _stageType == StageType.MidBoss || _stageType == StageType.FinalBoss; // 전투판 필요 여부
+
+        public void ConfigureRuntime(string stageId, string displayName, StageType stageType, RoundDefinition roundDefinition, string rewardProfileId) // 45일차 런타임 생성용 데이터 설정
+        {
+            _stageId = stageId ?? string.Empty; // null ID 방지
+            _displayName = string.IsNullOrWhiteSpace(displayName) ? _stageId : displayName; // 표시 이름 기본값 보정
+            _stageType = stageType; // 스테이지 종류 저장
+            _roundDefinition = roundDefinition; // 기존 RoundDefinition 재사용
+            _rewardProfileId = rewardProfileId ?? string.Empty; // 이후 보상 연결 ID 저장
+        }
     }
 }

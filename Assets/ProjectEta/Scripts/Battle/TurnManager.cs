@@ -75,6 +75,19 @@ namespace ProjectEta.Battle // 전투 턴 관련 타입을 모아두는 네임�
             return true; // 전환 성공 반환
         }
 
+        public void ResetForNewBattle() // 동일 Battle 씬에서 다음 스테이지 전투를 시작하기 위한 턴 상태 초기화
+        {
+            CurrentState = TurnState.DeploymentTurn; // 새 전투를 시작 배치 턴으로 복구
+            TurnNumber = 1; // 새 전투 턴 번호를 1로 초기화
+            IsInitialDeployment = true; // 새 전투 시작 배치 상태 지정
+            IsInitialKingPlaced = false; // 플레이어 킹 재배치 필요 상태 지정
+            HasPlayerActed = false; // 플레이어 행동권 초기화
+            DeployedCardCount = 0; // 배치 수 초기화
+            Outcome = BattleOutcome.None; // 이전 전투 승패 결과 제거
+            IsPlayerActionTransitionPending = false; // 이전 공격 연출 대기 상태 제거
+            NotifyTurnChanged(); // 기존 UI·AI·브리지에 새 전투 시작 상태 통지
+        }
+
         public bool CompleteEnemyTurn() // 적 행동 종료 후 주기 배치 또는 다음 플레이어 턴으로 전환하는 메서드
         {
             if (CurrentState != TurnState.EnemyTurn)

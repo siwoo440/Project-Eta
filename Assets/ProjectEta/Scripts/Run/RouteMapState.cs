@@ -55,20 +55,21 @@ namespace ProjectEta.Run // 런 경로 지도 상태 네임스페이스
             currentNode.MarkVisited(); // 현재 노드 방문 처리
         }
 
-        public void PreparePrototypeAfterBattle(int clearedDepth) // 다음 스테이지 후보 프로토타입 준비
+        public void PreparePrototypeAfterBattle(int clearedDepth) // 기존 호출부를 유지하면서 45일차 실제 다음 분기 생성
         {
             int safeDepth = Mathf.Clamp(clearedDepth, RoundState.FirstRound, RoundState.FinalRound - 1); // 최종 스테이지 전 깊이 보정
-            int nextDepth = safeDepth + 1; // 다음 선택 스테이지 깊이 계산
-            int currentY = safeDepth - 1; // 완료 스테이지 지도 Y 계산
-            int nextY = nextDepth - 1; // 다음 스테이지 지도 Y 계산
+            Vector2Int currentPosition = ResolveCurrentPositionForDepth(safeDepth); // 이전 선택 경로의 X를 유지한 현재 위치 계산
+            var current = new StageNode($"depth_{safeDepth}_resolved", currentPosition, safeDepth, "ResolvedStage"); // 현재 완료 노드 생성
+            var nextNodes = StageRouteGenerator.CreateNextNodes(safeDepth, currentPosition); // 깊이별 2~3분기·보스 강제 노드 생성
+            var nextIds = new List<string>(nextNodes.Count); // 현재 노드 연결 ID 목록 생성
 
-            var current = new StageNode($"depth_{safeDepth}_resolved", new Vector2Int(PrototypeCenterX, currentY), safeDepth, "ResolvedStage"); // 현재 완료 노드 생성
-            var left = new StageNode($"depth_{nextDepth}_left", new Vector2Int(PrototypeCenterX - 1, nextY), nextDepth, "PrototypeBattle"); // 왼쪽 후보 생성
-            var center = new StageNode($"depth_{nextDepth}_center", new Vector2Int(PrototypeCenterX, nextY), nextDepth, "PrototypeBattle"); // 중앙 후보 생성
-            var right = new StageNode($"depth_{nextDepth}_right", new Vector2Int(PrototypeCenterX + 1, nextY), nextDepth, "PrototypeBattle"); // 오른쪽 후보 생성
+            for (int i = 0; i < nextNodes.Count; i++) // 생성된 다음 노드 순회
+            {
+                nextIds.Add(nextNodes[i].NodeId); // 그래프 연결용 노드 ID 추가
+            }
 
-            current.SetNextNodeIds(new[] { left.NodeId, center.NodeId, right.NodeId }); // 현재 노드에서 다음 3개 노드 연결
-            Configure(safeDepth, current, new[] { left, center, right }); // 프로토타입 경로 상태 적용
+            current.SetNextNodeIds(nextIds); // 현재 노드에서 실제 다음 분기 연결
+            Configure(safeDepth, current, nextNodes); // 새 지도 상태 적용
         }
 
         public IReadOnlyList<StageNode> GetSelectableNodes() // 현재 위치에서 선택 가능한 다음 스테이지 반환
@@ -126,6 +127,12 @@ namespace ProjectEta.Run // 런 경로 지도 상태 네임스페이스
             int deltaY = Mathf.Abs(to.y - from.y); // 세로 이동 거리 계산
             if (deltaX == 0 && deltaY == 0) return false; // 제자리 이동 차단
             return deltaX <= 1 && deltaY <= 1; // 직선·대각선 1칸 허용
+        }
+
+        private Vector2Int ResolveCurrentPositionForDepth(int depth) // 연속 경로에서 이전에 선택한 X 위치를 유지하는 현재 노드 좌표 계산
+        {
+            if (CurrentDepth == depth) return new Vector2Int(KingMapPosition.x, depth - 1); // 직전 선택 위치의 X를 그대로 유지
+            return new Vector2Int(PrototypeCenterX, depth - 1); // 최초 또는 외부 라운드 변경은 중앙 위치 사용
         }
 
         private static bool ContainsConnection(StageNode sourceNode, string targetNodeId) // 현재 노드의 그래프 연결 여부 검사
