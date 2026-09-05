@@ -2,7 +2,7 @@ using System.Collections.Generic; // IReadOnlyList<T>와 List<T>를 사용하기
 using UnityEngine; // Vector2Int를 사용하기 위한 네임스페이스
 using ProjectEta.Pieces; // PieceRuntimeState를 사용하기 위한 네임스페이스
 
-namespace ProjectEta.AI // AI 점수와 디버그 로그 데이터를 기존 AI 네임스페이스에 함께 배치
+namespace ProjectEta.AI // AI 점수와 성능 디버그 데이터를 기존 AI 네임스페이스에 함께 배치
 {
     public sealed class AIDebugScoreEntry // F1 디버그 창 한 줄에 표시할 AI 행동 후보 점수 정보
     {
@@ -45,23 +45,32 @@ namespace ProjectEta.AI // AI 점수와 디버그 로그 데이터를 기존 AI 
         }
     }
 
-    public sealed class AIDebugScoreSnapshot // 특정 시점 보드 전체의 AI 점수 로그 스냅샷
+    public sealed class AIDebugScoreSnapshot // 특정 시점 보드 전체의 AI 점수와 평가 성능을 함께 보관하는 스냅샷
     {
         private readonly List<AIDebugScoreEntry> _entries; // 내부에서 보관하는 점수 로그 목록
 
         public IReadOnlyList<AIDebugScoreEntry> Entries => _entries; // 외부에는 읽기 전용 목록으로 제공
         public AIDebugScoreEntry SelectedEntry { get; } // 현재 AI가 실제로 선택할 행동 로그
-        public int CandidateCount => _entries.Count; // 화면 상단에 표시할 총 후보 수
+        public int CandidateCount => _entries.Count; // 실제 정밀 평가해 화면에 표시할 후보 수
+        public int TotalCandidateCount { get; } // 정밀 평가 전 Base Planner가 생성한 전체 후보 수
+        public EnemyAIPerformanceStats PerformanceStats { get; } // 후보 절감·캐시·시간 측정 통계
 
-        public AIDebugScoreSnapshot(List<AIDebugScoreEntry> entries, AIDebugScoreEntry selectedEntry) // 완성된 로그 목록을 받는 생성자
+        public AIDebugScoreSnapshot(List<AIDebugScoreEntry> entries, AIDebugScoreEntry selectedEntry) // 34~35일차 기존 호출부와 호환되는 생성자
+            : this(entries, selectedEntry, entries?.Count ?? 0, EnemyAIPerformanceStats.Empty) // 기존에는 전체 후보 수와 평가 후보 수가 같았던 것으로 처리
+        {
+        }
+
+        public AIDebugScoreSnapshot(List<AIDebugScoreEntry> entries, AIDebugScoreEntry selectedEntry, int totalCandidateCount, EnemyAIPerformanceStats performanceStats) // 39일차 성능 정보를 포함하는 생성자
         {
             _entries = entries ?? new List<AIDebugScoreEntry>(); // null이 들어와도 빈 목록으로 안전하게 보정
             SelectedEntry = selectedEntry; // 현재 선택 행동 저장
+            TotalCandidateCount = totalCandidateCount < _entries.Count ? _entries.Count : totalCandidateCount; // 전체 후보 수가 평가 후보보다 작아지지 않게 보정
+            PerformanceStats = performanceStats ?? EnemyAIPerformanceStats.Empty; // 성능 통계가 없으면 빈 값 사용
         }
 
         public static AIDebugScoreSnapshot Empty() // 보드가 없거나 Battle 씬이 아닐 때 사용할 빈 스냅샷 생성
         {
-            return new AIDebugScoreSnapshot(new List<AIDebugScoreEntry>(), null); // 후보와 선택 행동이 없는 상태 반환
+            return new AIDebugScoreSnapshot(new List<AIDebugScoreEntry>(), null, 0, EnemyAIPerformanceStats.Empty); // 후보와 선택 행동·성능 값이 없는 상태 반환
         }
     }
 }

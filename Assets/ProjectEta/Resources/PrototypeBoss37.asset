@@ -20,8 +20,8 @@ MonoBehaviour:
   _roleTags: 192
   _immuneStatusTags: 15
   _movementRules: []
-  _baseHp: 30
-  _baseAtk: 4
+  _baseHp: 15
+  _baseAtk: 2
   _occupancySize: {x: 2, y: 2}
   _cardArtwork: {fileID: 0}
-  _description: 37일차 2x2 점유·공격·사망·카운트 검증용 임시 보스. 38일차 보스 전투 기본형에서 이동과 공격 패턴을 확장한다.
+  _description: 2x2 점유·이동·공격·2페이즈 검증용 프로토타입 보스. 플레이 테스트 피드백에 따라 HP 30→15, ATK 4→2로 절반 조정한다.

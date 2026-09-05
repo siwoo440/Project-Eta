@@ -37,6 +37,7 @@ namespace ProjectEta.Boss // 2x2 이상 보스 전투 관련 타입을 모아두
         private PlayerStartingDeckCatalog _pieceCatalog; // Knight/Pawn 증원 정의를 찾을 기존 카탈로그
         private BossTelegraphOverlay _overlay; // 보드 위 실제 위험 칸 표시기
         private BossPhaseStatusUI _statusUI; // 상단 Phase 2·예고 상태 표시 UI
+        private BossHealthUI _healthUI; // Phase 1부터 사망 전까지 현재/최대 HP를 표시하는 보스 체력 UI
         private readonly Dictionary<PieceRuntimeState, BossPhaseRuntimeState> _states = new Dictionary<PieceRuntimeState, BossPhaseRuntimeState>(); // 보스 런타임별 페이즈 상태 저장
         private bool _isBound; // 실제 Battle 객체와 연결됐는지 여부
 
@@ -57,6 +58,9 @@ namespace ProjectEta.Boss // 2x2 이상 보스 전투 관련 타입을 모아두
             if (_overlay == null) _overlay = gameObject.AddComponent<BossTelegraphOverlay>(); // 없으면 자동 추가
             _statusUI = GetComponent<BossPhaseStatusUI>(); // 같은 오브젝트의 보스 상태 UI 조회
             if (_statusUI == null) _statusUI = gameObject.AddComponent<BossPhaseStatusUI>(); // 없으면 자동 추가
+            _healthUI = GetComponent<BossHealthUI>(); // 같은 오브젝트의 보스 체력 UI 조회
+            if (_healthUI == null) _healthUI = gameObject.AddComponent<BossHealthUI>(); // 없으면 자동 추가
+            _healthUI.Bind(_runState != null ? _runState.Board : null); // 현재 보드를 연결해 자동 스폰 보스까지 추적
 
             if (_battleHooks != null) _battleHooks.AfterDamage += HandleAfterDamage; // 플레이어 공격으로 보스 HP가 50%를 넘는 순간을 즉시 감지
             _isBound = _runState != null && _turnManager != null; // 핵심 전투 상태가 있으면 연결 완료
@@ -132,6 +136,8 @@ namespace ProjectEta.Boss // 2x2 이상 보스 전투 관련 타입을 모아두
             if (target?.Definition == null || target.IsPlayerPiece || target.Definition.Category != PieceCategory.Boss) return; // 적 Boss 피해만 처리
 
             BossPhaseRuntimeState state = GetOrCreateState(target); // 대상 보스의 페이즈 상태 확보
+            if (target.IsDead) _healthUI?.Hide(); // 보스가 이번 피해로 사망했다면 즉시 체력 UI 숨김
+            else _healthUI?.Show(target); // 살아 있다면 피해 직후 변경된 현재 HP를 같은 프레임에 표시
 
             if (target.IsDead) // Phase 2 보스가 사망했다면
             {
@@ -144,10 +150,11 @@ namespace ProjectEta.Boss // 2x2 이상 보스 전투 관련 타입을 모아두
             TryApplyPhase2Transition(target, state); // 이번 피해로 50% 조건에 들어갔는지 검사
         }
 
-        private void ScanBossesAndApplyTransitions() // 보드에 새로 생성되거나 세이브로 복원된 보스를 한 번씩 찾아 페이즈 상태를 동기화하는 메서드
+        private void ScanBossesAndApplyTransitions() // 보드에 새로 생성되거나 세이브로 복원된 보스를 찾아 페이즈 상태와 HP UI를 동기화하는 메서드
         {
             if (_runState?.Board == null) return; // 보드가 없으면 검사할 수 없음
             var visited = new HashSet<PieceRuntimeState>(); // 2x2 네 칸의 같은 보스를 한 번만 검사하기 위한 집합
+            PieceRuntimeState displayBoss = null; // 상단 HP UI에 표시할 첫 살아 있는 적 보스
 
             for (int x = 0; x < BoardState.Width; x++) // 보드 가로 전체 순회
             {
@@ -157,10 +164,14 @@ namespace ProjectEta.Boss // 2x2 이상 보스 전투 관련 타입을 모아두
                     if (piece?.Definition == null || piece.IsPlayerPiece || piece.IsDead || !visited.Add(piece)) continue; // 살아 있는 적 기물만 한 번 검사
                     if (piece.Definition.Category != PieceCategory.Boss) continue; // Boss 카테고리만 페이즈 상태 관리
 
+                    if (displayBoss == null) displayBoss = piece; // 첫 살아 있는 보스를 HP UI 대표 대상으로 선택
                     BossPhaseRuntimeState state = GetOrCreateState(piece); // 상태가 없으면 Phase 1 상태 생성
                     TryApplyPhase2Transition(piece, state); // 현재 HP가 이미 절반 이하면 즉시 Phase 2 적용
                 }
             }
+
+            if (displayBoss != null) _healthUI?.Show(displayBoss); // 살아 있는 보스가 있으면 현재 HP 표시
+            else _healthUI?.Hide(); // 보스가 모두 사망했으면 HP UI 숨김
         }
 
         private void TryApplyPhase2Transition(PieceRuntimeState boss, BossPhaseRuntimeState state) // 보스 하나의 50% HP 전환·증원·UI를 한 번에 처리하는 메서드

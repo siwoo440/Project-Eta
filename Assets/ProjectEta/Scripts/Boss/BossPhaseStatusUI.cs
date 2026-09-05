@@ -53,7 +53,7 @@ namespace ProjectEta.Boss // 2x2 이상 보스 전투 관련 타입을 모아두
             panelRect.anchorMin = new Vector2(0.5f, 1f); // 상단 중앙 앵커
             panelRect.anchorMax = new Vector2(0.5f, 1f); // 상단 중앙 앵커
             panelRect.pivot = new Vector2(0.5f, 1f); // 윗중앙 기준 배치
-            panelRect.anchoredPosition = new Vector2(0f, -146f); // RoundSummaryUI(-96, 높이42) 아래 약 8픽셀 간격
+            panelRect.anchoredPosition = new Vector2(0f, -208f); // 새 BossHealthUI(-146, 높이54) 아래 약 8픽셀 간격
             panelRect.sizeDelta = new Vector2(620f, 42f); // 기존 상단 UI와 같은 폭
 
             var image = panelObject.GetComponent<Image>(); // 패널 배경 Image 확보
