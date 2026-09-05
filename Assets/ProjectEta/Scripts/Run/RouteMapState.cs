@@ -9,12 +9,15 @@ namespace ProjectEta.Run // 런 경로 지도 상태 네임스페이스
         private const int PrototypeCenterX = 4; // 10×10 보드 중앙 기준 X
         private readonly List<StageNode> _nodes = new List<StageNode>(); // 현재 경로 지도 노드 목록
 
-        public int CurrentDepth { get; private set; } // 현재 완료한 스테이지 깊이
+        public int CurrentDepth { get; private set; } // 현재 킹이 위치한 지도 깊이
         public string CurrentNodeId { get; private set; } // 현재 킹이 위치한 노드 ID
+        public string SelectedNodeId { get; private set; } // 이번 지도 단계에서 선택한 다음 스테이지 노드 ID
         public Vector2Int KingMapPosition { get; private set; } // 지도 모드 킹 좌표
         public IReadOnlyList<StageNode> Nodes => _nodes; // 전체 노드 읽기 전용 공개
         public StageNode CurrentNode => FindNode(CurrentNodeId); // 현재 노드 조회
+        public StageNode SelectedNode => FindNode(SelectedNodeId); // 선택 스테이지 노드 조회
         public bool HasPreparedRoute => _nodes.Count > 0 && CurrentNode != null; // 경로 준비 여부
+        public bool HasSelectedNode => !string.IsNullOrWhiteSpace(SelectedNodeId); // 다음 스테이지 선택 완료 여부
 
         public RouteMapState() // 새 경로 지도 상태 생성
         {
@@ -26,6 +29,7 @@ namespace ProjectEta.Run // 런 경로 지도 상태 네임스페이스
             _nodes.Clear(); // 노드 목록 제거
             CurrentDepth = RoundState.FirstRound; // 기본 깊이 복구
             CurrentNodeId = string.Empty; // 현재 노드 제거
+            SelectedNodeId = string.Empty; // 선택 노드 제거
             KingMapPosition = new Vector2Int(PrototypeCenterX, 0); // 기본 킹 좌표 지정
         }
 
@@ -51,7 +55,7 @@ namespace ProjectEta.Run // 런 경로 지도 상태 네임스페이스
             currentNode.MarkVisited(); // 현재 노드 방문 처리
         }
 
-        public void PreparePrototypeAfterBattle(int clearedDepth) // 43일차 상태 검증용 다음 스테이지 후보 준비
+        public void PreparePrototypeAfterBattle(int clearedDepth) // 다음 스테이지 후보 프로토타입 준비
         {
             int safeDepth = Mathf.Clamp(clearedDepth, RoundState.FirstRound, RoundState.FinalRound - 1); // 최종 스테이지 전 깊이 보정
             int nextDepth = safeDepth + 1; // 다음 선택 스테이지 깊이 계산
@@ -71,15 +75,35 @@ namespace ProjectEta.Run // 런 경로 지도 상태 네임스페이스
         {
             var result = new List<StageNode>(); // 선택 가능 결과 목록 생성
             var current = CurrentNode; // 현재 노드 조회
-            if (current == null) return result; // 현재 노드 없으면 빈 목록 반환
+            if (current == null || HasSelectedNode) return result; // 현재 노드 누락·이미 선택 완료 시 빈 목록 반환
 
             for (int i = 0; i < current.NextNodeIds.Count; i++) // 연결된 다음 노드 ID 순회
             {
                 var node = FindNode(current.NextNodeIds[i]); // 실제 노드 조회
-                if (node != null) result.Add(node); // 존재 노드만 후보 추가
+                if (node != null && IsKingStep(CurrentNode.Position, node.Position)) result.Add(node); // 연결·킹 1칸 조건 후보 추가
             }
 
             return result; // 선택 가능 노드 반환
+        }
+
+        public bool CanMoveTo(StageNode targetNode) // 현재 킹이 대상 스테이지 노드로 이동 가능한지 판정
+        {
+            if (targetNode == null || CurrentNode == null || HasSelectedNode) return false; // 대상·현재 노드 누락·이미 선택 완료 차단
+            if (!ContainsConnection(CurrentNode, targetNode.NodeId)) return false; // 그래프 연결 없는 노드 차단
+            return IsKingStep(KingMapPosition, targetNode.Position); // 킹 인접 8방향 1칸 규칙 반환
+        }
+
+        public bool TryMoveKingTo(string nodeId) // 지도 킹 이동과 다음 스테이지 선택을 동시에 적용
+        {
+            var targetNode = FindNode(nodeId); // 대상 노드 조회
+            if (!CanMoveTo(targetNode)) return false; // 유효하지 않은 이동 차단
+
+            KingMapPosition = targetNode.Position; // 킹 지도 좌표 이동
+            CurrentNodeId = targetNode.NodeId; // 현재 노드를 대상 노드로 변경
+            SelectedNodeId = targetNode.NodeId; // 선택 스테이지 기록
+            CurrentDepth = targetNode.Depth; // 지도 깊이 갱신
+            targetNode.MarkVisited(); // 도착 노드 방문 처리
+            return true; // 이동 성공 반환
         }
 
         public StageNode FindNode(string nodeId) // 노드 ID로 경로 노드 조회
@@ -94,6 +118,26 @@ namespace ProjectEta.Run // 런 경로 지도 상태 네임스페이스
             }
 
             return null; // 일치 노드 없음
+        }
+
+        public static bool IsKingStep(Vector2Int from, Vector2Int to) // 체스 킹의 인접 8방향 1칸 이동 판정
+        {
+            int deltaX = Mathf.Abs(to.x - from.x); // 가로 이동 거리 계산
+            int deltaY = Mathf.Abs(to.y - from.y); // 세로 이동 거리 계산
+            if (deltaX == 0 && deltaY == 0) return false; // 제자리 이동 차단
+            return deltaX <= 1 && deltaY <= 1; // 직선·대각선 1칸 허용
+        }
+
+        private static bool ContainsConnection(StageNode sourceNode, string targetNodeId) // 현재 노드의 그래프 연결 여부 검사
+        {
+            if (sourceNode == null || string.IsNullOrWhiteSpace(targetNodeId)) return false; // 잘못된 입력 차단
+
+            for (int i = 0; i < sourceNode.NextNodeIds.Count; i++) // 다음 노드 ID 순회
+            {
+                if (string.Equals(sourceNode.NextNodeIds[i], targetNodeId, StringComparison.Ordinal)) return true; // 연결 ID 일치 반환
+            }
+
+            return false; // 연결 없음 반환
         }
 
         private void AddNodeIfUnique(StageNode node) // 중복 없는 노드 등록
