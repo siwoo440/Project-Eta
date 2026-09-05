@@ -7,7 +7,7 @@ using ProjectEta.Run; // RunState·RoundProgressStatus 사용
 namespace ProjectEta.Round // 라운드 런타임 연결 네임스페이스
 {
     [DefaultExecutionOrder(900)] // 기존 전투 시스템 초기화 이후 연결
-    public sealed class RoundStateBattleBridge : MonoBehaviour // TurnManager 결과를 RunState 라운드 상태에 연결
+    public sealed class RoundStateBattleBridge : MonoBehaviour // TurnManager 결과를 RunState 라운드·런 흐름 상태에 연결
     {
         private BattleController _battleController; // 현재 전투 컨트롤러
         private TurnManager _turnManager; // 현재 턴 매니저
@@ -20,8 +20,8 @@ namespace ProjectEta.Round // 라운드 런타임 연결 네임스페이스
             if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 생성 방지
             if (Object.FindFirstObjectByType<RoundStateBattleBridge>() != null) return; // 중복 생성 방지
 
-            var bridgeObject = new GameObject("RoundStateBattleBridge_Day42"); // 브리지 오브젝트 생성
-            bridgeObject.AddComponent<RoundStateBattleBridge>(); // 라운드 상태 연결 컴포넌트 추가
+            var bridgeObject = new GameObject("RoundStateBattleBridge_Day43"); // 브리지 오브젝트 생성
+            bridgeObject.AddComponent<RoundStateBattleBridge>(); // 라운드·런 상태 연결 컴포넌트 추가
         }
 
         private IEnumerator Start() // 기존 전투 시스템 준비 후 연결
@@ -43,7 +43,7 @@ namespace ProjectEta.Round // 라운드 런타임 연결 네임스페이스
                 yield return null; // 다음 프레임 대기
             }
 
-            Debug.LogError("42일차 RoundStateBattleBridge 초기화 실패: BattleController 또는 RunState를 찾지 못했습니다."); // 연결 실패 기록
+            Debug.LogError("43일차 RoundStateBattleBridge 초기화 실패: BattleController 또는 RunState를 찾지 못했습니다."); // 연결 실패 기록
         }
 
         private void Bind() // RunState와 TurnManager 연결
@@ -67,20 +67,20 @@ namespace ProjectEta.Round // 라운드 런타임 연결 네임스페이스
                 SynchronizeOutcome(); // 종료 결과 즉시 동기화
             }
 
-            Debug.Log($"42일차 라운드 상태 연결: Round={_runState.CurrentRound} / Boss={_runState.IsBossRound} / Status={_runState.CurrentRoundStatus}"); // 연결 결과 기록
+            Debug.Log($"43일차 런 상태 연결: Round={_runState.CurrentRound} / Boss={_runState.IsBossRound} / Flow={_runState.CurrentFlowPhase} / BoardMode={_runState.CurrentBoardMode}"); // 연결 결과 기록
         }
 
         private void HandleTurnChanged(TurnState state, int turnNumber) // 턴 상태 변경 수신
         {
             if (state != TurnState.BattleEnded) return; // 전투 종료 외 상태 제외
-            SynchronizeOutcome(); // 전투 결과를 런 상태에 기록
+            SynchronizeOutcome(); // 전투 결과를 라운드·런 흐름에 기록
         }
 
-        private void SynchronizeOutcome() // TurnManager 결과를 RoundState에 반영
+        private void SynchronizeOutcome() // TurnManager 결과를 RunState에 반영
         {
             if (_runState == null || _turnManager == null) return; // 필수 상태 검사
-            _runState.RecordBattleOutcome(_turnManager.Outcome); // 승리·패배 결과 기록
-            Debug.Log($"42일차 라운드 결과 기록: Round={_runState.CurrentRound} / Status={_runState.CurrentRoundStatus} / Outcome={_runState.LastBattleOutcome}"); // 결과 기록 출력
+            _runState.HandleBattleOutcome(_turnManager.Outcome); // 승패 결과와 Battle/Map/종료 흐름 처리
+            Debug.Log($"43일차 전투 결과 처리: Round={_runState.CurrentRound} / Status={_runState.CurrentRoundStatus} / Outcome={_runState.LastBattleOutcome} / Flow={_runState.CurrentFlowPhase} / BoardMode={_runState.CurrentBoardMode} / Selectable={_runState.SelectableStageNodes.Count}"); // 결과 기록 출력
         }
 
         private void OnDestroy() // 브리지 파괴 시 이벤트 정리

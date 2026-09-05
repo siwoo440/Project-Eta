@@ -15,6 +15,8 @@ namespace ProjectEta.Run // 런 관련 타입 네임스페이스
 
         public BattleState Battle { get; private set; } // 현재 전투 임시 상태
         public RoundState Round { get; } // 현재 1~10라운드 진행 상태
+        public RunFlowState Flow { get; } // 43일차 전투·지도·종료 상위 흐름
+        public RouteMapState RouteMap { get; } // 43일차 체스판 경로 지도 상태
         public BoardState Board => Battle.Board; // 기존 호출부 호환 보드 접근
         public DeckState Deck { get; } // 런에서 유지되는 덱 상태
         public HandState Hand => Battle.Hand; // 기존 호출부 호환 손패 접근
@@ -24,6 +26,9 @@ namespace ProjectEta.Run // 런 관련 타입 네임스페이스
         public RoundProgressStatus CurrentRoundStatus => Round.Status; // 현재 라운드 진행 상태
         public bool IsBossRound => Round.IsBossRound; // 현재 보스 라운드 여부
         public BattleOutcome LastBattleOutcome => Round.BattleOutcome; // 현재 라운드 전투 결과
+        public RunFlowPhase CurrentFlowPhase => Flow.Phase; // 현재 로그라이트 상위 진행 단계
+        public BoardMode CurrentBoardMode => Flow.BoardMode; // 현재 체스판 역할
+        public IReadOnlyList<StageNode> SelectableStageNodes => RouteMap.GetSelectableNodes(); // 현재 선택 가능 스테이지 노드
 
         public int CurrentRound // 기존 라운드 번호 접근 호환 프로퍼티
         {
@@ -42,18 +47,45 @@ namespace ProjectEta.Run // 런 관련 타입 네임스페이스
             _kingHp = startingKingHp; // 시작 킹 체력 저장
             Battle = new BattleState(); // 첫 전투 임시 상태 생성
             Round = new RoundState(RoundState.FirstRound); // 1라운드 상태 생성
+            Flow = new RunFlowState(); // 전투 모드 런 흐름 생성
+            RouteMap = new RouteMapState(); // 빈 경로 지도 상태 생성
             Deck = new DeckState(); // 새 덱 상태 생성
             FusionDiscovery = new FusionDiscoveryLog(); // 합성 발견 기록 생성
         }
 
         public void StartCurrentRound() // 현재 라운드 진행 시작
         {
+            Flow.EnterBattle(); // 동일 체스판을 전투 모드로 지정
             Round.Begin(); // 라운드 상태를 진행 중으로 변경
         }
 
         public void RecordBattleOutcome(BattleOutcome outcome) // 현재 라운드 전투 결과 기록
         {
             Round.Complete(outcome); // 승패 결과를 라운드 상태에 반영
+        }
+
+        public void HandleBattleOutcome(BattleOutcome outcome) // 전투 결과를 런 상위 흐름까지 반영
+        {
+            if (Flow.Phase != RunFlowPhase.Battle) return; // 이미 지도·종료 상태면 중복 결과 무시
+
+            RecordBattleOutcome(outcome); // 기존 라운드 승패 상태 기록
+
+            if (outcome == BattleOutcome.Defeat) // 패배 결과 처리
+            {
+                Flow.FailRun(); // 런 실패 상태 전환
+                return; // 패배 처리 종료
+            }
+
+            if (outcome != BattleOutcome.Victory) return; // 승리 외 결과는 전투 상태 유지
+
+            if (CurrentRound >= RoundState.FinalRound) // 최종 스테이지 승리 확인
+            {
+                Flow.CompleteRun(); // 런 완료 상태 전환
+                return; // 최종 승리 처리 종료
+            }
+
+            RouteMap.PreparePrototypeAfterBattle(CurrentRound); // 다음 깊이 선택 후보 상태 준비
+            Flow.EnterMap(); // 동일 체스판을 경로 지도 모드로 전환
         }
 
         public void ResetBattleState() // 다음 전투를 위한 임시 전투 상태 초기화
