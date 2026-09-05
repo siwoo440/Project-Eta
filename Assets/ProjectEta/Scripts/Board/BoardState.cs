@@ -108,7 +108,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             return clearedCount; // 실제 해제한 전체 칸 수 반환
         }
 
-        public int CountPieces(bool isPlayerPiece) // 보드 위에 남아 있는 살아 있는 기물 수를 런타임 기물 기준으로 세는 메서드
+        public int CountPieces(bool isPlayerPiece) // 보드 위 점유 기물 수를 런타임 기물 기준으로 세는 메서드
         {
             var uniquePieces = new HashSet<PieceRuntimeState>(); // 2x2 보스처럼 여러 칸이 같은 기물을 가리켜도 한 번만 세기 위한 집합
 
@@ -118,9 +118,12 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 {
                     var piece = _tiles[x, y].OccupyingPiece; // 이 칸의 점유 기물 조회
                     if (piece == null) continue; // 빈 칸은 제외
-                    if (piece.IsDead) continue; // 사망했지만 연출 때문에 점유가 잠깐 남은 기물은 남은 기물 수에서 제외
+
+                    bool hasConfiguredHp = piece.Definition != null && piece.Definition.BaseHp > 0; // 실제 게임 데이터처럼 양수 HP가 설정된 기물인지 확인
+                    if (piece.IsDead && hasConfiguredHp) continue; // 양수 HP로 생성된 실제 기물이 0 HP가 된 경우에만 사망 기물로 제외
+
                     if (piece.IsPlayerPiece != isPlayerPiece) continue; // 요청한 진영이 아니면 제외
-                    uniquePieces.Add(piece); // 같은 PieceRuntimeState는 HashSet에서 한 번만 등록
+                    uniquePieces.Add(piece); // BaseHp가 0인 레거시/테스트 정의도 점유 기물로 세며 2x2 동일 런타임은 한 번만 등록
                 }
             }
 
