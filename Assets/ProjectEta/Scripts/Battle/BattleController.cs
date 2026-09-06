@@ -160,7 +160,10 @@ namespace ProjectEta.Battle
                 _dummyEnemyTurnCoroutine = null; // 코루틴 참조 초기화
             }
 
-            _turnManager?.EndBattle(outcome); // 턴 상태 전투 종료 적용
+            if (_turnManager == null) return; // 턴 매니저 누락 시 전투 결과 처리 차단
+
+            _turnManager.EndBattle(outcome); // 먼저 BattleEnded 이벤트를 발행해 카드 보상 등 기존 구독자에게 결과 전달
+            RunStageFlowService.CompleteBattle(_runState, outcome); // TurnManager 결과를 RunState Map·Completed·Failed 흐름과 동기화
         }
 
         private void ResolveReferences()

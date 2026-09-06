@@ -492,18 +492,15 @@ namespace ProjectEta.Run
         private void CompleteCurrentStage()
         {
             CloseOverlayOnly(); // 돗자리·UI 먼저 제거
-            _runState.Round.Restore(_runState.CurrentRound, RoundProgressStatus.Cleared, BattleOutcome.Victory); // 현재 비전투 스테이지 완료 기록
 
-            if (_runState.CurrentRound >= RoundState.FinalRound)
+            if (!RunStageFlowService.CompleteNonBattleStage(_runState))
             {
-                _runState.Flow.CompleteRun(); // 최종 깊이 안전 완료
-                return;
+                Debug.LogWarning($"53일차 Shop/Event 완료 거부: Flow={_runState.CurrentFlowPhase} / Stage={_runState.CurrentRound}"); // 잘못된 완료 상태 기록
+                return; // 중복·불일치 상태 변경 차단
             }
 
-            _runState.RouteMap.PreparePrototypeAfterBattle(_runState.CurrentRound); // 현재 위치 기준 다음 2~3개 경로 생성
-            _runState.Flow.EnterMap(); // 경로 지도 선택 상태 복귀
-            _routeMapBoardController.RefreshMapVisuals(); // 새 경로 지도 즉시 재구성
-            Debug.Log($"47일차 비전투 스테이지 완료 -> Map / Depth={_runState.CurrentRound} / Gold={_economy.Currency}"); // 지도 복귀 로그
+            if (_runState.CurrentFlowPhase == RunFlowPhase.Map) _routeMapBoardController.RefreshMapVisuals(); // 다음 경로 선택 상태만 지도 즉시 갱신
+            Debug.Log($"53일차 비전투 스테이지 완료 -> {_runState.CurrentFlowPhase} / Stage={_runState.CurrentRound} / Gold={_economy.Currency}"); // 통합 지도·종료 결과 기록
         }
 
         private void CloseOverlayOnly()

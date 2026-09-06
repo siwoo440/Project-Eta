@@ -153,47 +153,39 @@ namespace ProjectEta.Run // 카드 보상 런타임 네임스페이스
             CompleteReward(source); // 보상 발생 경로에 맞춰 지도 복귀
         }
 
-        private void CompleteReward(CardRewardSource source) // 카드 획득 완료 후 경로 지도 상태 복귀
+        private void CompleteReward(CardRewardSource source) // 카드 획득 완료 후 통합 런 흐름 복귀
         {
             _rewardState.Clear(); // 현재 후보·선택 상태 정리
 
-            if (source == CardRewardSource.RewardNode) // 독립 Reward 노드 완료 처리
+            bool completed = source == CardRewardSource.RewardNode
+                ? RunStageFlowService.CompleteNonBattleStage(_runState)
+                : RunStageFlowService.CompleteBattleReward(_runState); // RewardNode 완료와 전투 승리 보상 복귀를 분리 처리
+
+            if (!completed)
             {
-                _runState.Round.Restore(_runState.CurrentRound, RoundProgressStatus.Cleared, BattleOutcome.Victory); // 현재 보상 스테이지 완료 기록
-
-                if (_runState.CurrentRound >= RoundState.FinalRound) // 최종 깊이 안전 처리
-                {
-                    _runState.Flow.CompleteRun(); // 최종 깊이라면 런 완료
-                    return; // 다음 지도 생성 없음
-                }
-
-                _runState.RouteMap.PreparePrototypeAfterBattle(_runState.CurrentRound); // 현재 보상 노드 위치 기준 다음 깊이 분기 생성
+                Debug.LogWarning($"53일차 카드 보상 완료 거부: Source={source} / Flow={_runState.CurrentFlowPhase} / Stage={_runState.CurrentRound}"); // 진행 상태 불일치 기록
+                return; // 잘못된 상태에서 지도 변경 차단
             }
 
-            _runState.Flow.EnterMap(); // 같은 10×10 체스판 경로 지도 모드 복귀
-            _routeMapBoardController.RefreshMapVisuals(); // 현재 RouteMapState를 즉시 화면에 다시 표시
-            Debug.Log($"46일차 카드 보상 완료 -> Map / Round={_runState.CurrentRound} / Source={source}"); // 지도 복귀 결과 기록
+            if (_runState.CurrentFlowPhase == RunFlowPhase.Map) _routeMapBoardController.RefreshMapVisuals(); // 다음 선택 지도일 때만 즉시 표시 갱신
+            Debug.Log($"53일차 카드 보상 완료 -> {_runState.CurrentFlowPhase} / Stage={_runState.CurrentRound} / Source={source}"); // 통합 보상 완료 결과 기록
         }
 
-        private void CompleteRewardWithoutCard(CardRewardSource source) // 후보 없음·리소스 누락 시 진행 차단 방지용 완료 처리
+        private void CompleteRewardWithoutCard(CardRewardSource source) // 후보 없음·리소스 누락 시 동일 통합 완료 흐름 사용
         {
             _rewardState.Clear(); // 남은 임시 상태 제거
 
-            if (source == CardRewardSource.RewardNode) // 독립 Reward 노드 완료 처리
+            bool completed = source == CardRewardSource.RewardNode
+                ? RunStageFlowService.CompleteNonBattleStage(_runState)
+                : RunStageFlowService.CompleteBattleReward(_runState); // 카드 획득 여부와 무관하게 동일 진행 규칙 적용
+
+            if (!completed)
             {
-                _runState.Round.Restore(_runState.CurrentRound, RoundProgressStatus.Cleared, BattleOutcome.Victory); // 보상 노드 완료 기록
-
-                if (_runState.CurrentRound >= RoundState.FinalRound) // 최종 깊이 안전 처리
-                {
-                    _runState.Flow.CompleteRun(); // 런 완료 처리
-                    return; // 지도 생성 생략
-                }
-
-                _runState.RouteMap.PreparePrototypeAfterBattle(_runState.CurrentRound); // 다음 깊이 분기 생성
+                Debug.LogWarning($"53일차 카드 없는 보상 완료 거부: Source={source} / Flow={_runState.CurrentFlowPhase} / Stage={_runState.CurrentRound}"); // 진행 상태 불일치 기록
+                return; // 잘못된 상태 변경 차단
             }
 
-            _runState.Flow.EnterMap(); // 경로 지도 흐름 복귀
-            _routeMapBoardController.RefreshMapVisuals(); // 지도 화면 즉시 갱신
+            if (_runState.CurrentFlowPhase == RunFlowPhase.Map) _routeMapBoardController.RefreshMapVisuals(); // 정상 지도 복귀 시 화면 갱신
         }
 
         private void OnDestroy() // 카드 보상 관리자 제거 시 이벤트·UI 정리

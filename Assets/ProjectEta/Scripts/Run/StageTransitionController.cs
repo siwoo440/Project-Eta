@@ -81,8 +81,14 @@ namespace ProjectEta.Run // 로그라이트 스테이지 전환 네임스페이�
                 yield break; // 전환 중단
             }
 
-            _runState.CurrentRound = stageNode.Depth; // 선택 노드 깊이를 현재 1~10 진행 단계에 반영
             yield return CleanupPreviousBattleRuntime(); // 이전 라운드 증원·보스 런타임 이벤트 제거
+
+            if (!RunStageFlowService.TrySynchronizeSelectedStage(_runState, stageNode, definition))
+            {
+                Debug.LogError($"53일차 스테이지 진입 차단: 선택 노드·지도 위치·Depth 상태가 일치하지 않습니다. Node={stageNode.NodeId} / Depth={stageNode.Depth}"); // 통합 진행 상태 불일치 기록
+                _transitionCoroutine = null; // 다음 정상 선택을 위해 전환 상태 해제
+                yield break; // 잘못된 스테이지 진입 중단
+            }
 
             if (definition.RequiresBattle) // 일반·엘리트·보스 전투 스테이지인지 확인
             {
@@ -165,38 +171,44 @@ namespace ProjectEta.Run // 로그라이트 스테이지 전환 네임스페이�
             return null; // 킹 카드 없음 반환
         }
 
-        private void EnterNonBattleStage(StageDefinition definition) // Reward는 실제 카드 보상, Shop·Event는 다음 일차 임시 흐름으로 연결
+        private void EnterNonBattleStage(StageDefinition definition) // Reward·Shop·Event 실제 시스템으로 통합 진입
         {
-            _runState.Round.Begin(); // 선택한 비전투 스테이지 진행 중 상태 지정
-
-            if (definition.StageType == StageType.Reward) // 카드 보상 노드 확인
+            if (!RunStageFlowService.EnterNonBattleStage(_runState, definition))
             {
-                _runState.Flow.EnterReward(); // CardRewardController가 감지할 실제 보상 흐름 진입
-                Debug.Log($"46일차 카드 보상 스테이지 진입: {definition.DisplayName}"); // 실제 보상 시스템 진입 기록
-                return; // Placeholder UI 표시 차단
+                Debug.LogError($"53일차 비전투 스테이지 진입 실패: {definition.StageId} / Type={definition.StageType}"); // 잘못된 Flow·Depth 상태 기록
+                return; // 잘못된 비전투 진입 중단
             }
 
-            if (definition.StageType == StageType.Shop) _runState.Flow.EnterShop(); // 상점 흐름 진입
-            else _runState.Flow.EnterEvent(); // 이벤트 흐름 진입
+            if (definition.StageType == StageType.Reward)
+            {
+                if (_placeholderUI != null) _placeholderUI.Hide(); // 실제 CardRewardUI만 사용하도록 레거시 Placeholder 숨김
+                Debug.Log($"53일차 Reward 진입: {definition.DisplayName} / Stage={_runState.CurrentRound}"); // 카드 보상 통합 진입 기록
+                return; // Reward 실제 컨트롤러 처리 대기
+            }
 
-            _placeholderUI.Show(definition, CompleteNonBattleStage); // 47일차 전까지 Shop·Event 개발용 완료 UI 표시
-            Debug.Log($"45일차 비전투 스테이지 진입: {definition.DisplayName} / Type={definition.StageType}"); // 비전투 전환 결과 기록
+            StageActivityController activityController = UnityEngine.Object.FindFirstObjectByType<StageActivityController>(); // 47일차 실제 Shop·Event 관리자 확인
+
+            if (activityController == null)
+            {
+                _placeholderUI.Show(definition, CompleteNonBattleStage); // 실제 관리자 누락 시 진행 불가 방지용 레거시 완료 UI fallback
+                Debug.LogWarning($"53일차 {definition.StageType} 실제 관리자 누락: Placeholder fallback을 사용합니다."); // fallback 사용 기록
+                return; // 레거시 완료 흐름 대기
+            }
+
+            if (_placeholderUI != null) _placeholderUI.Hide(); // 실제 Shop·Event UI 사용 시 레거시 Placeholder 제거
+            Debug.Log($"53일차 비전투 스테이지 진입: {definition.DisplayName} / Type={definition.StageType} / Stage={_runState.CurrentRound}"); // 통합 비전투 진입 기록
         }
 
-        private void CompleteNonBattleStage() // Reward·Shop·Event 임시 처리를 완료하고 다음 지도 분기 준비
+        private void CompleteNonBattleStage() // 실제 Shop·Event 관리자 누락 시 fallback 완료 처리
         {
-            _runState.Round.Restore(_runState.CurrentRound, RoundProgressStatus.Cleared, BattleOutcome.Victory); // 비전투 스테이지 완료 상태 기록
-
-            if (_runState.CurrentRound >= RoundState.FinalRound) // 안전한 최종 깊이 완료 처리
+            if (!RunStageFlowService.CompleteNonBattleStage(_runState))
             {
-                _runState.Flow.CompleteRun(); // 최종 깊이라면 런 완료
-                return; // 다음 지도 생성 없음
+                Debug.LogWarning($"53일차 비전투 fallback 완료 거부: Flow={_runState.CurrentFlowPhase} / Stage={_runState.CurrentRound}"); // 잘못된 fallback 완료 기록
+                return; // 상태 변경 차단
             }
 
-            _runState.RouteMap.PreparePrototypeAfterBattle(_runState.CurrentRound); // 현재 킹 위치 기준 다음 깊이 2~3분기 생성
-            _runState.Flow.EnterMap(); // 다시 경로 지도 선택 흐름 진입
-            _routeMapBoardController.RefreshMapVisuals(); // BoardMode가 계속 Map이어도 새 분기를 즉시 화면에 반영
-            Debug.Log($"45일차 비전투 스테이지 완료 -> Map / Depth={_runState.CurrentRound}"); // 다음 경로 복귀 결과 기록
+            if (_runState.CurrentFlowPhase == RunFlowPhase.Map) _routeMapBoardController.RefreshMapVisuals(); // 정상 다음 지도만 즉시 화면 갱신
+            Debug.Log($"53일차 비전투 fallback 완료 -> {_runState.CurrentFlowPhase} / Stage={_runState.CurrentRound}"); // fallback 완료 결과 기록
         }
 
         private void OnDestroy() // 전환 관리자 제거 시 이벤트·코루틴 정리
