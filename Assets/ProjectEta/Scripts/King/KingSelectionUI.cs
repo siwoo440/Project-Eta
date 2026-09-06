@@ -18,8 +18,8 @@ namespace ProjectEta.King
         private BattleController _battleController; // 현재 BattleController
         private Canvas _canvas; // King 선택 전용 Canvas
         private GameObject _selectionRoot; // 초기 King 선택 전체 화면
-        private GameObject _statusRoot; // 선택 완료·런 중 King 상태 패널
-        private Text _statusText; // 선택 완료·런 중 King 상태 문구
+        private GameObject _placementRoot; // 선택 확정 후 최초 King 배치 안내 패널
+        private Text _placementText; // 선택 확정 후 최초 King 배치 안내 문구
         private Button _previousButton; // 이전 King 화살표 버튼
         private Button _nextButton; // 다음 King 화살표 버튼
         private Button _confirmButton; // 현재 King 확정 버튼
@@ -67,7 +67,7 @@ namespace ProjectEta.King
         private void Update()
         {
             ResolveBattleController(); // 현재 BattleController 탐색
-            RefreshPresentation(); // 선택·배치·런 중 King UI 갱신
+            RefreshPresentation(); // King 선택·최초 배치 안내 UI 갱신
         }
 
         private void ResolveBattleController()
@@ -100,7 +100,8 @@ namespace ProjectEta.King
                 return; // 배치 안내 갱신 종료
             }
 
-            ShowStatusMode(kingState); // 전투·지도 진행 중 현재 King 상태 표시
+            _selectionRoot.SetActive(false); // 최초 선택 완료 후 캐러셀 화면 숨김
+            _placementRoot.SetActive(false); // King 배치 완료 후 선택 UI의 안내 패널 숨김
         }
 
         private void HandleRunChanged(RunState runState)
@@ -133,7 +134,7 @@ namespace ProjectEta.King
         private void ShowSelectionMode(RunState runState, KingRunState kingState)
         {
             _selectionRoot.SetActive(true); // 전체 화면 King 선택 UI 표시
-            _statusRoot.SetActive(false); // 런 중 상태 패널 숨김
+            _placementRoot.SetActive(false); // King 선택 중 배치 안내 패널 숨김
 
             if (_carouselState == null)
             {
@@ -156,46 +157,10 @@ namespace ProjectEta.King
         private void ShowPlacementPendingStatus(KingRunState kingState)
         {
             _selectionRoot.SetActive(false); // 선택 완료 후 전체 화면 차단 해제
-            _statusRoot.SetActive(true); // King 배치 안내 패널 표시
+            _placementRoot.SetActive(true); // 선택 확정 후 King 배치 안내 패널 표시
 
             string displayName = kingState != null ? KingArchetypeNames.GetDisplayName(kingState.Archetype) : "기본 킹"; // 확정 King 표시 이름 조회
-            _statusText.text = $"선택 완료 · {displayName}  |  보드에 King을 배치하세요"; // 초기 King 배치 안내 표시
-        }
-
-        private void ShowStatusMode(KingRunState kingState)
-        {
-            _selectionRoot.SetActive(false); // 초기 선택 화면 숨김
-            _statusRoot.SetActive(true); // 런 중 King 상태 패널 표시
-
-            if (kingState == null)
-            {
-                _statusText.text = "King 상태 준비 중"; // King 상태 누락 안내
-                return; // 상태 표시 종료
-            }
-
-            string displayName = KingArchetypeNames.GetDisplayName(kingState.Archetype); // 현재 King 표시 이름 조회
-
-            if (kingState.Archetype == KingArchetype.Attack)
-            {
-                _statusText.text = $"{displayName}  |  격노 {kingState.RageStacks}/{KingRunState.AttackRageMaxStacks}"; // 공격형 격노 상태 표시
-                return; // 공격형 상태 표시 종료
-            }
-
-            if (kingState.Archetype == KingArchetype.Defense)
-            {
-                _statusText.text = $"{displayName}  |  방벽 {(kingState.BarrierActive ? "ON" : "OFF")}"; // 방어형 방벽 상태 표시
-                return; // 방어형 상태 표시 종료
-            }
-
-            if (kingState.Archetype == KingArchetype.Strategy)
-            {
-                _statusText.text = kingState.StrategyPreparationPending
-                    ? $"{displayName}  |  전술적 준비 선택 중"
-                    : $"{displayName}  |  배치 턴마다 덱 위 3장 중 1장 선택"; // 전략형 전술적 준비 상태 표시
-                return; // 전략형 상태 표시 종료
-            }
-
-            _statusText.text = displayName; // 기본 King 이름 표시
+            _placementText.text = $"선택 완료 · {displayName}  |  보드에 King을 배치하세요"; // 초기 King 배치 안내 표시
         }
 
         private void HandleNavigationInput()
@@ -427,7 +392,7 @@ namespace ProjectEta.King
             scaler.matchWidthOrHeight = 0.5f; // 가로·세로 균형 스케일 적용
 
             BuildSelectionRoot(canvasObject.transform); // 캐러셀 초기 선택 화면 생성
-            BuildStatusRoot(canvasObject.transform); // 선택 완료·런 중 상태 패널 생성
+            BuildPlacementRoot(canvasObject.transform); // 선택 확정 후 최초 King 배치 안내 패널 생성
         }
 
         private void BuildSelectionRoot(Transform parent)
@@ -545,20 +510,20 @@ namespace ProjectEta.King
             SetCenteredRect(_detailDescriptionText.rectTransform, new Vector2(275f, -20f), new Vector2(560f, 220f)); // 상세 패시브 설명 배치
         }
 
-        private void BuildStatusRoot(Transform parent)
+        private void BuildPlacementRoot(Transform parent)
         {
-            _statusRoot = CreateImageObject("KingStatusRoot_Day60", parent, new Vector2(285f, -62f), new Vector2(520f, 84f), new Color(0.07f, 0.045f, 0.025f, 0.93f)); // 좌측 상단 King 상태 패널 생성
-            RectTransform rect = _statusRoot.GetComponent<RectTransform>(); // King 상태 패널 RectTransform 조회
+            _placementRoot = CreateImageObject("KingPlacementRoot_Day61", parent, new Vector2(285f, -62f), new Vector2(520f, 84f), new Color(0.07f, 0.045f, 0.025f, 0.93f)); // 좌측 상단 King 배치 안내 패널 생성
+            RectTransform rect = _placementRoot.GetComponent<RectTransform>(); // King 배치 안내 패널 RectTransform 조회
             rect.anchorMin = new Vector2(0f, 1f); // 좌측 상단 앵커 적용
             rect.anchorMax = new Vector2(0f, 1f); // 좌측 상단 앵커 적용
             rect.pivot = new Vector2(0.5f, 0.5f); // 중앙 피벗 적용
             rect.anchoredPosition = new Vector2(285f, -62f); // 좌측 상단 여백 적용
 
-            _statusText = CreateText("Status", _statusRoot.transform, 17, FontStyle.Bold, TextAnchor.MiddleCenter); // King 상태 문구 생성
-            _statusText.horizontalOverflow = HorizontalWrapMode.Wrap; // 긴 King 상태 줄바꿈 허용
-            _statusText.verticalOverflow = VerticalWrapMode.Truncate; // 패널 밖 상태 문구 잘라내기
-            Stretch(_statusText.rectTransform, 14f); // King 상태 문구 내부 여백 적용
-            _statusRoot.SetActive(false); // 초기 상태 패널 숨김
+            _placementText = CreateText("PlacementStatus", _placementRoot.transform, 17, FontStyle.Bold, TextAnchor.MiddleCenter); // King 배치 안내 문구 생성
+            _placementText.horizontalOverflow = HorizontalWrapMode.Wrap; // 긴 King 배치 안내 줄바꿈 허용
+            _placementText.verticalOverflow = VerticalWrapMode.Truncate; // 패널 밖 배치 안내 문구 잘라내기
+            Stretch(_placementText.rectTransform, 14f); // King 배치 안내 문구 내부 여백 적용
+            _placementRoot.SetActive(false); // 초기 배치 안내 패널 숨김
         }
 
         private static Button CreateArrowButton(string name, Transform parent, string label, Vector2 position)
