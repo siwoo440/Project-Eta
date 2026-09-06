@@ -27,7 +27,7 @@ namespace ProjectEta.Settings
             if (_loaded) return; // 중복 설정 로드 차단
 
             _current = LoadFromDisk() ?? GameSettingsData.CreateDefault(); // 저장 설정 또는 기본 설정 선택
-            _current = _current.Normalized(); // 저장 설정 안전 범위 보정
+            _current = _current.Normalized(); // 저장 설정 안전 범위·버전 보정
             _loaded = true; // 설정 로드 완료 기록
             ApplyRuntime(_current); // 최초 런타임 설정 적용
         }
@@ -36,7 +36,7 @@ namespace ProjectEta.Settings
         {
             EnsureLoaded(); // 설정 서비스 준비 보장
             _current = (data ?? GameSettingsData.CreateDefault()).Normalized(); // 적용 설정 안전 보정
-            ApplyRuntime(_current); // 화면·UI 설정 즉시 적용
+            ApplyRuntime(_current); // 화면·UI·오디오 설정 즉시 적용
             SaveToDisk(_current); // 적용 설정 영구 저장
         }
 
@@ -46,16 +46,35 @@ namespace ProjectEta.Settings
             ApplyUiScaleToAllCanvases(normalized); // 현재 Canvas 전체 UI 배율 미리보기
         }
 
+        public static void PreviewAudio(float masterVolume, float bgmVolume, float sfxVolume)
+        {
+            GameAudioService.Apply(masterVolume, bgmVolume, sfxVolume); // 미저장 오디오 편집값 즉시 미리보기
+        }
+
         public static void ReapplyUiScale()
         {
             EnsureLoaded(); // 설정 서비스 준비 보장
             ApplyUiScaleToAllCanvases(_current.UiScale); // 현재 저장 UI 배율 재적용
         }
 
+        public static void ReapplyAudio()
+        {
+            EnsureLoaded(); // 설정 서비스 준비 보장
+            GameAudioService.Apply(_current); // 현재 저장 오디오 설정 재적용
+        }
+
+        public static void ReapplyRuntimeSettings()
+        {
+            EnsureLoaded(); // 설정 서비스 준비 보장
+            ApplyUiScaleToAllCanvases(_current.UiScale); // 새 Canvas UI Scale 재적용
+            GameAudioService.Apply(_current); // 새 Scene 오디오 설정 재적용
+        }
+
         public static void ResetRuntimeState()
         {
             _current = null; // 정적 현재 설정 초기화
             _loaded = false; // 정적 로드 상태 초기화
+            GameAudioService.ResetRuntimeState(); // 오디오 런타임 상태 초기화
         }
 
         private static GameSettingsData LoadFromDisk()
@@ -70,7 +89,7 @@ namespace ProjectEta.Settings
             }
             catch (Exception exception)
             {
-                Debug.LogWarning($"56일차 설정 읽기 실패: {exception.Message}"); // 설정 읽기 오류 기록
+                Debug.LogWarning($"57일차 설정 읽기 실패: {exception.Message}"); // 설정 읽기 오류 기록
                 return null; // 기본 설정 fallback 허용
             }
         }
@@ -86,7 +105,7 @@ namespace ProjectEta.Settings
             }
             catch (Exception exception)
             {
-                Debug.LogWarning($"56일차 설정 저장 실패: {exception.Message}"); // 설정 저장 오류 기록
+                Debug.LogWarning($"57일차 설정 저장 실패: {exception.Message}"); // 설정 저장 오류 기록
             }
         }
 
@@ -95,6 +114,7 @@ namespace ProjectEta.Settings
             FullScreenMode mode = (FullScreenMode)data.ScreenMode; // 저장 화면 모드 변환
             Screen.SetResolution(data.ResolutionWidth, data.ResolutionHeight, mode); // 해상도·화면 모드 적용
             ApplyUiScaleToAllCanvases(data.UiScale); // 현재 Canvas UI 배율 적용
+            GameAudioService.Apply(data); // Master·BGM·SFX 오디오 설정 적용
         }
 
         private static void ApplyUiScaleToAllCanvases(float uiScale)
