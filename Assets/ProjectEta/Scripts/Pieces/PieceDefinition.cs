@@ -10,6 +10,9 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
         [SerializeField] private string _pieceId; // 기물 고유 식별자
         [SerializeField] private string _displayName; // 화면과 카드에 표시할 기물 이름
 
+        [Header("영구 해금")] // 59일차 런 콘텐츠 가용성 구분선
+        [SerializeField] private string _requiredMetaUnlockId; // 빈 값이면 기본 콘텐츠, 값이 있으면 해당 Meta Unlock을 가진 런 Snapshot에서만 획득 가능
+
         [Header("분류")] // 인스펙터 분류 정보 구분선
         [SerializeField] private PieceCategory _category; // 기물 획득 경로 분류
         [SerializeField] private PieceGrade _grade; // 기물 등급
@@ -32,12 +35,13 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
         [Header("카드 UI")] // 카드 이미지 손패 UI 구분선
         [SerializeField] private Sprite _cardArtwork; // 카드 상단 초상화에 표시할 일러스트 Sprite
 
-        [Header("설명")] // 인스펙터 설명 구분선
+        [Header("설명")] // 인스펙터 설명 정보 구분선
         [TextArea] // 여러 줄 설명을 편집할 수 있게 표시
         [SerializeField] private string _description; // 카드 하단 설명 영역에 표시할 기물 설명
 
         public string PieceId => _pieceId; // 외부에서 읽는 기물 식별자
         public string DisplayName => _displayName; // 외부에서 읽는 표시 이름
+        public string RequiredMetaUnlockId => _requiredMetaUnlockId; // 59일차: 런 Snapshot에서 요구하는 영구 해금 ID
         public PieceCategory Category => _category; // 외부에서 읽는 분류
         public PieceGrade Grade => _grade; // 외부에서 읽는 등급
         public PieceMovementType MovementType => _movementType; // 기존 코드가 읽는 구형 이동 타입
