@@ -9,6 +9,7 @@ using ProjectEta.King; // 킹 능력·선택 UI 사용
 using ProjectEta.Meta; // 메타 결과 관리자 사용
 using ProjectEta.Round; // 첫 전투 RoundRuntimeController 사용
 using ProjectEta.Run; // 런·스테이지 관리자 사용
+using ProjectEta.Settings; // 56일차 재사용 설정 패널 사용
 using ProjectEta.UI; // MainMenuController 사용
 
 namespace ProjectEta.SceneFlow
@@ -47,6 +48,7 @@ namespace ProjectEta.SceneFlow
             if (scene.name == SceneFlowController.MainMenuSceneName)
             {
                 EnsureComponent<MainMenuController>("MainMenuController_Day54"); // MainMenu 런타임 UI 주입
+                EnsureComponent<MainMenuSettingsBridge>("MainMenuSettingsBridge_Day56"); // 55일차 SettingsRoot에 재사용 설정 패널 연결
                 return; // MainMenu 전용 구성 종료
             }
 
@@ -75,6 +77,7 @@ namespace ProjectEta.SceneFlow
             EnsureKingRuntime(); // 49~50일차 킹 패시브·선택 관리자 생성
             EnsureComponent<RunPersistenceController>("RunPersistenceController_Day51"); // 안전 지점 자동 저장 관리자 생성
             EnsureComponent<RunResultMainMenuController>("RunResultMainMenuController_Day54"); // Completed·Failed 메인 메뉴 복귀 UI 생성
+            EnsureComponent<BattleSettingsOverlayController>("BattleSettingsOverlayController_Day56"); // Battle ESC 재사용 설정 패널 생성
         }
 
         private static void EnsureKingRuntime()
