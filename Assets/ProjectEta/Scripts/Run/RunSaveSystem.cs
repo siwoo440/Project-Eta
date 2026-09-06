@@ -13,7 +13,7 @@ namespace ProjectEta.Run
         private static string TempPath => SavePath + ".tmp"; // 임시 안전 저장 경로 계산
 
         public static bool HasSave => File.Exists(SavePath); // 런 세이브 존재 여부
-        public static bool CanContinue => TryReadData(out RunSaveData data) && IsContinueDataValid(data); // 메인 메뉴 이어하기 가능 여부
+        public static bool CanContinue => TryGetContinueInfo(out _); // 메인 메뉴 이어하기 가능 여부
 
         public static void Save(RunState runState)
         {
@@ -93,6 +93,24 @@ namespace ProjectEta.Run
                 Debug.LogWarning($"51일차 안전 지점 복원 실패: {exception.Message}"); // 자동 복원 오류 출력
                 return false; // 신규 런 fallback 허용
             }
+        }
+
+        public static bool TryGetContinueInfo(out RunContinueInfo info)
+        {
+            info = null; // 기본 이어하기 요약 초기화
+            if (!TryReadData(out RunSaveData data)) return false; // 실제 저장 데이터 읽기 실패 처리
+            return TryCreateContinueInfo(data, out info); // 안전 검증 후 메뉴 요약 생성
+        }
+
+        public static bool TryCreateContinueInfo(RunSaveData data, out RunContinueInfo info)
+        {
+            info = null; // 기본 이어하기 요약 초기화
+            if (!IsContinueDataValid(data)) return false; // 안전 지점 저장 데이터만 메뉴 노출 허용
+
+            RunFlowPhase phase = ParseFlowPhase(data.flowPhase); // 저장 상위 흐름 변환
+            int visitedNodeCount = data.routeMap.visitedNodeIds != null ? data.routeMap.visitedNodeIds.Count : 0; // 방문 경로 수 계산
+            info = new RunContinueInfo(data.currentRound, phase, data.runCurrency, data.kingHp, visitedNodeCount); // MainMenu 표시용 요약 생성
+            return true; // 이어하기 요약 생성 성공 반환
         }
 
         public static bool IsContinueDataValid(RunSaveData data)
