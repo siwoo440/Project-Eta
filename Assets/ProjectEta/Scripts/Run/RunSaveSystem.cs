@@ -13,6 +13,7 @@ namespace ProjectEta.Run
         private static string TempPath => SavePath + ".tmp"; // 임시 안전 저장 경로 계산
 
         public static bool HasSave => File.Exists(SavePath); // 런 세이브 존재 여부
+        public static bool CanContinue => TryReadData(out RunSaveData data) && IsContinueDataValid(data); // 메인 메뉴 이어하기 가능 여부
 
         public static void Save(RunState runState)
         {
@@ -35,7 +36,6 @@ namespace ProjectEta.Run
                 }
 
                 File.WriteAllText(TempPath, json); // 임시 파일에 먼저 전체 JSON 기록
-
                 File.Copy(TempPath, SavePath, true); // 임시 파일을 실제 세이브 경로에 덮어쓰기
                 File.Delete(TempPath); // 정상 복사 후 임시 파일 정리
                 return true; // 저장 성공 반환
@@ -51,7 +51,6 @@ namespace ProjectEta.Run
         public static bool TryLoad(PieceDatabase database, out RunState runState, StatusEffectDatabase statusEffectDatabase = null)
         {
             runState = null; // 기본 불러오기 결과 초기화
-
             if (!TryReadData(out RunSaveData data)) return false; // JSON 저장 DTO 읽기 실패 처리
 
             try
@@ -71,11 +70,7 @@ namespace ProjectEta.Run
         {
             runState = null; // 기본 자동 복원 결과 초기화
             if (!TryReadData(out RunSaveData data)) return false; // 저장 DTO 읽기 실패 처리
-
-            if (data.saveVersion < RunSaveData.CurrentVersion)
-            {
-                return false; // 구버전 세이브는 수동 로드만 허용
-            }
+            if (!IsContinueDataValid(data)) return false; // MainMenu와 동일한 안전 세이브 규칙 적용
 
             PieceDatabase pieceDatabase = LoadFirstResource<PieceDatabase>(); // Resources PieceDatabase 자동 탐색
             StatusEffectDatabase statusEffectDatabase = LoadFirstResource<StatusEffectDatabase>(); // Resources 상태 이상 DB 자동 탐색
@@ -100,6 +95,36 @@ namespace ProjectEta.Run
             }
         }
 
+        public static bool IsContinueDataValid(RunSaveData data)
+        {
+            if (data == null) return false; // 저장 DTO 누락 차단
+            if (data.saveVersion != RunSaveData.CurrentVersion) return false; // 현재 포맷 외 자동 이어하기 차단
+            if (string.IsNullOrWhiteSpace(data.runId)) return false; // 런 고유 ID 누락 차단
+            if (data.currentRound < RoundState.FirstRound || data.currentRound > RoundState.FinalRound) return false; // 1~10 범위 밖 스테이지 차단
+            if (data.routeMap == null || data.routeMap.nodes == null || data.routeMap.nodes.Count == 0) return false; // 지도 스냅샷 누락 차단
+            if (string.IsNullOrWhiteSpace(data.routeMap.currentNodeId)) return false; // 현재 지도 노드 누락 차단
+
+            RouteNodeSaveData currentNode = FindRouteNode(data.routeMap, data.routeMap.currentNodeId); // 현재 노드 저장 항목 조회
+            if (currentNode == null) return false; // 현재 노드가 전체 지도에 없으면 차단
+            if (currentNode.depth != data.routeMap.currentDepth) return false; // 현재 노드 깊이와 지도 깊이 불일치 차단
+            if (data.currentRound != data.routeMap.currentDepth) return false; // RunState 스테이지와 지도 깊이 불일치 차단
+
+            RunFlowPhase phase = ParseFlowPhase(data.flowPhase); // 저장 상위 흐름 검증
+            if (phase == RunFlowPhase.Map)
+            {
+                return string.IsNullOrWhiteSpace(data.routeMap.selectedNodeId); // 선택 전 Map 안전 지점만 허용
+            }
+
+            if (phase == RunFlowPhase.Reward || phase == RunFlowPhase.Shop || phase == RunFlowPhase.Event)
+            {
+                if (string.IsNullOrWhiteSpace(data.routeMap.selectedNodeId)) return false; // 비전투 진입 노드 누락 차단
+                if (!string.Equals(data.routeMap.currentNodeId, data.routeMap.selectedNodeId, StringComparison.Ordinal)) return false; // 선택 노드와 King 현재 노드 불일치 차단
+                return FindRouteNode(data.routeMap, data.routeMap.selectedNodeId) != null; // 선택 노드가 지도에 존재하는 경우만 허용
+            }
+
+            return false; // Battle·Completed·Failed 자동 이어하기 차단
+        }
+
         public static bool IsSafeCheckpoint(RunState runState)
         {
             if (runState == null || runState.Flow.IsRunFinished) return false; // null·종료 런 저장 차단
@@ -115,6 +140,23 @@ namespace ProjectEta.Run
             }
 
             return runState.CurrentFlowPhase == RunFlowPhase.Shop || runState.CurrentFlowPhase == RunFlowPhase.Event; // 상점·이벤트 선택 화면 안전 저장
+        }
+
+        public static bool TryDeleteForNewRun()
+        {
+            if (!File.Exists(SavePath) && !File.Exists(TempPath)) return true; // 기존 런 파일이 없으면 즉시 새 게임 허용
+
+            try
+            {
+                if (File.Exists(SavePath)) File.Delete(SavePath); // 이전 런 세이브 제거
+                if (File.Exists(TempPath)) File.Delete(TempPath); // 남은 임시 런 세이브 제거
+                return !File.Exists(SavePath) && !File.Exists(TempPath); // 실제 정리 완료 여부 반환
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"54일차 새 게임 Run Save 정리 실패: {exception.Message}"); // 새 게임 정리 오류 출력
+                return false; // 이전 런 잔존 시 새 게임 차단
+            }
         }
 
         public static bool DeleteSave()
@@ -161,6 +203,26 @@ namespace ProjectEta.Run
                 Debug.LogWarning($"51일차 런 세이브 읽기 실패: {exception.Message}"); // 손상·읽기 오류 출력
                 return false; // 읽기 실패 반환
             }
+        }
+
+        private static RunFlowPhase ParseFlowPhase(int rawPhase)
+        {
+            if (rawPhase < (int)RunFlowPhase.Battle || rawPhase > (int)RunFlowPhase.Failed) return RunFlowPhase.Battle; // 범위 밖 저장값 Battle fallback
+            return (RunFlowPhase)rawPhase; // 정상 저장 흐름 반환
+        }
+
+        private static RouteNodeSaveData FindRouteNode(RouteMapSaveData routeMap, string nodeId)
+        {
+            if (routeMap == null || routeMap.nodes == null || string.IsNullOrWhiteSpace(nodeId)) return null; // 잘못된 지도 조회 차단
+
+            for (int i = 0; i < routeMap.nodes.Count; i++)
+            {
+                RouteNodeSaveData node = routeMap.nodes[i]; // 현재 저장 노드 조회
+                if (node == null) continue; // 빈 저장 노드 제외
+                if (string.Equals(node.nodeId, nodeId, StringComparison.Ordinal)) return node; // 동일 노드 ID 반환
+            }
+
+            return null; // 일치 저장 노드 없음
         }
 
         private static T LoadFirstResource<T>() where T : UnityEngine.Object
