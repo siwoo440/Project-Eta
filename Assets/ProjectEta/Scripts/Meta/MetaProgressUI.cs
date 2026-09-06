@@ -1,4 +1,3 @@
-using System.Collections.Generic; // List<T>·IReadOnlyList<T> 사용
 using UnityEngine; // MonoBehaviour·GameObject·Color·Vector2 사용
 using UnityEngine.EventSystems; // EventSystem 사용
 using UnityEngine.InputSystem.UI; // 새 Input System UI 입력 모듈 사용
@@ -8,20 +7,19 @@ namespace ProjectEta.Meta
 {
     public sealed class MetaProgressUI : MonoBehaviour
     {
-        private const int UnlockButtonCount = 5; // 프로토타입 영구 해금 버튼 수
-
-        private readonly List<Button> _unlockButtons = new List<Button>(); // 재사용 영구 해금 버튼 목록
         private Canvas _canvas; // 메타 진행 전용 Canvas
-        private GameObject _root; // 전체 메타 결과 UI 루트
+        private GameObject _resultRoot; // 런 결과 요약 UI 루트
+        private GameObject _progressRoot; // 재사용 영구 성장 UI 루트
         private Text _titleText; // 런 결과 제목
         private Text _rewardText; // 이번 메타 토큰 보상
         private Text _totalText; // 현재 영구 메타 토큰 잔액
-        private Text _statusText; // 해금 결과 안내
+        private Text _statusText; // 결과 안내
         private EventSystem _createdEventSystem; // 직접 생성 EventSystem
         private MetaProgressState _progress; // 현재 표시 영구 진행 상태
+        private MetaProgressPanelController _progressPanelController; // 재사용 영구 성장 패널
         private static Font _runtimeFont; // 한글 런타임 폰트 캐시
 
-        public bool IsVisible => _root != null && _root.activeSelf; // 현재 메타 결과 UI 표시 여부
+        public bool IsVisible => (_resultRoot != null && _resultRoot.activeSelf) || (_progressRoot != null && _progressRoot.activeSelf); // 현재 결과·영구 성장 UI 표시 여부
 
         public void Show(MetaProgressState progress, int earnedTokens, int reachedStage, bool completed)
         {
@@ -29,14 +27,16 @@ namespace ProjectEta.Meta
             _progress = progress; // 현재 영구 진행 상태 저장
             _titleText.text = completed ? "런 클리어" : "런 종료"; // 승리·실패 제목 표시
             _rewardText.text = $"도달 단계 {reachedStage}\n메타 토큰 +{earnedTokens}"; // 이번 런 메타 보상 표시
-            _statusText.text = "메타 토큰은 게임을 종료해도 유지됩니다."; // 영구 진행 안내 표시
-            RefreshProgress(); // 토큰·해금 상태 즉시 갱신
-            _root.SetActive(true); // 메타 결과 화면 표시
+            _statusText.text = "획득한 메타 토큰은 영구 저장됩니다."; // 영구 진행 안내 표시
+            RefreshSummary(); // 현재 메타 토큰 요약 갱신
+            _progressRoot.SetActive(false); // 결과 표시 전 영구 성장 상세 숨김
+            _resultRoot.SetActive(true); // 런 결과 요약 화면 표시
         }
 
         public void Hide()
         {
-            if (_root != null) _root.SetActive(false); // 메타 결과 화면 숨김
+            if (_progressRoot != null) _progressRoot.SetActive(false); // 영구 성장 상세 화면 숨김
+            if (_resultRoot != null) _resultRoot.SetActive(false); // 런 결과 요약 화면 숨김
         }
 
         private void EnsureUI()
@@ -44,7 +44,7 @@ namespace ProjectEta.Meta
             if (_canvas != null) return; // 중복 UI 생성 차단
             EnsureEventSystem(); // UI 클릭용 EventSystem 보장
 
-            var canvasObject = new GameObject("MetaProgressCanvas_Day48", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster)); // 메타 진행 Canvas 생성
+            var canvasObject = new GameObject("MetaProgressCanvas_Day58", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster)); // 메타 진행 Canvas 생성
             canvasObject.transform.SetParent(transform, false); // 컨트롤러 호스트 자식 연결
             _canvas = canvasObject.GetComponent<Canvas>(); // Canvas 참조 저장
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay; // 런 종료 결과를 화면 위에 표시
@@ -56,148 +56,123 @@ namespace ProjectEta.Meta
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight; // 화면 비율 대응
             scaler.matchWidthOrHeight = 0.5f; // 가로·세로 균형 보정
 
-            BuildRoot(canvasObject.transform); // 메타 결과 화면 구성
+            BuildResultRoot(canvasObject.transform); // 런 결과 요약 화면 생성
+            BuildProgressRoot(canvasObject.transform); // 재사용 영구 성장 상세 화면 생성
         }
 
-        private void BuildRoot(Transform parent)
+        private void BuildResultRoot(Transform parent)
         {
-            _root = new GameObject("MetaProgressRoot", typeof(RectTransform), typeof(Image)); // 전체 화면 결과 루트 생성
-            _root.transform.SetParent(parent, false); // Canvas 자식 연결
+            _resultRoot = new GameObject("MetaResultRoot_Day58", typeof(RectTransform), typeof(Image)); // 전체 화면 결과 루트 생성
+            _resultRoot.transform.SetParent(parent, false); // Canvas 자식 연결
+            Stretch(_resultRoot.GetComponent<RectTransform>(), 0f); // 전체 화면 배치
 
-            RectTransform rootRect = _root.GetComponent<RectTransform>(); // 전체 화면 RectTransform 확보
-            rootRect.anchorMin = Vector2.zero; // 좌하단 Stretch 시작
-            rootRect.anchorMax = Vector2.one; // 우상단 Stretch 끝
-            rootRect.offsetMin = Vector2.zero; // 좌하단 여백 제거
-            rootRect.offsetMax = Vector2.zero; // 우상단 여백 제거
-
-            Image blocker = _root.GetComponent<Image>(); // 전체 화면 어두운 배경 확보
+            Image blocker = _resultRoot.GetComponent<Image>(); // 전체 화면 어두운 배경 확보
             blocker.color = new Color(0.02f, 0.018f, 0.015f, 0.92f); // 런 종료 집중 배경 적용
             blocker.raycastTarget = true; // 뒤쪽 보드 입력 차단
 
-            var panelObject = new GameObject("MetaPanel", typeof(RectTransform), typeof(Image)); // 중앙 영구 성장 패널 생성
-            panelObject.transform.SetParent(_root.transform, false); // 결과 루트 자식 연결
-            RectTransform panelRect = panelObject.GetComponent<RectTransform>(); // 중앙 패널 RectTransform 확보
-            SetRect(panelRect, Vector2.zero, new Vector2(980f, 820f)); // 중앙 패널 위치·크기 적용
-            Image panelImage = panelObject.GetComponent<Image>(); // 중앙 패널 배경 확보
-            panelImage.color = new Color(0.14f, 0.09f, 0.05f, 0.98f); // 테이블 분위기 갈색 배경 적용
+            GameObject panel = CreatePanel("MetaResultPanel", _resultRoot.transform, Vector2.zero, new Vector2(940f, 720f), new Color(0.055f, 0.065f, 0.085f, 0.99f)); // 런 결과 중앙 패널 생성
 
-            _titleText = CreateText("Title", panelObject.transform, 42, FontStyle.Bold); // 결과 제목 생성
-            SetRect(_titleText.rectTransform, new Vector2(0f, 335f), new Vector2(840f, 66f)); // 결과 제목 위치 적용
+            Text eyebrow = CreateText("Eyebrow", panel.transform, 18, FontStyle.Bold, TextAnchor.MiddleLeft); // 결과 분류 문구 생성
+            eyebrow.text = "RUN RESULT"; // 결과 분류 문구 적용
+            eyebrow.color = new Color(0.38f, 0.68f, 0.88f, 1f); // 결과 분류 강조 적용
+            SetRect(eyebrow.rectTransform, new Vector2(-315f, 285f), new Vector2(220f, 36f)); // 결과 분류 문구 배치
 
-            _rewardText = CreateText("Reward", panelObject.transform, 26, FontStyle.Bold); // 이번 보상 텍스트 생성
-            SetRect(_rewardText.rectTransform, new Vector2(-245f, 245f), new Vector2(410f, 100f)); // 이번 보상 위치 적용
+            _titleText = CreateText("Title", panel.transform, 46, FontStyle.Bold, TextAnchor.MiddleLeft); // 결과 제목 생성
+            SetRect(_titleText.rectTransform, new Vector2(-250f, 230f), new Vector2(480f, 70f)); // 결과 제목 배치
 
-            _totalText = CreateText("Total", panelObject.transform, 30, FontStyle.Bold); // 총 메타 토큰 텍스트 생성
-            SetRect(_totalText.rectTransform, new Vector2(245f, 245f), new Vector2(410f, 100f)); // 총 토큰 위치 적용
+            _rewardText = CreateText("Reward", panel.transform, 26, FontStyle.Bold, TextAnchor.MiddleLeft); // 이번 보상 문구 생성
+            SetRect(_rewardText.rectTransform, new Vector2(-235f, 105f), new Vector2(440f, 120f)); // 이번 보상 문구 배치
 
-            Text unlockTitle = CreateText("UnlockTitle", panelObject.transform, 28, FontStyle.Bold); // 영구 해금 제목 생성
-            unlockTitle.text = "영구 해금"; // 영구 해금 제목 적용
-            SetRect(unlockTitle.rectTransform, new Vector2(0f, 150f), new Vector2(700f, 52f)); // 영구 해금 제목 위치 적용
+            _totalText = CreateText("Total", panel.transform, 28, FontStyle.Bold, TextAnchor.MiddleRight); // 총 메타 토큰 문구 생성
+            _totalText.color = new Color(0.38f, 0.68f, 0.88f, 1f); // 총 토큰 강조 색상 적용
+            SetRect(_totalText.rectTransform, new Vector2(255f, 105f), new Vector2(360f, 120f)); // 총 토큰 문구 배치
 
-            for (int i = 0; i < UnlockButtonCount; i++)
-            {
-                Button button = CreateUnlockButton(panelObject.transform, i); // 영구 해금 버튼 생성
-                _unlockButtons.Add(button); // 재사용 버튼 목록 등록
-            }
+            _statusText = CreateText("Status", panel.transform, 19, FontStyle.Normal, TextAnchor.MiddleCenter); // 결과 안내 문구 생성
+            _statusText.color = new Color(0.68f, 0.72f, 0.79f, 1f); // 안내 보조 색상 적용
+            SetRect(_statusText.rectTransform, new Vector2(0f, -35f), new Vector2(760f, 70f)); // 결과 안내 문구 배치
 
-            _statusText = CreateText("Status", panelObject.transform, 20, FontStyle.Normal); // 결과·안내 텍스트 생성
-            _statusText.horizontalOverflow = HorizontalWrapMode.Wrap; // 안내 줄바꿈 허용
-            SetRect(_statusText.rectTransform, new Vector2(0f, -278f), new Vector2(820f, 70f)); // 안내 위치 적용
+            Button openProgress = CreateButton("OpenMetaProgress", panel.transform, "영구 성장 보기", new Vector2(0f, -155f), new Vector2(420f, 74f)); // 영구 성장 상세 진입 버튼 생성
+            openProgress.onClick.AddListener(OpenProgressPanel); // 재사용 영구 성장 패널 열기 연결
 
-            Button closeButton = CreateButton("CloseButton", panelObject.transform, "닫기", new Vector2(0f, -355f), new Vector2(280f, 64f)); // 닫기 버튼 생성
-            closeButton.onClick.AddListener(Hide); // 메타 결과 화면 닫기 연결
-            _root.SetActive(false); // 기본 숨김 상태
+            Button close = CreateButton("Close", panel.transform, "닫기", new Vector2(0f, -255f), new Vector2(300f, 64f)); // 결과 UI 닫기 버튼 생성
+            close.onClick.AddListener(Hide); // 결과 UI 닫기 연결
+
+            _resultRoot.SetActive(false); // 기본 런 결과 숨김
         }
 
-        private Button CreateUnlockButton(Transform parent, int index)
+        private void BuildProgressRoot(Transform parent)
         {
-            int column = index % 2; // 2열 해금 버튼 열 계산
-            int row = index / 2; // 해금 버튼 행 계산
-            float x = column == 0 ? -225f : 225f; // 좌우 버튼 위치 계산
-            float y = 65f - row * 105f; // 위에서 아래 버튼 위치 계산
-            return CreateButton($"Unlock_{index}", parent, string.Empty, new Vector2(x, y), new Vector2(410f, 82f)); // 영구 해금 버튼 생성
+            _progressRoot = new GameObject("MetaProgressDetailRoot_Day58", typeof(RectTransform)); // 재사용 영구 성장 상세 루트 생성
+            _progressRoot.transform.SetParent(parent, false); // Canvas 자식 연결
+            Stretch(_progressRoot.GetComponent<RectTransform>(), 0f); // 전체 화면 배치
+            _progressRoot.SetActive(false); // 초기 영구 성장 상세 숨김
+
+            _progressPanelController = _progressRoot.AddComponent<MetaProgressPanelController>(); // 재사용 영구 성장 패널 추가
+            _progressPanelController.Initialize(CloseProgressPanel); // 런 결과 복귀 콜백 연결
         }
 
-        private Button CreateButton(string name, Transform parent, string label, Vector2 position, Vector2 size)
+        private void OpenProgressPanel()
+        {
+            _resultRoot.SetActive(false); // 런 결과 요약 숨김
+            _progressRoot.SetActive(true); // 영구 성장 상세 화면 표시
+        }
+
+        private void CloseProgressPanel()
+        {
+            _progressRoot.SetActive(false); // 영구 성장 상세 화면 숨김
+            RefreshSummary(); // 해금 후 최신 토큰 잔액 갱신
+            _resultRoot.SetActive(true); // 런 결과 요약 화면 복귀
+        }
+
+        private void RefreshSummary()
+        {
+            MetaProgressState progress = MetaProgressService.Current; // 최신 영구 진행 상태 조회
+            if (_progress != null) progress = _progress; // 지급 직후 전달된 진행 상태 우선 사용
+            _totalText.text = $"보유 Meta Token\n{progress.MetaTokens}"; // 현재 영구 토큰 잔액 표시
+        }
+
+        private void EnsureEventSystem()
+        {
+            if (Object.FindFirstObjectByType<EventSystem>() != null) return; // 기존 EventSystem 재사용
+            var eventSystemObject = new GameObject("EventSystem_Day58_Meta", typeof(EventSystem), typeof(InputSystemUIInputModule)); // 새 Input System EventSystem 생성
+            _createdEventSystem = eventSystemObject.GetComponent<EventSystem>(); // 직접 생성 EventSystem 저장
+        }
+
+        private static GameObject CreatePanel(string name, Transform parent, Vector2 position, Vector2 size, Color color)
+        {
+            var panel = new GameObject(name, typeof(RectTransform), typeof(Image)); // 공통 패널 오브젝트 생성
+            panel.transform.SetParent(parent, false); // UI 부모 연결
+            SetRect(panel.GetComponent<RectTransform>(), position, size); // 패널 위치·크기 적용
+            panel.GetComponent<Image>().color = color; // 패널 배경 색상 적용
+            return panel; // 완성 패널 반환
+        }
+
+        private static Button CreateButton(string name, Transform parent, string label, Vector2 position, Vector2 size)
         {
             var buttonObject = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button)); // 공통 버튼 오브젝트 생성
-            buttonObject.transform.SetParent(parent, false); // 부모 자식 연결
+            buttonObject.transform.SetParent(parent, false); // UI 부모 연결
             SetRect(buttonObject.GetComponent<RectTransform>(), position, size); // 버튼 위치·크기 적용
 
             Image image = buttonObject.GetComponent<Image>(); // 버튼 배경 확보
-            image.color = new Color(0.33f, 0.23f, 0.12f, 0.98f); // 목재 카드형 배경 적용
+            image.color = new Color(0.13f, 0.17f, 0.23f, 1f); // 공통 버튼 배경 적용
+
             Button button = buttonObject.GetComponent<Button>(); // Button 컴포넌트 확보
             button.targetGraphic = image; // 버튼 대상 그래픽 지정
+            ColorBlock colors = button.colors; // 버튼 상태 색상 조회
+            colors.normalColor = Color.white; // Image.color 기준 기본 상태 유지
+            colors.highlightedColor = new Color(1.08f, 1.08f, 1.08f, 1f); // Hover 밝기 적용
+            colors.pressedColor = new Color(0.72f, 0.72f, 0.72f, 1f); // Pressed 밝기 적용
+            colors.selectedColor = colors.highlightedColor; // 선택 밝기 적용
+            colors.disabledColor = new Color(0.45f, 0.45f, 0.45f, 0.72f); // Disabled 밝기 적용
+            button.colors = colors; // 버튼 상태 색상 저장
 
-            Text text = CreateText("Label", buttonObject.transform, 20, FontStyle.Bold); // 버튼 문구 생성
+            Text text = CreateText("Label", buttonObject.transform, 21, FontStyle.Bold, TextAnchor.MiddleCenter); // 버튼 문구 생성
             text.text = label; // 버튼 문구 적용
             Stretch(text.rectTransform, 8f); // 버튼 내부 여백 적용
             return button; // 완성 버튼 반환
         }
 
-        private void RefreshProgress()
-        {
-            if (_progress == null) return; // 영구 진행 상태 누락 방어
-            _totalText.text = $"보유 메타 토큰\n{_progress.MetaTokens}"; // 현재 영구 토큰 잔액 표시
-
-            IReadOnlyList<MetaUnlockDefinition> definitions = MetaUnlockCatalog.All; // 프로토타입 해금 목록 조회
-
-            for (int i = 0; i < _unlockButtons.Count; i++)
-            {
-                Button button = _unlockButtons[i]; // 현재 해금 버튼 조회
-                button.onClick.RemoveAllListeners(); // 이전 해금 콜백 제거
-
-                if (i >= definitions.Count)
-                {
-                    button.gameObject.SetActive(false); // 정의가 없는 남는 버튼 숨김
-                    continue;
-                }
-
-                MetaUnlockDefinition definition = definitions[i]; // 현재 영구 해금 정의 조회
-                bool unlocked = _progress.IsUnlocked(definition.UnlockType, definition.UnlockId); // 현재 해금 완료 여부 조회
-                bool canUnlock = MetaUnlockService.CanUnlock(_progress, definition); // 현재 비용 충족 여부 조회
-                Text label = button.GetComponentInChildren<Text>(true); // 버튼 문구 Text 조회
-
-                if (label != null)
-                {
-                    label.text = unlocked
-                        ? $"{definition.DisplayName}\n해금 완료"
-                        : $"{definition.DisplayName}\n{definition.Cost} Token"; // 해금 상태·비용 표시
-                }
-
-                button.interactable = canUnlock; // 완료·비용 부족 버튼 비활성화
-                MetaUnlockDefinition captured = definition; // 버튼 클로저 해금 정의 고정
-                button.onClick.AddListener(() => TryUnlock(captured)); // 영구 해금 실행 연결
-                button.gameObject.SetActive(true); // 현재 해금 버튼 표시
-            }
-        }
-
-        private void TryUnlock(MetaUnlockDefinition definition)
-        {
-            if (_progress == null || definition == null) return; // 잘못된 해금 요청 차단
-
-            if (!MetaUnlockService.TryUnlock(_progress, definition))
-            {
-                _statusText.text = "메타 토큰이 부족하거나 이미 해금된 항목입니다."; // 해금 실패 안내
-                RefreshProgress(); // 현재 상태 재표시
-                return;
-            }
-
-            bool saved = MetaProgressService.Save(); // 영구 해금 즉시 디스크 저장
-            _statusText.text = saved
-                ? $"{definition.DisplayName} 영구 해금 완료"
-                : $"{definition.DisplayName} 해금 완료 · 저장 실패"; // 영구 해금 결과 안내
-            RefreshProgress(); // 해금·잔액 상태 갱신
-        }
-
-        private void EnsureEventSystem()
-        {
-            if (UnityEngine.Object.FindFirstObjectByType<EventSystem>() != null) return; // 기존 EventSystem 재사용
-            var eventSystemObject = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule)); // 새 Input System EventSystem 생성
-            _createdEventSystem = eventSystemObject.GetComponent<EventSystem>(); // 직접 생성 EventSystem 저장
-        }
-
-        private static Text CreateText(string name, Transform parent, int fontSize, FontStyle style)
+        private static Text CreateText(string name, Transform parent, int fontSize, FontStyle style, TextAnchor alignment)
         {
             var textObject = new GameObject(name, typeof(RectTransform), typeof(Text)); // 런타임 Text 생성
             textObject.transform.SetParent(parent, false); // UI 부모 연결
@@ -205,8 +180,8 @@ namespace ProjectEta.Meta
             text.font = GetRuntimeFont(); // 한글 폰트 적용
             text.fontSize = fontSize; // 글자 크기 적용
             text.fontStyle = style; // 글자 스타일 적용
-            text.alignment = TextAnchor.MiddleCenter; // 중앙 정렬 적용
-            text.color = Color.white; // 흰색 문구 적용
+            text.alignment = alignment; // 요청 정렬 적용
+            text.color = Color.white; // 기본 흰색 문구 적용
             text.raycastTarget = false; // 버튼 입력 간섭 제거
             return text; // 완성 Text 반환
         }

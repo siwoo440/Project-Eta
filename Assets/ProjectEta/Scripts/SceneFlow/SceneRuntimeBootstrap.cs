@@ -6,10 +6,10 @@ using ProjectEta.Board; // 지도 런타임 관리자 사용
 using ProjectEta.Boss; // 대형 보스·호환 브리지 사용
 using ProjectEta.Environment; // 41일차 전투방 환경 사용
 using ProjectEta.King; // 킹 능력·선택 UI 사용
-using ProjectEta.Meta; // 메타 결과 관리자 사용
+using ProjectEta.Meta; // 메타 결과·영구 성장 관리자 사용
 using ProjectEta.Round; // 첫 전투 RoundRuntimeController 사용
 using ProjectEta.Run; // 런·스테이지 관리자 사용
-using ProjectEta.Settings; // 56일차 재사용 설정 패널 사용
+using ProjectEta.Settings; // 재사용 설정 패널 사용
 using ProjectEta.UI; // MainMenuController 사용
 
 namespace ProjectEta.SceneFlow
@@ -48,7 +48,8 @@ namespace ProjectEta.SceneFlow
             if (scene.name == SceneFlowController.MainMenuSceneName)
             {
                 EnsureComponent<MainMenuController>("MainMenuController_Day54"); // MainMenu 런타임 UI 주입
-                EnsureComponent<MainMenuSettingsBridge>("MainMenuSettingsBridge_Day56"); // 55일차 SettingsRoot에 재사용 설정 패널 연결
+                EnsureComponent<MainMenuSettingsBridge>("MainMenuSettingsBridge_Day56"); // SettingsRoot 재사용 설정 패널 연결
+                EnsureComponent<MainMenuMetaProgressBridge>("MainMenuMetaProgressBridge_Day58"); // MetaRoot 정식 영구 성장 패널 연결
                 return; // MainMenu 전용 구성 종료
             }
 
