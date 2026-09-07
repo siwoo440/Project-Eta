@@ -115,7 +115,7 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
 
         public void OnPointerEnter(PointerEventData eventData) // 마우스가 카드 위에 올라왔을 때 호출되는 이벤트
         {
-            if (_isInteractable && !_isDragging) transform.localScale = Vector3.one * 1.05f; // 사용 가능한 카드를 살짝 확대
+            if (_isInteractable && !_isDragging) transform.localScale = Vector3.one * 1.08f; // 63일차: 사용 가능한 카드 Hover 상태를 조금 더 분명하게 확대
         }
 
         public void OnPointerExit(PointerEventData eventData) // 마우스가 카드 밖으로 나갔을 때 호출되는 이벤트

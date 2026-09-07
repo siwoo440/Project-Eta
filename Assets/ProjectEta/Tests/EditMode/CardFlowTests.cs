@@ -204,13 +204,15 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
                 var cardToDiscard = context.RunState.Hand.Hand[nonKingIndex]; // 정리 대상 카드 참조 저장
                 int handCountBefore = context.RunState.Hand.Hand.Count; // 정리 전 손패 수 저장
                 int drawCountBefore = context.RunState.Deck.DrawPile.Count; // 정리 전 드로우 더미 수 저장
+                int matchingHandCountBefore = context.RunState.Hand.Hand.Count(card => card == cardToDiscard); // 같은 정의 카드의 정리 전 손패 수 저장
 
                 bool result = context.BoardInput.TryDiscardHandCardToBottom(cardToDiscard); // 실제 손패 정리 실행
 
                 Assert.IsTrue(result); // 배치 턴에는 정리가 성공해야 함
                 Assert.AreEqual(handCountBefore - 1, context.RunState.Hand.Hand.Count); // 손패 수가 1 줄어야 함
                 Assert.AreEqual(drawCountBefore + 1, context.RunState.Deck.DrawPile.Count); // 드로우 더미 수가 1 늘어야 함
-                Assert.IsFalse(context.RunState.Hand.Hand.Contains(cardToDiscard)); // 정리한 카드가 손패에 남아 있지 않아야 함
+                Assert.AreEqual(matchingHandCountBefore - 1, context.RunState.Hand.Hand.Count(card => card == cardToDiscard)); // 같은 정의 카드가 여러 장이어도 정확히 1장만 손패에서 제거돼야 함
+                Assert.AreSame(cardToDiscard, context.RunState.Deck.DrawPile[0]); // 정리한 카드가 실제 드로우 더미 맨 아래에 있어야 함
             }
             finally // 성공/실패와 무관하게 정리
             {

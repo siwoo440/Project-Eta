@@ -109,7 +109,6 @@ namespace ProjectEta.Environment // 전투 공간 프레젠테이션 네임스�
             }
         }
 
-
         private void ResolveTopViewOccluders() // 맨 위 시점에서 가리는 천장 구조 탐색
         {
             if (_topViewOccluders != null) return; // 기존 참조 유지
@@ -189,7 +188,6 @@ namespace ProjectEta.Environment // 전투 공간 프레젠테이션 네임스�
             targetRotation = baseRotation * lookOffset; // 상대 정면 기준 자유 회전 적용
         }
 
-
         public static bool ShouldShowTopViewOccluders(Day41CameraView currentView) // 카메라별 천장 구조 표시 규칙 계산
         {
             return currentView != Day41CameraView.Top; // 맨 위 시점에서만 가림 구조 비활성화
@@ -219,19 +217,6 @@ namespace ProjectEta.Environment // 전투 공간 프레젠테이션 네임스�
             Vector3 direction = target - position; // 목표 방향 벡터 계산
             if (direction.sqrMagnitude < 0.0001f) return Quaternion.identity; // 동일 위치 예외 처리
             return Quaternion.LookRotation(direction.normalized, Vector3.up); // 월드 위쪽 기준 회전 반환
-        }
-
-        private void OnGUI() // 현재 카메라 뷰·조작 안내 표시
-        {
-            string viewName = GetViewName(_currentView); // 현재 뷰 이름 조회
-            GUI.Label(new Rect(10, 70, 760, 20), $"카메라 뷰: {(int)_currentView} {viewName}  |  W: 맨 위/기본 전환  |  S: 상대 시점  |  상대 시점: 우클릭+마우스 고개 회전"); // 카메라 조작 안내 표시
-        }
-
-        private static string GetViewName(Day41CameraView view) // 뷰 표시 이름 반환
-        {
-            if (view == Day41CameraView.Top) return "맨 위"; // 맨 위 이름 반환
-            if (view == Day41CameraView.Basic) return "기본"; // 기본 이름 반환
-            return "상대"; // 상대 이름 반환
         }
 
         private void OnDisable() // 세 뷰 리그 해제 처리

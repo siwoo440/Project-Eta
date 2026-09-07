@@ -243,7 +243,7 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
 
             _layoutGroup = handRootObject.GetComponent<HorizontalLayoutGroup>(); // 가로 레이아웃 확보
             _layoutGroup.childAlignment = TextAnchor.LowerCenter; // 카드들을 하단 중앙 정렬
-            _layoutGroup.spacing = -24f; // 카드가 살짝 겹쳐 10장도 화면에 들어오게 설정
+            _layoutGroup.spacing = -30f; // 63일차: 최대 10장 손패가 1540px 영역 안에 안정적으로 들어오도록 겹침 간격 확대
             _layoutGroup.padding = new RectOffset(8, 8, 5, 5); // 손패 내부 여백 적용
             _layoutGroup.childControlWidth = false; // CardView 고정 너비 사용
             _layoutGroup.childControlHeight = false; // CardView 고정 높이 사용
