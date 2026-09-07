@@ -10,7 +10,7 @@ using ProjectEta.Meta; // 메타 결과·영구 성장 관리자 사용
 using ProjectEta.Round; // 첫 전투 RoundRuntimeController 사용
 using ProjectEta.Run; // 런·스테이지 관리자 사용
 using ProjectEta.Settings; // 재사용 설정 패널 사용
-using ProjectEta.UI; // MainMenuController·승패 버튼 UI 사용
+using ProjectEta.UI; // MainMenuController·BattleHUD·승패 버튼 UI 사용
 
 namespace ProjectEta.SceneFlow
 {
@@ -75,21 +75,27 @@ namespace ProjectEta.SceneFlow
             EnsureComponent<CardRewardController>("CardRewardController_Day46"); // 전투·Reward 카드 보상 관리자 생성
             EnsureComponent<StageActivityController>("StageActivityController_Day47"); // Shop·Event 활동 관리자 생성
             EnsureComponent<MetaProgressRunResultController>("MetaProgressController_Day48"); // 런 종료 메타 보상 관리자 생성
-            EnsureKingRuntime(); // 49~61일차 킹 패시브·선택·전투 HUD 관리자 생성
+            EnsureKingRuntime(); // 49~60일차 킹 패시브·선택 관리자 생성
             EnsureComponent<RunPersistenceController>("RunPersistenceController_Day51"); // 안전 지점 자동 저장 관리자 생성
             EnsureComponent<RunResultMainMenuController>("RunResultMainMenuController_Day54"); // Completed·Failed 메인 메뉴 복귀 UI 생성
             EnsureComponent<BattleSettingsOverlayController>("BattleSettingsOverlayController_Day56"); // Battle ESC 재사용 설정 패널 생성
             EnsureComponent<BattleOutcomeDebugUI>("BattleOutcomeDebugUI_Day61"); // 승리·패배 전투 결과 버튼 복구
+            EnsureComponent<BattleHUD>("BattleHUD_Day62"); // 62일차 전투 전체 상단 HUD 생성
         }
 
         private static void EnsureKingRuntime()
         {
+            KingCombatHUD legacyCombatHud = Object.FindFirstObjectByType<KingCombatHUD>(); // 기존 61일차 좌측 King 전투 HUD 조회
+            if (legacyCombatHud != null) Object.Destroy(legacyCombatHud); // 62일차 상단 HUD 정식화에 따라 좌측 King 패널 제거
+
+            GameObject legacyCombatCanvas = GameObject.Find("KingCombatHUDCanvas_Day61"); // 이미 생성된 61일차 King HUD Canvas 조회
+            if (legacyCombatCanvas != null) Object.Destroy(legacyCombatCanvas); // 남아 있는 좌측 King HUD Canvas 제거
+
             KingAbilityController existing = Object.FindFirstObjectByType<KingAbilityController>(); // 기존 킹 능력 관리자 조회
             if (existing != null)
             {
                 if (existing.GetComponent<KingSelectionUI>() == null) existing.gameObject.AddComponent<KingSelectionUI>(); // 기존 호스트 킹 선택 UI 보강
                 if (existing.GetComponent<StrategyKingSelectionUI>() == null) existing.gameObject.AddComponent<StrategyKingSelectionUI>(); // 기존 호스트 전략형 선택 UI 보강
-                if (existing.GetComponent<KingCombatHUD>() == null) existing.gameObject.AddComponent<KingCombatHUD>(); // 기존 호스트 61일차 King 전투 HUD 보강
                 return; // 기존 킹 호스트 재사용
             }
 
@@ -97,7 +103,6 @@ namespace ProjectEta.SceneFlow
             host.AddComponent<KingAbilityController>(); // 공격·방어·전략형 패시브 관리자 추가
             host.AddComponent<KingSelectionUI>(); // 새 런 킹 선택 UI 추가
             host.AddComponent<StrategyKingSelectionUI>(); // 전략형 배치 카드 선택 UI 추가
-            host.AddComponent<KingCombatHUD>(); // 61일차 King 전투 상태 HUD 추가
         }
 
         private static T EnsureComponent<T>(string objectName) where T : Component

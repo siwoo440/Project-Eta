@@ -250,16 +250,26 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             Debug.Log($"적 시작 덱 구성: Owned={_enemyDeck.OwnedCardPool.Count}, Hand={_enemyHandState.Hand.Count}, Draw={_enemyDeck.DrawPile.Count}"); // 적 카드 준비 상태를 개발 로그로 출력
         }
 
-        private PieceDefinition[] GetPrototypeStartingCards() // 프로토타입 시작 풀 6종을 한 곳에서 반환하는 메서드
+        private PieceDefinition[] GetPrototypeStartingCards() // 시작 기본 카드 15장 + 킹 구성 배열을 반환하는 메서드
         {
-            return new[] // 현재 프로젝트에서 테스트 가능한 기본 6종 배열 생성
+            return new[] // 새 런의 기본 체스 카드 구성 16장 생성
             {
-                _kingDefinition, // 킹 카드
-                _pawnDefinition, // 폰 카드
-                _knightDefinition, // 나이트 카드
-                _bishopDefinition, // 비숍 카드
-                _rookDefinition, // 룩 카드
-                _queenDefinition // 퀸 카드
+                _kingDefinition, // 필수 킹 1장
+                _pawnDefinition, // 폰 1/8
+                _pawnDefinition, // 폰 2/8
+                _pawnDefinition, // 폰 3/8
+                _pawnDefinition, // 폰 4/8
+                _pawnDefinition, // 폰 5/8
+                _pawnDefinition, // 폰 6/8
+                _pawnDefinition, // 폰 7/8
+                _pawnDefinition, // 폰 8/8
+                _rookDefinition, // 룩 1/2
+                _rookDefinition, // 룩 2/2
+                _bishopDefinition, // 비숍 1/2
+                _bishopDefinition, // 비숍 2/2
+                _queenDefinition, // 퀸 1장
+                _knightDefinition, // 나이트 1/2
+                _knightDefinition // 나이트 2/2
             };
         }
 
@@ -1240,17 +1250,9 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             if (_isFusionModeActive) SetFusionModeActive(false); // 21일차: 입력이 잠기면 합성 모드도 함께 종료
         }
 
-        private void OnGUI() // 18일차 이후 실제 카드 손패는 Canvas로 표시하고 좌상단에는 최소 디버그 정보만 남기는 메서드
+        private void OnGUI() // 개발용 전투 디버그 IMGUI 표시를 차단하는 메서드
         {
-            if (!IsBound) // 실제 RunState가 아직 연결되지 않았으면
-            {
-                GUI.Label(new Rect(10, 10, 600, 20), "BattleController가 RunState를 연결하는 중입니다."); // 상태 연결 대기 안내
-                return; // 추가 디버그 UI는 그리지 않음
-            }
-
-            GUI.Label(new Rect(10, 10, 960, 20), $"Debug | PlayerHand {_handState.Hand.Count}/{HandState.MaxHandSize} | Draw {_runState.Deck.DrawPile.Count} | Dead {_runState.Deck.DeadCardPile.Count} | EnemyHand {_enemyHandState.Hand.Count} | EnemyDraw {_enemyDeck.DrawPile.Count} | EnemyDead {_enemyDeck.DeadCardPile.Count}"); // 카드 상태 한 줄 요약(20일차: 적 덱 정보 추가)
-            GUI.Label(new Rect(10, 30, 920, 20), BuildTurnInputLabel()); // 현재 턴 조작 안내 표시
-            GUI.Label(new Rect(10, 50, 920, 20), BuildSelectedPieceLabel()); // 선택 기물 디버그 상태 표시
+            return; // 개발용 전투 디버그 오버레이 숨김
         }
 
         private string BuildTurnInputLabel() // 현재 턴 종류에 맞는 개발용 조작 안내 문구를 만드는 메서드

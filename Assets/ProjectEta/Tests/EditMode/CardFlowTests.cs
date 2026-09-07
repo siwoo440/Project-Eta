@@ -23,7 +23,13 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
 
                 Assert.That(FindCardIndex(context.RunState.Hand, context.Definitions[0]), Is.GreaterThanOrEqualTo(0)); // 킹이 손패에 존재
                 Assert.AreEqual(5, context.RunState.Hand.Hand.Count); // 초기 손패 5장 유지
-                Assert.AreEqual(1, context.RunState.Deck.DrawPile.Count); // 나머지 카드 1장은 드로우 더미
+                Assert.AreEqual(16, context.RunState.Deck.OwnedCardPool.Count); // 시작 기본 카드 구성 16장 검증
+                Assert.AreEqual(11, context.RunState.Deck.DrawPile.Count); // 킹 포함 시작 손패 5장 이후 드로우 더미 11장 검증
+                Assert.AreEqual(8, context.RunState.Deck.OwnedCardPool.Count(card => card == context.Definitions[1])); // 폰 8장 검증
+                Assert.AreEqual(2, context.RunState.Deck.OwnedCardPool.Count(card => card == context.Definitions[4])); // 룩 2장 검증
+                Assert.AreEqual(2, context.RunState.Deck.OwnedCardPool.Count(card => card == context.Definitions[3])); // 비숍 2장 검증
+                Assert.AreEqual(1, context.RunState.Deck.OwnedCardPool.Count(card => card == context.Definitions[5])); // 퀸 1장 검증
+                Assert.AreEqual(2, context.RunState.Deck.OwnedCardPool.Count(card => card == context.Definitions[2])); // 나이트 2장 검증
             }
             finally // 성공/실패와 무관하게 정리
             {
