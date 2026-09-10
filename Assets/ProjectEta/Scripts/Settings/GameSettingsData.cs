@@ -6,7 +6,7 @@ namespace ProjectEta.Settings
     [Serializable]
     public sealed class GameSettingsData
     {
-        public const int CurrentVersion = 2; // 57일차 오디오 설정 포함 저장 버전
+        public const int CurrentVersion = 3; // 68일차 최초 튜토리얼 상태 포함 저장 버전
         public const int MinimumWidth = 640; // 최소 지원 해상도 너비
         public const int MinimumHeight = 360; // 최소 지원 해상도 높이
         public const float MinimumUiScale = 0.75f; // 최소 UI 배율
@@ -26,6 +26,7 @@ namespace ProjectEta.Settings
         public float MasterVolume = DefaultMasterVolume; // 저장 Master 볼륨
         public float BgmVolume = DefaultBgmVolume; // 저장 BGM 볼륨
         public float SfxVolume = DefaultSfxVolume; // 저장 SFX 볼륨
+        public bool FirstTutorialCompleted; // 최초 전투 튜토리얼 완료 여부
 
         public static GameSettingsData CreateDefault()
         {
@@ -38,7 +39,8 @@ namespace ProjectEta.Settings
                 UiScale = DefaultUiScale, // 기본 UI 배율 적용
                 MasterVolume = DefaultMasterVolume, // 기본 Master 볼륨 적용
                 BgmVolume = DefaultBgmVolume, // 기본 BGM 볼륨 적용
-                SfxVolume = DefaultSfxVolume // 기본 SFX 볼륨 적용
+                SfxVolume = DefaultSfxVolume, // 기본 SFX 볼륨 적용
+                FirstTutorialCompleted = false // 최초 튜토리얼 미완료 적용
             };
         }
 
@@ -53,13 +55,15 @@ namespace ProjectEta.Settings
                 UiScale = UiScale, // UI 배율 복제
                 MasterVolume = MasterVolume, // Master 볼륨 복제
                 BgmVolume = BgmVolume, // BGM 볼륨 복제
-                SfxVolume = SfxVolume // SFX 볼륨 복제
+                SfxVolume = SfxVolume, // SFX 볼륨 복제
+                FirstTutorialCompleted = FirstTutorialCompleted // 튜토리얼 완료 상태 복제
             };
         }
 
         public GameSettingsData Normalized()
         {
-            bool legacyAudioSettings = SettingsVersion < CurrentVersion; // 56일차 이전 오디오 필드 누락 여부 판정
+            bool legacyAudioSettings = SettingsVersion < 2; // 56일차 이전 오디오 필드 누락 여부 판정
+            bool tutorialCompleted = SettingsVersion >= 3 && FirstTutorialCompleted; // 68일차 이전 저장은 최초 튜토리얼 미완료 처리
             int width = Mathf.Max(MinimumWidth, ResolutionWidth); // 최소 너비 보정
             int height = Mathf.Max(MinimumHeight, ResolutionHeight); // 최소 높이 보정
             int mode = IsSupportedScreenMode(ScreenMode) ? ScreenMode : (int)FullScreenMode.FullScreenWindow; // 지원 화면 모드 보정
@@ -77,7 +81,8 @@ namespace ProjectEta.Settings
                 UiScale = uiScale, // 보정 UI 배율 저장
                 MasterVolume = masterVolume, // 보정 Master 볼륨 저장
                 BgmVolume = bgmVolume, // 보정 BGM 볼륨 저장
-                SfxVolume = sfxVolume // 보정 SFX 볼륨 저장
+                SfxVolume = sfxVolume, // 보정 SFX 볼륨 저장
+                FirstTutorialCompleted = tutorialCompleted // 보정 튜토리얼 완료 상태 저장
             };
         }
 
@@ -90,7 +95,8 @@ namespace ProjectEta.Settings
             if (Mathf.Abs(UiScale - other.UiScale) >= 0.001f) return false; // UI 배율 차이 확인
             if (Mathf.Abs(MasterVolume - other.MasterVolume) >= 0.001f) return false; // Master 볼륨 차이 확인
             if (Mathf.Abs(BgmVolume - other.BgmVolume) >= 0.001f) return false; // BGM 볼륨 차이 확인
-            return Mathf.Abs(SfxVolume - other.SfxVolume) < 0.001f; // SFX 볼륨 동일 여부 반환
+            if (Mathf.Abs(SfxVolume - other.SfxVolume) >= 0.001f) return false; // SFX 볼륨 차이 확인
+            return FirstTutorialCompleted == other.FirstTutorialCompleted; // 튜토리얼 완료 상태 동일 여부 반환
         }
 
         public static bool IsSupportedScreenMode(int mode)

@@ -29,7 +29,7 @@ namespace ProjectEta.Settings
 
         public void SetUiScale(float value)
         {
-            Editing.UiScale = value; // 편집 UI 배율 변경
+            Editing.UiScale = value; // 편집 UI Scale 변경
             Editing = Editing.Normalized(); // UI 배율 안전 범위 보정
         }
 
@@ -65,7 +65,9 @@ namespace ProjectEta.Settings
 
         public void ResetToDefault()
         {
+            bool tutorialCompleted = Editing.FirstTutorialCompleted; // 시스템 튜토리얼 완료 상태 보존
             Editing = GameSettingsData.CreateDefault().Normalized(); // 전체 기본 설정을 편집값으로 적용
+            Editing.FirstTutorialCompleted = tutorialCompleted; // 표시 설정 초기화와 튜토리얼 상태 분리
         }
 
         public void ResetCategory(SettingsCategory category)

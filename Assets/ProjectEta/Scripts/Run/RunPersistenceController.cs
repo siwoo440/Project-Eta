@@ -1,6 +1,7 @@
 using UnityEngine; // MonoBehaviour·Time 사용
 using UnityEngine.SceneManagement; // Battle 씬 자동 생성 사용
 using ProjectEta.Battle; // BattleController 사용
+using ProjectEta.UI; // 시스템 저장 Toast 사용
 
 namespace ProjectEta.Run
 {
@@ -21,7 +22,7 @@ namespace ProjectEta.Run
             if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 생성 차단
             if (Object.FindFirstObjectByType<RunPersistenceController>() != null) return; // 중복 저장 관리자 차단
 
-            var host = new GameObject("RunPersistenceController_Day51"); // 51일차 런 저장 호스트 생성
+            var host = new GameObject("RunPersistenceController_Day51"); // 런 저장 호스트 생성
             host.AddComponent<RunPersistenceController>(); // 자동 저장 관리자 추가
         }
 
@@ -53,7 +54,8 @@ namespace ProjectEta.Run
             if (ReferenceEquals(current, _runState)) return; // 같은 런 재연결 차단
 
             _runState = current; // 새 런 상태 연결
-            _lastCheckpointKey = string.Empty; // 새 런 안전 지점 식별값 초기화
+            bool restoredSafeCheckpoint = _runState != null && RunSaveSystem.CanContinue && RunSaveSystem.IsSafeCheckpoint(_runState); // 디스크에서 복원된 안전 지점 여부 판정
+            _lastCheckpointKey = restoredSafeCheckpoint ? CreateCheckpointKey(_runState) : string.Empty; // 복원 직후 같은 지점 중복 저장 Toast 차단
             _terminalSaveCleared = false; // 새 런 종료 삭제 상태 초기화
             _nextSavePollTime = 0f; // 새 런 즉시 안전 지점 검사 허용
         }
@@ -68,12 +70,30 @@ namespace ProjectEta.Run
             if (!RunSaveSystem.TrySave(_runState)) return; // 실제 디스크 저장 실패 시 식별값 갱신 차단
 
             _lastCheckpointKey = checkpointKey; // 저장 성공 안전 지점 기록
-            Debug.Log($"51일차 런 자동 저장: Phase={_runState.CurrentFlowPhase} / Stage={_runState.CurrentRound} / Node={_runState.RouteMap.CurrentNodeId}"); // 자동 저장 결과 출력
+            Debug.Log($"68일차 런 자동 저장: Phase={_runState.CurrentFlowPhase} / Stage={_runState.CurrentRound} / Node={_runState.RouteMap.CurrentNodeId}"); // 자동 저장 결과 출력
+            SystemToastUI.Push("저장 완료", $"STAGE {_runState.CurrentRound} · {GetFlowLabel(_runState.CurrentFlowPhase)}", 1.8f); // 화면 우상단 저장 완료 안내 등록
         }
 
         private static string CreateCheckpointKey(RunState runState)
         {
             return $"{runState.CurrentFlowPhase}|{runState.CurrentRound}|{runState.RouteMap.CurrentNodeId}|{runState.RouteMap.SelectedNodeId}"; // 진행 위치 중심 안전 지점 키 생성
+        }
+
+        private static string GetFlowLabel(RunFlowPhase phase)
+        {
+            switch (phase)
+            {
+                case RunFlowPhase.Map:
+                    return "경로 지도"; // Map 한글 표시 반환
+                case RunFlowPhase.Reward:
+                    return "보상"; // Reward 한글 표시 반환
+                case RunFlowPhase.Shop:
+                    return "상점"; // Shop 한글 표시 반환
+                case RunFlowPhase.Event:
+                    return "이벤트"; // Event 한글 표시 반환
+                default:
+                    return phase.ToString(); // 기타 흐름 원본 표시 반환
+            }
         }
 
         private void ClearTerminalSave()

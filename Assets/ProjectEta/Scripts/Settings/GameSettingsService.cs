@@ -40,6 +40,16 @@ namespace ProjectEta.Settings
             SaveToDisk(_current); // 적용 설정 영구 저장
         }
 
+        public static void MarkFirstTutorialCompleted()
+        {
+            EnsureLoaded(); // 설정 서비스 준비 보장
+            if (_current.FirstTutorialCompleted) return; // 이미 완료한 튜토리얼 중복 저장 차단
+
+            _current.FirstTutorialCompleted = true; // 최초 튜토리얼 완료 상태 적용
+            _current.SettingsVersion = GameSettingsData.CurrentVersion; // 최신 저장 버전 유지
+            SaveToDisk(_current); // 튜토리얼 완료 상태 즉시 저장
+        }
+
         public static void PreviewUiScale(float uiScale)
         {
             float normalized = Mathf.Clamp(uiScale, GameSettingsData.MinimumUiScale, GameSettingsData.MaximumUiScale); // 미리보기 UI 배율 보정
