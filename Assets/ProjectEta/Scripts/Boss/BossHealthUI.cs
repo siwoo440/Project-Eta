@@ -1,8 +1,10 @@
 using System.Collections.Generic; // HashSet<T>를 사용하기 위한 네임스페이스
 using UnityEngine; // MonoBehaviour, GameObject, Font, Color, Vector2 등을 사용하기 위한 네임스페이스
 using UnityEngine.UI; // Canvas, CanvasScaler, Image, Text, Shadow를 사용하기 위한 네임스페이스
+using ProjectEta.Battle; // BattleController를 사용하기 위한 네임스페이스
 using ProjectEta.Board; // BoardState를 사용하기 위한 네임스페이스
 using ProjectEta.Pieces; // PieceRuntimeState와 PieceCategory를 사용하기 위한 네임스페이스
+using ProjectEta.Run; // BoardMode·RunFlowPhase를 사용하기 위한 네임스페이스
 
 namespace ProjectEta.Boss // 보스 전투 관련 타입을 모아두는 네임스페이스
 {
@@ -10,6 +12,7 @@ namespace ProjectEta.Boss // 보스 전투 관련 타입을 모아두는 네임�
     {
         private const float MissingBossScanInterval = 0.25f; // 아직 보스를 찾지 못했을 때만 보드 재탐색하는 간격
 
+        private BattleController _battleController; // 현재 RunState·화면 흐름을 제공하는 전투 컨트롤러
         private BoardState _board; // 현재 Battle 씬의 실제 보드 상태
         private PieceRuntimeState _trackedBoss; // 현재 UI가 추적 중인 살아 있는 보스 한 기
         private Canvas _canvas; // 보스 체력 전용 Screen Space Overlay Canvas
@@ -28,12 +31,21 @@ namespace ProjectEta.Boss // 보스 전투 관련 타입을 모아두는 네임�
             _trackedBoss = null; // 이전 전투에서 추적하던 보스 참조 초기화
             _lastHp = int.MinValue; // 다음 표시에서 강제 갱신
             _lastMaxHp = int.MinValue; // 다음 표시에서 강제 갱신
-            FindAndShowBoss(); // 첫 프레임부터 가능한 한 빨리 보스 HP를 표시
+            ResolveBattleController(); // 현재 전투 화면 흐름 참조 확보
+
+            if (IsPresentationActive())
+            {
+                FindAndShowBoss(); // 실제 Battle 화면에서만 첫 보스 표시
+            }
+            else
+            {
+                Hide(); // 지도·보상 등에서는 잔존 보스바 제거
+            }
         }
 
         public void Show(PieceRuntimeState boss) // 외부 전투 훅이 알고 있는 보스를 즉시 UI에 반영하는 메서드
         {
-            if (!IsAliveEnemyBoss(boss)) // 죽었거나 보스가 아닌 대상이면
+            if (!IsPresentationActive() || !IsAliveEnemyBoss(boss)) // 전투 화면이 아니거나 유효한 보스가 아니면
             {
                 Hide(); // 잘못된 체력 표시를 남기지 않음
                 return; // 더 처리하지 않음
@@ -54,6 +66,14 @@ namespace ProjectEta.Boss // 보스 전투 관련 타입을 모아두는 네임�
 
         private void Update() // 보스 HP 변화와 늦게 생성되는 보스를 가벼운 방식으로 추적하는 메서드
         {
+            ResolveBattleController(); // 런타임 생성 순서와 RunState 교체에 대응
+
+            if (!IsPresentationActive())
+            {
+                Hide(); // Map·Reward·Shop·Event·종료 흐름에서 보스바 강제 숨김
+                return; // 전투 보드 탐색 차단
+            }
+
             if (_board == null) return; // 현재 Battle 보드가 없으면 처리할 수 없음
 
             if (!IsAliveEnemyBoss(_trackedBoss)) // 아직 보스를 못 찾았거나 추적 보스가 사망했다면
@@ -67,9 +87,30 @@ namespace ProjectEta.Boss // 보스 전투 관련 타입을 모아두는 네임�
             RefreshVisual(false); // 살아 있는 보스는 HP 숫자가 실제로 바뀐 경우에만 UI 갱신
         }
 
+        public static bool ShouldPresent(BoardMode boardMode, RunFlowPhase flowPhase) // 보스 HP 표시 소유 규칙
+        {
+            return boardMode == BoardMode.Battle && flowPhase == RunFlowPhase.Battle; // 실제 전투 화면에서만 표시 허용
+        }
+
+        private bool IsPresentationActive() // 현재 바인딩 보드가 실제 전투 화면 소유인지 확인
+        {
+            ResolveBattleController(); // 지연 생성 BattleController 확보
+            if (_battleController == null || _battleController.RunState == null || _board == null) return false; // 필수 상태 누락 차단
+
+            RunState runState = _battleController.RunState; // 현재 런 상태 조회
+            if (!object.ReferenceEquals(runState.Board, _board)) return false; // 이전 전투 BoardState 잔존 표시 차단
+            return ShouldPresent(runState.CurrentBoardMode, runState.CurrentFlowPhase); // 화면 흐름 표시 규칙 적용
+        }
+
+        private void ResolveBattleController() // 현재 BattleController 지연 탐색
+        {
+            if (_battleController != null) return; // 기존 참조 재사용
+            _battleController = Object.FindFirstObjectByType<BattleController>(); // 현재 전투 컨트롤러 탐색
+        }
+
         private void FindAndShowBoss() // 현재 보드에서 살아 있는 적 Boss 한 기를 결정론적으로 찾는 메서드
         {
-            if (_board == null) // 보드 연결이 없으면
+            if (_board == null || !IsPresentationActive()) // 보드 연결·전투 화면 여부 확인
             {
                 Hide(); // UI 숨김
                 return; // 탐색 불가
@@ -94,7 +135,7 @@ namespace ProjectEta.Boss // 보스 전투 관련 타입을 모아두는 네임�
 
         private void RefreshVisual(bool force) // 현재 추적 보스의 HP 숫자와 체력바를 필요할 때만 갱신하는 메서드
         {
-            if (!IsAliveEnemyBoss(_trackedBoss)) // 갱신 직전 보스가 사망했으면
+            if (!IsPresentationActive() || !IsAliveEnemyBoss(_trackedBoss)) // 전투 화면을 벗어났거나 보스가 사망했으면
             {
                 Hide(); // 체력 UI 제거
                 return; // 추가 계산 중단

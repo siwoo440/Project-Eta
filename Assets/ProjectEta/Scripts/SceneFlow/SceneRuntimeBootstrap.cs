@@ -79,7 +79,7 @@ namespace ProjectEta.SceneFlow
             EnsureComponent<RunPersistenceController>("RunPersistenceController_Day51"); // 안전 지점 자동 저장 관리자 생성
             EnsureComponent<RunResultMainMenuController>("RunResultMainMenuController_Day54"); // Completed·Failed 메인 메뉴 복귀 UI 생성
             EnsureComponent<BattleSettingsOverlayController>("BattleSettingsOverlayController_Day56"); // Battle ESC 재사용 설정 패널 생성
-            EnsureComponent<BattleOutcomeDebugUI>("BattleOutcomeDebugUI_Day61"); // 승리·패배 전투 결과 버튼 복구
+            EnsureComponent<DebugBattleResultButtons>("DebugBattleResultButtons_Day43"); // 단일 승리·패배 개발 버튼 복구
             EnsureComponent<BattleHUD>("BattleHUD_Day62"); // 62일차 전투 전체 상단 HUD 생성
         }
 

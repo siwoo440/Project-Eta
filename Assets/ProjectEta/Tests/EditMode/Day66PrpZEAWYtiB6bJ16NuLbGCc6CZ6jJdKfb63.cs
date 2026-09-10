@@ -1,0 +1,3 @@
+namespace ProjectEta.Tests.EditMode
+{
+}

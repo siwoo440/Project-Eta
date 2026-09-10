@@ -8,20 +8,20 @@ namespace ProjectEta.Board
         {
             if (boardMode != BoardMode.Map) // 지도 보드 여부 확인
             {
-                return false; // 전투판에서는 지도 건물 숨김
+                return false; // 전투판 지도 건물 숨김
             }
 
-            if (flowPhase == RunFlowPhase.Shop || flowPhase == RunFlowPhase.Event) // 판 위 활동 오버레이 여부 확인
+            if (flowPhase == RunFlowPhase.Shop || flowPhase == RunFlowPhase.Event) // 활동 오버레이 여부 확인
             {
-                return false; // 상점·이벤트 UI 아래 건물 숨김
+                return false; // 상점·이벤트 지도 건물 숨김
             }
 
-            return true; // Map·Reward 지도 배경에서는 건물 유지
+            return true; // 기존 Day66 테스트 호환 규칙 유지
         }
 
         public static bool ShouldShowBossHealth(BoardMode boardMode, RunFlowPhase flowPhase)
         {
-            return boardMode == BoardMode.Battle && flowPhase == RunFlowPhase.Battle; // 실제 전투 상태에서만 보스바 표시
+            return boardMode == BoardMode.Battle && flowPhase == RunFlowPhase.Battle; // 실제 전투 상태만 허용
         }
     }
 }

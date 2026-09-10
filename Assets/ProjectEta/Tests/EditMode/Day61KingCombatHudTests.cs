@@ -63,13 +63,13 @@ namespace ProjectEta.Tests.EditMode
         }
 
         [Test]
-        public void BattleOutcomeDebugUI_ConnectsVictoryAndDefeatToBattleController()
+        public void DebugBattleResultButtons_ConnectsVictoryAndDefeatToBattleController()
         {
-            string sourcePath = Path.Combine(Application.dataPath, "ProjectEta/Scripts/UI/BattleOutcomeDebugUI.cs"); // 승리·패배 버튼 UI 소스 경로
+            string sourcePath = Path.Combine(Application.dataPath, "ProjectEta/Scripts/UI/DebugBattleResultButtons.cs"); // 현재 단일 승리·패배 버튼 UI 소스 경로
             string source = File.ReadAllText(sourcePath); // 승리·패배 버튼 구현 읽기
 
-            StringAssert.Contains("EndBattle(BattleOutcome.Victory)", source); // 승리 버튼 기존 승리 종료 흐름 연결 검증
-            StringAssert.Contains("EndBattle(BattleOutcome.Defeat)", source); // 패배 버튼 기존 패배 종료 흐름 연결 검증
+            StringAssert.Contains("EndBattle(BattleOutcome.Victory)", source); // 승리 버튼 공통 전투 종료 흐름 연결 검증
+            StringAssert.Contains("EndBattle(BattleOutcome.Defeat)", source); // 패배 버튼 공통 전투 종료 흐름 연결 검증
             StringAssert.Contains("\"승리\"", source); // 승리 버튼 문구 검증
             StringAssert.Contains("\"패배\"", source); // 패배 버튼 문구 검증
         }
@@ -80,8 +80,9 @@ namespace ProjectEta.Tests.EditMode
             string sourcePath = Path.Combine(Application.dataPath, "ProjectEta/Scripts/SceneFlow/SceneRuntimeBootstrap.cs"); // 씬 부트스트랩 소스 경로
             string source = File.ReadAllText(sourcePath); // 씬 부트스트랩 구현 읽기
 
-            StringAssert.Contains("KingCombatHUD", source); // King 전투 HUD 주입 검증
-            StringAssert.Contains("EnsureComponent<BattleOutcomeDebugUI>", source); // 승리·패배 버튼 UI 주입 검증
+            StringAssert.Contains("KingCombatHUD", source); // King 전투 HUD 정리·호환 처리 유지 검증
+            StringAssert.Contains("EnsureComponent<DebugBattleResultButtons>", source); // 현재 단일 승리·패배 개발 버튼 주입 검증
+            StringAssert.DoesNotContain("EnsureComponent<BattleOutcomeDebugUI>", source); // 삭제한 중복 승패 UI 재주입 차단 검증
         }
     }
 }

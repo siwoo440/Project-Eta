@@ -1,9 +1,10 @@
 using System.Collections; // Coroutine·IEnumerator 사용
+using System.Collections.Generic; // HashSet<T> 사용
 using UnityEngine; // MonoBehaviour·GameObject·Debug 사용
 using UnityEngine.InputSystem; // Space 키 입력 사용
 using UnityEngine.SceneManagement; // 현재 씬 이름 확인
 using ProjectEta.Board; // BoardView·BoardInputController 사용
-using ProjectEta.Pieces; // PieceMovementType 사용
+using ProjectEta.Pieces; // PieceMovementType·PieceRuntimeState 사용
 using ProjectEta.Run; // RunState·RunSaveSystem 사용
 using ProjectEta.UI; // 전투 UI 사용
 
@@ -160,10 +161,58 @@ namespace ProjectEta.Battle
                 _dummyEnemyTurnCoroutine = null; // 코루틴 참조 초기화
             }
 
-            if (_turnManager == null) return; // 턴 매니저 누락 시 전투 결과 처리 차단
+            if (_turnManager == null || _runState == null || outcome == BattleOutcome.None) return; // 필수 상태·유효 결과 누락 차단
+            if (_turnManager.CurrentState == TurnState.BattleEnded) return; // 결과 정리·이벤트 중복 실행 차단
+
+            ApplyOutcomeState(_runState, outcome); // 자연 종료·개발 버튼 종료의 킹 상태를 동일 규칙으로 정규화
+
+            if (outcome == BattleOutcome.Victory)
+            {
+                int clearedEnemies = ClearEnemyOccupancy(_runState.Board); // 강제 승리에서도 남은 적 논리 점유 제거
+                _boardInputController?.ReturnDeadPileToOwnedPool(); // 자연·강제 승리 모두 죽은 아군 카드 복구
+
+                if (clearedEnemies > 0)
+                {
+                    Debug.Log($"전투 승리 정리: 남은 적 {clearedEnemies}기 논리 점유 제거"); // 개발 승리 정리 결과 기록
+                }
+            }
 
             _turnManager.EndBattle(outcome); // 먼저 BattleEnded 이벤트를 발행해 카드 보상 등 기존 구독자에게 결과 전달
             RunStageFlowService.CompleteBattle(_runState, outcome); // TurnManager 결과를 RunState Map·Completed·Failed 흐름과 동기화
+        }
+
+        public static void ApplyOutcomeState(RunState runState, BattleOutcome outcome) // 전투 종료 상태의 단일 소유 규칙
+        {
+            if (runState == null) return; // 런 상태 누락 차단
+
+            if (outcome == BattleOutcome.Defeat)
+            {
+                runState.KingHp = 0; // 강제 패배도 실제 킹 사망과 동일한 런 체력로 정규화
+            }
+        }
+
+        public static int ClearEnemyOccupancy(BoardState board) // 강제 승리 시 남아 있는 적 논리 점유만 정리
+        {
+            if (board == null) return 0; // 보드 누락 시 정리 대상 없음
+
+            var enemies = new HashSet<PieceRuntimeState>(); // 대형 기물 중복 타일을 한 기로 수집
+
+            for (int x = 0; x < BoardState.Width; x++)
+            {
+                for (int y = 0; y < BoardState.Height; y++)
+                {
+                    PieceRuntimeState piece = board.GetTile(new Vector2Int(x, y))?.OccupyingPiece; // 현재 점유 기물 조회
+                    if (piece == null || piece.IsPlayerPiece) continue; // 빈 칸·아군 제외
+                    enemies.Add(piece); // 적 기물 한 번만 등록
+                }
+            }
+
+            foreach (PieceRuntimeState enemy in enemies)
+            {
+                board.ClearPiece(enemy); // 1x1·2x2 전체 점유 칸 안전 해제
+            }
+
+            return enemies.Count; // 정리한 실제 적 기물 수 반환
         }
 
         private void ResolveReferences()
@@ -272,7 +321,7 @@ namespace ProjectEta.Battle
 
             if (_pieceInfoPanelUI == null)
             {
-                _pieceInfoPanelUI = gameObject.AddComponent<PieceInfoPanelUI>(); // PieceInfoPanelUI 자동 추가
+                _pieceInfoPanelUI = gameObject.AddComponent<PieceInfoPanelUI>(); // 기물 정보 UI 자동 추가
             }
 
             _pieceInfoPanelUI.Bind(_boardInputController); // 실제 기물 선택 상태 연결
@@ -287,7 +336,7 @@ namespace ProjectEta.Battle
 
             if (_combatLogUI == null)
             {
-                _combatLogUI = gameObject.AddComponent<CombatLogUI>(); // CombatLogUI 자동 추가
+                _combatLogUI = gameObject.AddComponent<CombatLogUI>(); // 전투 로그 UI 자동 추가
             }
 
             _combatLogUI.Bind(_boardInputController); // 실제 전투 훅 연결
@@ -390,8 +439,7 @@ namespace ProjectEta.Battle
                 if (remainingEnemies == 0)
                 {
                     Debug.Log("적 전멸 - 승리, 전투를 종료합니다."); // 전투 승리 사유 출력
-                    _boardInputController?.ReturnDeadPileToOwnedPool(); // 죽은 아군 카드 소유 풀 복귀
-                    EndBattle(BattleOutcome.Victory); // 승리 전투 종료
+                    EndBattle(BattleOutcome.Victory); // 공통 승리 정리·흐름 전환 실행
                 }
             }
         }

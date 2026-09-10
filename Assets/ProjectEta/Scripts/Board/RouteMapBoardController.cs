@@ -14,9 +14,11 @@ namespace ProjectEta.Board // 보드 경로 지도 런타임 네임스페이스
     [DefaultExecutionOrder(1000)] // 전투 종료·런 흐름 갱신 이후 지도 표시
     public sealed class RouteMapBoardController : MonoBehaviour // 동일 10×10 체스판의 전투→경로 지도 시각화·입력 전환
     {
-        private const float NodeMarkerHeight = 0.08f; // 스테이지 노드 마커 높이
-        private const float NodeMarkerRadius = 0.31f; // 스테이지 노드 마커 반지름
-        private const float MapKingHeightOffset = 0.08f; // 지도 킹 바닥 높이
+        private const float NodeMarkerHeight = 0.028f; // 스테이지 노드 클릭 마커 높이
+        private const float NodeMarkerRadius = 0.22f; // 스테이지 노드 클릭 마커 반지름
+        private const float CurrentNodeMarkerHeight = 0.022f; // 현재 노드 바닥 마커 높이
+        private const float CurrentNodeMarkerRadius = 0.30f; // 현재 노드 바닥 마커 반지름
+        private const float MapKingHeightOffset = 0.06f; // 지도 킹 바닥 높이
         private const float KingMoveDuration = 0.28f; // 지도 킹 1칸 이동 시간
 
         private static readonly Color NodeColor = new Color(0.18f, 0.82f, 0.78f); // 이동 가능 노드 기본 색
@@ -89,9 +91,19 @@ namespace ProjectEta.Board // 보드 경로 지도 런타임 네임스페이스
 
             if (_mapModeActive) // 지도 시각이 유지되는 흐름 확인
             {
-                if (_runState.CurrentFlowPhase == RunFlowPhase.Map) HandleMapInput(); // 실제 Map 흐름에서만 노드 클릭 허용
-                else SetHoveredNode(null); // Reward·Shop·Event 동안 지도 입력·오버 표시 차단
+                bool showMapPresentation = _runState.CurrentFlowPhase == RunFlowPhase.Map; // 실제 Map 화면 여부 계산
+                SetMapPresentationVisible(showMapPresentation); // Reward·Shop·Event 동안 지도 마커·건물 숨김
+
+                if (showMapPresentation) HandleMapInput(); // 실제 Map 흐름에서만 노드 클릭 허용
+                else SetHoveredNode(null); // 비지도 흐름에서 입력·오버 표시 차단
             }
+        }
+
+
+        private void SetMapPresentationVisible(bool visible) // 지도 전용 루트의 화면 소유 상태 적용
+        {
+            if (_mapRoot == null || _mapRoot.activeSelf == visible) return; // 루트 누락·동일 상태 변경 생략
+            _mapRoot.SetActive(visible); // Map 흐름에서만 노드·건물·킹 표시
         }
 
         private void EnterMapMode() // 기존 체스판을 경로 지도 표시 상태로 전환
@@ -138,56 +150,89 @@ namespace ProjectEta.Board // 보드 경로 지도 런타임 네임스페이스
             _mapRoot = new GameObject("RouteMapVisuals_Day44"); // 지도 시각 루트 생성
             _mapRoot.transform.SetParent(_boardView.transform, false); // 기존 보드 로컬 좌표계 재사용
 
-            var currentNode = _runState.RouteMap.CurrentNode; // 현재 킹 위치 노드 조회
-            if (currentNode != null) CreateCurrentNodeMarker(currentNode.Position); // 현재 위치 마커 생성
+            StageNode currentNode = _runState.RouteMap.CurrentNode; // 현재 킹 위치 노드 조회
+            if (currentNode != null) CreateCurrentNodeMarker(currentNode); // 현재 위치 마커·건물 생성
 
             var selectableNodes = _runState.RouteMap.GetSelectableNodes(); // 이동 가능한 다음 스테이지 후보 조회
             for (int i = 0; i < selectableNodes.Count; i++) // 후보 노드 순회
             {
-                var node = selectableNodes[i]; // 현재 후보 노드 조회
+                StageNode node = selectableNodes[i]; // 현재 후보 노드 조회
                 CreatePathLine(_runState.RouteMap.KingMapPosition, node.Position); // 현재 위치→후보 연결선 생성
-                CreateSelectableNodeMarker(node); // 클릭 가능한 후보 마커 생성
+                CreateSelectableNodeMarker(node); // 클릭 가능한 후보 마커·건물 생성
             }
 
             CreateMapKing(_runState.RouteMap.KingMapPosition); // 지도 전용 킹 표시
         }
 
-        private void CreateCurrentNodeMarker(Vector2Int cell) // 현재 킹 위치 바닥 마커 생성
+        private void CreateCurrentNodeMarker(StageNode node) // 현재 킹 위치 바닥 마커·발판 생성
         {
             var marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder); // 원형 현재 위치 마커 생성
             marker.name = "RouteMap_CurrentNode"; // 계층창 이름 지정
             marker.transform.SetParent(_mapRoot.transform, false); // 지도 루트 자식 배치
-            marker.transform.localPosition = BoardView.BoardToLocalPosition(cell, _boardView.TileSize) + new Vector3(0f, 0.025f, 0f); // 현재 보드 좌표에 배치
-            marker.transform.localScale = new Vector3(_boardView.TileSize * 0.29f, 0.018f, _boardView.TileSize * 0.29f); // 낮은 원판 형태 적용
+            marker.transform.localPosition = GetNodeLocalPosition(node.Position) + new Vector3(0f, CurrentNodeMarkerHeight * 0.5f, 0f); // 2x2 중앙 기준 위치 배치
+            marker.transform.localScale = new Vector3(_boardView.TileSize * CurrentNodeMarkerRadius, CurrentNodeMarkerHeight * 0.5f, _boardView.TileSize * CurrentNodeMarkerRadius); // 낮은 현재 위치 원판 적용
 
-            var renderer = marker.GetComponent<Renderer>(); // 현재 위치 렌더러 확보
+            Renderer renderer = marker.GetComponent<Renderer>(); // 현재 위치 렌더러 확보
             renderer.sharedMaterial = CreateMaterial(CurrentNodeColor); // 현재 위치 색상 적용
 
             RemoveCollider(marker); // 현재 위치 마커 클릭 충돌 제거
+            CreateNodeBuilding(node, renderer); // 현재 노드 바닥형 모델 즉시 구성
         }
 
-        private void CreateSelectableNodeMarker(StageNode node) // 다음 스테이지 클릭 마커 생성
+        private void CreateSelectableNodeMarker(StageNode node) // 다음 스테이지 클릭 마커·발판 생성
         {
             var marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder); // 원형 스테이지 노드 생성
             marker.name = $"RouteMap_Node_{node.NodeId}"; // 노드 ID 기반 이름 지정
             marker.transform.SetParent(_mapRoot.transform, false); // 지도 루트 자식 배치
-            marker.transform.localPosition = BoardView.BoardToLocalPosition(node.Position, _boardView.TileSize) + new Vector3(0f, NodeMarkerHeight * 0.5f, 0f); // 노드 보드 좌표 배치
-            marker.transform.localScale = new Vector3(_boardView.TileSize * NodeMarkerRadius, NodeMarkerHeight * 0.5f, _boardView.TileSize * NodeMarkerRadius); // 클릭 가능한 원판 크기 적용
+            marker.transform.localPosition = GetNodeLocalPosition(node.Position) + new Vector3(0f, NodeMarkerHeight * 0.5f, 0f); // 2x2 중앙 기준 위치 배치
+            marker.transform.localScale = new Vector3(_boardView.TileSize * NodeMarkerRadius, NodeMarkerHeight * 0.5f, _boardView.TileSize * NodeMarkerRadius); // 낮은 클릭 원판 크기 적용
 
-            StageDefinition stageDefinition = StageDefinitionCatalog.Resolve(node.StageDefinitionId, node.Depth); // 노드의 실제 스테이지 타입 조회
-            Color stageColor = GetStageColor(stageDefinition != null ? stageDefinition.StageType : StageType.Battle); // 타입별 기본 노드 색상 선택
-            var renderer = marker.GetComponent<Renderer>(); // 노드 렌더러 확보
+            StageType stageType = ResolveStageType(node); // 노드의 실제 스테이지 타입 조회
+            Color stageColor = GetStageColor(stageType); // 타입별 기본 노드 색상 선택
+            Renderer renderer = marker.GetComponent<Renderer>(); // 노드 렌더러 확보
             renderer.sharedMaterial = CreateMaterial(stageColor); // 스테이지 타입별 선택 가능 색상 적용
 
             var nodeView = marker.AddComponent<RouteMapNodeView>(); // 노드 식별·상태 표시 컴포넌트 추가
             nodeView.Initialize(node.NodeId, renderer, stageColor, NodeHoverColor, NodeSelectedColor, NodeDimmedColor); // 노드 ID·타입 색상 연결
             _nodeViews[node.NodeId] = nodeView; // 노드 ID별 표시 객체 등록
+
+            CreateNodeBuilding(node, renderer); // 클릭 마커와 같은 시점에 바닥형 모델 생성
+        }
+
+        private void CreateNodeBuilding(StageNode node, Renderer signalRenderer) // 노드 데이터 기반 바닥형 모델 직접 생성
+        {
+            if (node == null || _mapRoot == null) return; // 필수 노드·지도 루트 누락 차단
+
+            GameObject host = new GameObject($"RouteMap_BuildingHost_{node.NodeId}"); // 마커 스케일과 분리된 발판 호스트 생성
+            host.transform.SetParent(_mapRoot.transform, false); // 현재 지도 수명에 발판 연결
+            host.transform.localPosition = GetNodeLocalPosition(node.Position); // 2x2 중앙 기준 위치 배치
+            host.transform.localRotation = Quaternion.identity; // 보드 정방향 유지
+            host.transform.localScale = Vector3.one; // 마커 납작한 스케일 상속 방지
+
+            Day66RouteNodeBuildingModel model = host.AddComponent<Day66RouteNodeBuildingModel>(); // 바닥형 노드 모델 컴포넌트 추가
+            model.Initialize(signalRenderer, ResolveStageType(node), _boardView.TileSize); // StageType·Hover 색상 신호 연결
+        }
+
+        private static StageType ResolveStageType(StageNode node) // 저장 StageDefinition에서 건물 타입 복원
+        {
+            if (node == null) return StageType.Battle; // 빈 노드 일반 전투 fallback
+
+            StageDefinition definition = StageDefinitionCatalog.Resolve(node.StageDefinitionId, node.Depth); // 현재 깊이 기준 스테이지 정의 조회
+            return definition != null ? definition.StageType : StageType.Battle; // 정의 누락 시 일반 성채 fallback
+        }
+
+        private Vector3 GetNodeLocalPosition(Vector2Int cell) // 1칸 중심 대신 2x2 중앙 기준 지도 위치 계산
+        {
+            float xOffset = cell.x >= BoardState.Width - 1 ? -0.5f : 0.5f; // 우측 가장자리 노드 내부 정렬 오프셋 계산
+            float zOffset = cell.y >= BoardState.Height - 1 ? -0.5f : 0.5f; // 상단 가장자리 노드 내부 정렬 오프셋 계산
+            Vector3 basePosition = BoardView.BoardToLocalPosition(cell, _boardView.TileSize); // 기본 보드 셀 중심 위치 계산
+            return basePosition + new Vector3(_boardView.TileSize * xOffset, 0f, _boardView.TileSize * zOffset); // 2x2 중앙 위치 반환
         }
 
         private void CreatePathLine(Vector2Int fromCell, Vector2Int toCell) // 현재 위치와 다음 노드를 잇는 지도 경로선 생성
         {
-            Vector3 from = BoardView.BoardToLocalPosition(fromCell, _boardView.TileSize); // 시작 보드 로컬 위치 계산
-            Vector3 to = BoardView.BoardToLocalPosition(toCell, _boardView.TileSize); // 도착 보드 로컬 위치 계산
+            Vector3 from = GetNodeLocalPosition(fromCell); // 시작 노드 2x2 중앙 위치 계산
+            Vector3 to = GetNodeLocalPosition(toCell); // 도착 노드 2x2 중앙 위치 계산
             Vector3 delta = to - from; // 연결 방향·거리 계산
             float distance = new Vector2(delta.x, delta.z).magnitude; // 평면 거리 계산
 
@@ -208,7 +253,7 @@ namespace ProjectEta.Board // 보드 경로 지도 런타임 네임스페이스
         {
             var kingRoot = new GameObject("RouteMap_King"); // 지도 킹 루트 생성
             kingRoot.transform.SetParent(_mapRoot.transform, false); // 지도 루트 자식 배치
-            kingRoot.transform.localPosition = BoardView.BoardToLocalPosition(cell, _boardView.TileSize) + new Vector3(0f, MapKingHeightOffset, 0f); // 현재 지도 좌표 배치
+            kingRoot.transform.localPosition = GetNodeLocalPosition(cell) + new Vector3(0f, MapKingHeightOffset, 0f); // 현재 지도 좌표 배치
             _mapKingTransform = kingRoot.transform; // 이동 애니메이션용 참조 저장
 
             var material = CreateMaterial(MapKingColor); // 지도 킹 공통 머티리얼 생성
@@ -267,7 +312,7 @@ namespace ProjectEta.Board // 보드 경로 지도 런타임 네임스페이스
             if (!_runState.RouteMap.CanMoveTo(targetNode)) return; // 연결·킹 1칸 규칙 위반 차단
 
             Vector3 startLocalPosition = _mapKingTransform.localPosition; // 현재 지도 킹 위치 저장
-            Vector3 targetLocalPosition = BoardView.BoardToLocalPosition(targetNode.Position, _boardView.TileSize) + new Vector3(0f, MapKingHeightOffset, 0f); // 목표 노드 킹 위치 계산
+            Vector3 targetLocalPosition = GetNodeLocalPosition(targetNode.Position) + new Vector3(0f, MapKingHeightOffset, 0f); // 목표 노드 킹 위치 계산
 
             if (!_runState.RouteMap.TryMoveKingTo(nodeId)) return; // 상태 데이터 이동·선택 반영
 

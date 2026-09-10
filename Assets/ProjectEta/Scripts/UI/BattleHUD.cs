@@ -29,7 +29,6 @@ namespace ProjectEta.UI
         private void Update()
         {
             ResolveBattleController(); // 현재 BattleController 참조 갱신
-            SuppressLegacyResultButtons(); // 43일차 중복 승패 UI 런타임 차단
             Refresh(); // 현재 전투 전체 HUD 갱신
         }
 
@@ -122,26 +121,6 @@ namespace ProjectEta.UI
             }
 
             return 0; // 잘못된 필드 값 안전 처리
-        }
-
-        private void SuppressLegacyResultButtons()
-        {
-            BattleOutcomeDebugUI currentOutcomeUI = Object.FindFirstObjectByType<BattleOutcomeDebugUI>(); // 61일차 정식 개발 승패 UI 확인
-
-            if (currentOutcomeUI == null)
-            {
-                return; // 61일차 승패 UI가 없으면 구형 UI 유지
-            }
-
-            DebugBattleResultButtons legacyButtons = Object.FindFirstObjectByType<DebugBattleResultButtons>(); // 43일차 구형 승패 UI 탐색
-
-            if (legacyButtons == null)
-            {
-                return; // 구형 UI가 없으면 처리 종료
-            }
-
-            legacyButtons.gameObject.SetActive(false); // 같은 프레임 구형 버튼 노출 차단
-            Destroy(legacyButtons.gameObject); // 43일차 중복 승패 UI 호스트 제거
         }
 
         private void EnsureUI()
