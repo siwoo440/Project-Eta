@@ -6,7 +6,7 @@ namespace ProjectEta.Settings
     [Serializable]
     public sealed class GameSettingsData
     {
-        public const int CurrentVersion = 3; // 68일차 최초 튜토리얼 상태 포함 저장 버전
+        public const int CurrentVersion = 4; // 69일차 조작키 설정 포함 저장 버전
         public const int MinimumWidth = 640; // 최소 지원 해상도 너비
         public const int MinimumHeight = 360; // 최소 지원 해상도 높이
         public const float MinimumUiScale = 0.75f; // 최소 UI 배율
@@ -27,6 +27,8 @@ namespace ProjectEta.Settings
         public float BgmVolume = DefaultBgmVolume; // 저장 BGM 볼륨
         public float SfxVolume = DefaultSfxVolume; // 저장 SFX 볼륨
         public bool FirstTutorialCompleted; // 최초 전투 튜토리얼 완료 여부
+        public string CompleteActionKey = GameInputBindingRules.DefaultCompleteActionKey; // 배치 종료·행동 완료 키 이름
+        public string PauseKey = GameInputBindingRules.DefaultPauseKey; // Pause·뒤로가기 키 이름
 
         public static GameSettingsData CreateDefault()
         {
@@ -40,7 +42,9 @@ namespace ProjectEta.Settings
                 MasterVolume = DefaultMasterVolume, // 기본 Master 볼륨 적용
                 BgmVolume = DefaultBgmVolume, // 기본 BGM 볼륨 적용
                 SfxVolume = DefaultSfxVolume, // 기본 SFX 볼륨 적용
-                FirstTutorialCompleted = false // 최초 튜토리얼 미완료 적용
+                FirstTutorialCompleted = false, // 최초 튜토리얼 미완료 적용
+                CompleteActionKey = GameInputBindingRules.DefaultCompleteActionKey, // 기본 행동 완료 Space 적용
+                PauseKey = GameInputBindingRules.DefaultPauseKey // 기본 Pause Escape 적용
             };
         }
 
@@ -56,7 +60,9 @@ namespace ProjectEta.Settings
                 MasterVolume = MasterVolume, // Master 볼륨 복제
                 BgmVolume = BgmVolume, // BGM 볼륨 복제
                 SfxVolume = SfxVolume, // SFX 볼륨 복제
-                FirstTutorialCompleted = FirstTutorialCompleted // 튜토리얼 완료 상태 복제
+                FirstTutorialCompleted = FirstTutorialCompleted, // 튜토리얼 완료 상태 복제
+                CompleteActionKey = CompleteActionKey, // 행동 완료 키 복제
+                PauseKey = PauseKey // Pause 키 복제
             };
         }
 
@@ -64,6 +70,7 @@ namespace ProjectEta.Settings
         {
             bool legacyAudioSettings = SettingsVersion < 2; // 56일차 이전 오디오 필드 누락 여부 판정
             bool tutorialCompleted = SettingsVersion >= 3 && FirstTutorialCompleted; // 68일차 이전 저장은 최초 튜토리얼 미완료 처리
+            bool legacyControlSettings = SettingsVersion < 4; // 69일차 이전 조작키 필드 누락 여부 판정
             int width = Mathf.Max(MinimumWidth, ResolutionWidth); // 최소 너비 보정
             int height = Mathf.Max(MinimumHeight, ResolutionHeight); // 최소 높이 보정
             int mode = IsSupportedScreenMode(ScreenMode) ? ScreenMode : (int)FullScreenMode.FullScreenWindow; // 지원 화면 모드 보정
@@ -71,6 +78,8 @@ namespace ProjectEta.Settings
             float masterVolume = legacyAudioSettings ? DefaultMasterVolume : Mathf.Clamp01(MasterVolume); // Master 구버전 보정·범위 제한
             float bgmVolume = legacyAudioSettings ? DefaultBgmVolume : Mathf.Clamp01(BgmVolume); // BGM 구버전 보정·범위 제한
             float sfxVolume = legacyAudioSettings ? DefaultSfxVolume : Mathf.Clamp01(SfxVolume); // SFX 구버전 보정·범위 제한
+            string completeActionKey = legacyControlSettings ? GameInputBindingRules.DefaultCompleteActionKey : GameInputBindingRules.NormalizeKeyName(CompleteActionKey, GameInputBindingRules.DefaultCompleteActionKey); // 행동 완료 키 보정
+            string pauseKey = legacyControlSettings ? GameInputBindingRules.DefaultPauseKey : GameInputBindingRules.NormalizeKeyName(PauseKey, GameInputBindingRules.DefaultPauseKey); // Pause 키 보정
 
             return new GameSettingsData
             {
@@ -82,7 +91,9 @@ namespace ProjectEta.Settings
                 MasterVolume = masterVolume, // 보정 Master 볼륨 저장
                 BgmVolume = bgmVolume, // 보정 BGM 볼륨 저장
                 SfxVolume = sfxVolume, // 보정 SFX 볼륨 저장
-                FirstTutorialCompleted = tutorialCompleted // 보정 튜토리얼 완료 상태 저장
+                FirstTutorialCompleted = tutorialCompleted, // 보정 튜토리얼 완료 상태 저장
+                CompleteActionKey = completeActionKey, // 보정 행동 완료 키 저장
+                PauseKey = pauseKey // 보정 Pause 키 저장
             };
         }
 
@@ -96,7 +107,9 @@ namespace ProjectEta.Settings
             if (Mathf.Abs(MasterVolume - other.MasterVolume) >= 0.001f) return false; // Master 볼륨 차이 확인
             if (Mathf.Abs(BgmVolume - other.BgmVolume) >= 0.001f) return false; // BGM 볼륨 차이 확인
             if (Mathf.Abs(SfxVolume - other.SfxVolume) >= 0.001f) return false; // SFX 볼륨 차이 확인
-            return FirstTutorialCompleted == other.FirstTutorialCompleted; // 튜토리얼 완료 상태 동일 여부 반환
+            if (FirstTutorialCompleted != other.FirstTutorialCompleted) return false; // 튜토리얼 완료 상태 차이 확인
+            if (!string.Equals(CompleteActionKey, other.CompleteActionKey, StringComparison.Ordinal)) return false; // 행동 완료 키 차이 확인
+            return string.Equals(PauseKey, other.PauseKey, StringComparison.Ordinal); // Pause 키 동일 여부 반환
         }
 
         public static bool IsSupportedScreenMode(int mode)

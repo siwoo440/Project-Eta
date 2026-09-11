@@ -1,6 +1,5 @@
 using UnityEngine; // MonoBehaviour·GameObject·Time 사용
 using UnityEngine.EventSystems; // EventSystem 사용
-using UnityEngine.InputSystem; // Keyboard 사용
 using UnityEngine.InputSystem.UI; // InputSystemUIInputModule 사용
 using UnityEngine.UI; // Canvas·CanvasScaler·Button·Image·Text 사용
 using ProjectEta.Board; // BoardInputController·RouteMapBoardController 사용
@@ -22,6 +21,10 @@ namespace ProjectEta.Settings
         private GameObject _pauseRoot; // Pause 기본 화면 루트
         private GameObject _controlsRoot; // 조작법 화면 루트
         private GameObject _settingsRoot; // 재사용 설정 화면 루트
+        private Text _pauseHintText; // 현재 Pause 키 안내 문구
+        private Text _completeActionKeyText; // 행동 완료 키 조작법 표시
+        private Text _pauseKeyText; // Pause 키 조작법 표시
+        private Text _uiBackKeyText; // UI 뒤로가기 키 조작법 표시
         private BoardInputController _boardInputController; // 전투 보드 입력
         private RouteMapBoardController _routeMapBoardController; // 경로 지도 입력
         private bool _boardInputWasEnabled; // Pause 열기 전 전투 입력 상태
@@ -43,13 +46,12 @@ namespace ProjectEta.Settings
 
         private void Update()
         {
-            Keyboard keyboard = Keyboard.current; // 현재 키보드 입력 장치 조회
-            if (keyboard == null || !keyboard.escapeKey.wasPressedThisFrame) return; // ESC 입력 없으면 처리 종료
-            if (FirstRunTutorialController.IsAnyTutorialOpen) return; // 튜토리얼 표시 중 Pause 입력 차단
+            if (!GameInputBindingService.WasPressedThisFrame(GameInputAction.Pause)) return; // 저장된 Pause·뒤로가기 키 입력 없으면 처리 종료
+            if (!_navigation.IsOpen && !Day69UiPresentationRules.CanOpenPause(Day69UiPresentationRules.CaptureCurrent())) return; // 닫힌 상태에서만 튜토리얼·런 결과 위 Pause 진입 차단
 
             if (!_navigation.IsOpen)
             {
-                OpenPanel(); // 게임 중 ESC Pause 진입
+                OpenPanel(); // 게임 중 저장된 Pause 키로 진입
                 return; // Pause 진입 처리 종료
             }
 
@@ -59,16 +61,18 @@ namespace ProjectEta.Settings
 
             if (wasOpen && !_navigation.IsOpen)
             {
-                ResumeRuntime(); // Pause 최상위 ESC 게임 복귀
+                ResumeRuntime(); // Pause 최상위 저장 키로 게임 복귀
             }
         }
 
         public void OpenPanel()
         {
             if (_navigation.IsOpen || _pauseRoot == null) return; // 중복 열기·UI 준비 전 차단
+            if (!Day69UiPresentationRules.CanOpenPause(Day69UiPresentationRules.CaptureCurrent())) return; // 현재 모달 상태에서 Pause 진입 가능 여부 확인
 
             SuspendRuntime(); // 게임 시간·입력 중단
             _navigation.OpenPause(); // Pause 기본 화면 상태 진입
+            RefreshBindingLabels(); // 현재 저장 조작키 문구 갱신
             ApplyPanelState(); // Pause 화면 표시
         }
 
@@ -85,6 +89,7 @@ namespace ProjectEta.Settings
         {
             if (!_navigation.IsOpen) return; // Pause 외부 직접 화면 진입 차단
             _navigation.OpenPause(); // Pause 기본 화면 복귀
+            RefreshBindingLabels(); // 설정 변경 후 현재 조작키 문구 갱신
             ApplyPanelState(); // Pause 화면 표시
         }
 
@@ -92,6 +97,7 @@ namespace ProjectEta.Settings
         {
             if (!_navigation.IsOpen) return; // Pause 외부 조작법 진입 차단
             _navigation.ShowControls(); // 조작법 화면 상태 진입
+            RefreshBindingLabels(); // 조작법 진입 시 현재 저장 조작키 반영
             ApplyPanelState(); // 조작법 화면 표시
         }
 
@@ -153,7 +159,7 @@ namespace ProjectEta.Settings
 
             Canvas canvas = canvasObject.GetComponent<Canvas>(); // Canvas 컴포넌트 조회
             canvas.renderMode = RenderMode.ScreenSpaceOverlay; // 전체 화면 오버레이 모드 적용
-            canvas.sortingOrder = 2100; // 전투 HUD 위 Pause 표시
+            canvas.sortingOrder = UiLayerOrder.Pause; // 공통 Pause 계층 적용
 
             CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>(); // CanvasScaler 조회
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; // 기준 해상도 스케일 적용
@@ -164,6 +170,7 @@ namespace ProjectEta.Settings
             BuildPauseScreen(canvasObject.transform); // Pause 기본 화면 생성
             BuildControlsScreen(canvasObject.transform); // 조작법 화면 생성
             BuildSettingsScreen(canvasObject.transform); // 기존 설정 패널 생성
+            RefreshBindingLabels(); // 최초 생성 시 현재 조작키 문구 적용
             GameSettingsService.ReapplyUiScale(); // 신규 Pause Canvas 저장 UI Scale 적용
         }
 
@@ -181,10 +188,9 @@ namespace ProjectEta.Settings
             title.text = "일시정지"; // Pause 제목 적용
             SetRect(title.rectTransform, new Vector2(0f, 250f), new Vector2(520f, 72f)); // Pause 제목 위치 적용
 
-            Text hint = CreateText("Hint", panel.transform, 17, FontStyle.Normal, TextAnchor.MiddleCenter); // Pause 안내 문구 생성
-            hint.text = "ESC로 게임으로 돌아갑니다."; // Pause 안내 적용
-            hint.color = SoftTextColor; // 보조 글자 색상 적용
-            SetRect(hint.rectTransform, new Vector2(0f, 195f), new Vector2(520f, 42f)); // Pause 안내 위치 적용
+            _pauseHintText = CreateText("Hint", panel.transform, 17, FontStyle.Normal, TextAnchor.MiddleCenter); // Pause 안내 문구 생성
+            _pauseHintText.color = SoftTextColor; // 보조 글자 색상 적용
+            SetRect(_pauseHintText.rectTransform, new Vector2(0f, 195f), new Vector2(520f, 42f)); // Pause 안내 위치 적용
 
             Button resume = CreateButton("Resume", panel.transform, "계속하기", new Vector2(0f, 90f)); // 계속하기 버튼 생성
             resume.onClick.AddListener(ClosePanel); // 게임 복귀 연결
@@ -218,17 +224,60 @@ namespace ProjectEta.Settings
             title.text = "조작법"; // 조작법 제목 적용
             SetRect(title.rectTransform, new Vector2(-305f, 295f), new Vector2(860f, 60f)); // 조작법 제목 위치 적용
 
-            Text body = CreateText("Body", panel.transform, 22, FontStyle.Normal, TextAnchor.UpperLeft); // 조작법 본문 생성
-            body.text = "[전투]\n좌클릭  · 카드 / 기물 선택\nSpace   · 배치 턴 종료 / 플레이어 행동 완료\nESC     · 일시정지\n\n[Route Map]\n마우스 이동  · 선택 가능한 노드 정보 확인\n좌클릭       · 다음 Stage 선택\n\n[UI]\nESC     · 뒤로가기 / 닫기"; // 실제 현재 입력 기준 조작법 적용
-            body.color = Color.white; // 본문 색상 적용
-            body.lineSpacing = 1.2f; // 본문 줄 간격 적용
-            SetRect(body.rectTransform, new Vector2(0f, 15f), new Vector2(780f, 470f)); // 조작법 본문 위치 적용
+            CreateControlSection(panel.transform, "[전투]", 145f); // 전투 조작법 구역 제목 생성
+            CreateControlRow(panel.transform, "좌클릭", "카드 / 기물 선택", 95f); // 고정 전투 선택 조작 생성
+            _completeActionKeyText = CreateControlRow(panel.transform, string.Empty, "배치 턴 종료 / 플레이어 행동 완료", 50f); // 변경 가능한 행동 완료 조작 생성
+            _pauseKeyText = CreateControlRow(panel.transform, string.Empty, "일시정지", 5f); // 변경 가능한 Pause 조작 생성
+
+            CreateControlSection(panel.transform, "[Route Map]", -65f); // Route Map 조작법 구역 제목 생성
+            CreateControlRow(panel.transform, "마우스 이동", "선택 가능한 노드 정보 확인", -115f); // 지도 Hover 조작 생성
+            CreateControlRow(panel.transform, "좌클릭", "다음 Stage 선택", -160f); // 지도 선택 조작 생성
+
+            CreateControlSection(panel.transform, "[UI]", -220f); // UI 조작법 구역 제목 생성
+            _uiBackKeyText = CreateControlRow(panel.transform, string.Empty, "뒤로가기 / 닫기", -270f); // 변경 가능한 UI 뒤로가기 조작 생성
 
             Button replay = CreateButton("ReplayTutorial", panel.transform, "튜토리얼 다시 보기", new Vector2(-205f, -330f), new Vector2(350f, 68f)); // 튜토리얼 다시 보기 버튼 생성
             replay.onClick.AddListener(HandleReplayTutorial); // 튜토리얼 재표시 연결
 
             Button back = CreateButton("Back", panel.transform, "뒤로", new Vector2(205f, -330f), new Vector2(350f, 68f)); // Pause 복귀 버튼 생성
             back.onClick.AddListener(ShowPausePanel); // Pause 기본 화면 복귀 연결
+        }
+
+        private static void CreateControlSection(Transform parent, string title, float y)
+        {
+            Text section = CreateText($"ControlSection_{title}", parent, 21, FontStyle.Bold, TextAnchor.MiddleLeft); // 조작법 구역 제목 생성
+            section.text = title; // 조작법 구역 제목 적용
+            section.color = new Color(0.84f, 0.88f, 0.94f, 1f); // 구역 제목 밝기 적용
+            SetRect(section.rectTransform, new Vector2(-70f, y), new Vector2(760f, 36f)); // 좌측 기준 구역 제목 정렬
+        }
+
+        private static Text CreateControlRow(Transform parent, string keyLabel, string description, float y)
+        {
+            Text key = CreateText("ControlKey", parent, 21, FontStyle.Bold, TextAnchor.MiddleRight); // 키 전용 열 생성
+            key.text = keyLabel; // 현재 키 문구 적용
+            key.color = AccentColor; // 키 문구 강조색 적용
+            SetRect(key.rectTransform, new Vector2(-285f, y), new Vector2(190f, 38f)); // 모든 키 문구 우측 끝 정렬
+
+            Text separator = CreateText("ControlSeparator", parent, 21, FontStyle.Normal, TextAnchor.MiddleCenter); // 키·설명 구분점 생성
+            separator.text = "·"; // 일정한 구분점 적용
+            separator.color = SoftTextColor; // 구분점 보조 색상 적용
+            SetRect(separator.rectTransform, new Vector2(-165f, y), new Vector2(32f, 38f)); // 공통 구분점 열 정렬
+
+            Text detail = CreateText("ControlDescription", parent, 21, FontStyle.Normal, TextAnchor.MiddleLeft); // 설명 전용 열 생성
+            detail.text = description; // 조작 설명 적용
+            SetRect(detail.rectTransform, new Vector2(105f, y), new Vector2(500f, 38f)); // 모든 설명 시작 위치 동일 적용
+            return key; // 동적 키 갱신용 Text 반환
+        }
+
+        private void RefreshBindingLabels()
+        {
+            string completeAction = GameInputBindingService.GetDisplayName(GameInputAction.CompleteAction); // 현재 행동 완료 키 문구 조회
+            string pause = GameInputBindingService.GetDisplayName(GameInputAction.Pause); // 현재 Pause 키 문구 조회
+
+            if (_pauseHintText != null) _pauseHintText.text = $"{pause}로 게임으로 돌아갑니다."; // Pause 안내에 현재 키 반영
+            if (_completeActionKeyText != null) _completeActionKeyText.text = completeAction; // 전투 행동 완료 키 반영
+            if (_pauseKeyText != null) _pauseKeyText.text = pause; // 일시정지 키 반영
+            if (_uiBackKeyText != null) _uiBackKeyText.text = pause; // UI 뒤로가기 키 반영
         }
 
         private void BuildSettingsScreen(Transform parent)

@@ -73,7 +73,22 @@ namespace ProjectEta.UI
         private void Update()
         {
             if (_toastRoot == null) return; // Toast UI 준비 전 차단
-            if (FirstRunTutorialController.IsAnyTutorialOpen) return; // 최초 튜토리얼 위 시스템 Toast 표시 지연
+
+            Day69UiModalState modalState = Day69UiPresentationRules.CaptureCurrent(); // 현재 주요 모달 표시 상태 조회
+            bool blocked = !Day69UiPresentationRules.CanShowSystemToast(modalState); // 시스템 Toast 표시 차단 여부 계산
+
+            if (blocked)
+            {
+                if (_showing)
+                {
+                    _hideAt += Time.unscaledDeltaTime; // 모달 표시 시간만큼 Toast 남은 시간을 보존
+                    if (_toastRoot.activeSelf) _toastRoot.SetActive(false); // 모달 뒤 Toast 즉시 숨김
+                }
+
+                return; // 모달이 닫힐 때까지 새 Toast 소비 차단
+            }
+
+            if (_showing && !_toastRoot.activeSelf) _toastRoot.SetActive(true); // 모달 종료 후 기존 Toast 표시 복원
 
             if (_showing && Time.unscaledTime >= _hideAt)
             {
@@ -98,7 +113,7 @@ namespace ProjectEta.UI
 
             Canvas canvas = canvasObject.GetComponent<Canvas>(); // Toast Canvas 조회
             canvas.renderMode = RenderMode.ScreenSpaceOverlay; // 화면 오버레이 모드 적용
-            canvas.sortingOrder = 2400; // 일반 전투·Pause UI 위 Toast 표시
+            canvas.sortingOrder = UiLayerOrder.SystemToast; // 공통 시스템 Toast 계층 적용
 
             CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>(); // Toast CanvasScaler 조회
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; // 기준 해상도 스케일 적용

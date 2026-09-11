@@ -97,7 +97,7 @@ namespace ProjectEta.UI // 카드 보상 UI 네임스페이스
             canvasObject.transform.SetParent(transform, false); // 컨트롤러 호스트 자식 연결
             _canvas = canvasObject.GetComponent<Canvas>(); // Canvas 참조 저장
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay; // 화면 위 직접 표시
-            _canvas.sortingOrder = 230; // 기존 지도·전투 UI 위에 표시
+            _canvas.sortingOrder = UiLayerOrder.RewardModal; // 공통 Reward 모달 계층 적용
 
             CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>(); // 해상도 대응 스케일러 확보
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; // 화면 크기 기반 스케일 사용

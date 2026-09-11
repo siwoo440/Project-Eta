@@ -103,7 +103,7 @@ namespace ProjectEta.UI
             canvasObject.transform.SetParent(transform, false); // 현재 호스트 자식 연결
             _canvas = canvasObject.GetComponent<Canvas>(); // Canvas 참조 저장
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay; // 화면 고정 알림 사용
-            _canvas.sortingOrder = 320; // Run 결과·지도·전투 UI보다 위에 표시
+            _canvas.sortingOrder = UiLayerOrder.BattleAnnouncement; // 공통 전투 알림 계층 적용
 
             CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>(); // 화면 스케일러 조회
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; // 기준 해상도 기반 크기 적용

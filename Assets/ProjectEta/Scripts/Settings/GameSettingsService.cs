@@ -78,6 +78,7 @@ namespace ProjectEta.Settings
             EnsureLoaded(); // 설정 서비스 준비 보장
             ApplyUiScaleToAllCanvases(_current.UiScale); // 새 Canvas UI Scale 재적용
             GameAudioService.Apply(_current); // 새 Scene 오디오 설정 재적용
+            GameInputBindingService.Apply(_current); // 새 Scene 저장 조작키 재적용
         }
 
         public static void ResetRuntimeState()
@@ -85,6 +86,7 @@ namespace ProjectEta.Settings
             _current = null; // 정적 현재 설정 초기화
             _loaded = false; // 정적 로드 상태 초기화
             GameAudioService.ResetRuntimeState(); // 오디오 런타임 상태 초기화
+            GameInputBindingService.ResetRuntimeState(); // 조작키 런타임 상태 초기화
         }
 
         private static GameSettingsData LoadFromDisk()
@@ -125,6 +127,7 @@ namespace ProjectEta.Settings
             Screen.SetResolution(data.ResolutionWidth, data.ResolutionHeight, mode); // 해상도·화면 모드 적용
             ApplyUiScaleToAllCanvases(data.UiScale); // 현재 Canvas UI 배율 적용
             GameAudioService.Apply(data); // Master·BGM·SFX 오디오 설정 적용
+            GameInputBindingService.Apply(data); // 저장 조작키 런타임 입력에 적용
         }
 
         private static void ApplyUiScaleToAllCanvases(float uiScale)

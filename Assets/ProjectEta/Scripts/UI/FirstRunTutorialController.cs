@@ -22,15 +22,6 @@ namespace ProjectEta.UI
             "카드 성장"
         }; // 튜토리얼 페이지 제목 목록
 
-        private static readonly string[] PageBodies =
-        {
-            "손패의 카드를 선택해 전투 보드에 기물을 배치합니다.\n초기 배치에서는 King을 아군 영역에 반드시 배치해야 합니다.",
-            "보드의 기물을 선택하면 이동하거나 공격할 수 있는 대상이 표시됩니다.\n행동을 마치면 Space로 다음 흐름을 진행합니다.",
-            "King의 HP가 0이 되면 현재 런이 실패합니다.\n기물을 배치하고 경로를 선택할 때 King의 생존을 우선하세요.",
-            "전투에서 승리하면 Route Map에서 다음 Stage를 선택합니다.\n노드의 색상과 바닥 문양으로 Battle, Reward, Shop, Event, Boss를 구분할 수 있습니다.",
-            "Reward와 Shop에서 카드를 확보하고 Fusion으로 더 강한 기물을 만들 수 있습니다.\nESC의 조작법 메뉴에서 이 안내를 다시 볼 수 있습니다."
-        }; // 튜토리얼 페이지 설명 목록
-
         private static FirstRunTutorialController _instance; // 현재 Battle 튜토리얼 인스턴스
         private GameObject _root; // 튜토리얼 전체 화면 루트
         private Text _pageIndexText; // 현재 페이지 번호 문구
@@ -131,7 +122,8 @@ namespace ProjectEta.UI
             _root.SetActive(false); // 튜토리얼 화면 숨김
             _isShowing = false; // 튜토리얼 표시 상태 해제
             RestoreGameplay(); // 전투 입력·시간 복원
-            SystemToastUI.Push("튜토리얼 완료", "ESC → 조작법에서 다시 확인할 수 있습니다.", 1.8f); // 완료 안내 Toast 등록
+            string pauseKey = GameInputBindingService.GetDisplayName(GameInputAction.Pause); // 현재 Pause 키 표시 문구 조회
+            SystemToastUI.Push("튜토리얼 완료", $"{pauseKey} → 조작법에서 다시 확인할 수 있습니다.", 1.8f); // 현재 조작키 기반 완료 안내 Toast 등록
         }
 
         private void CaptureAndSuspendGameplay()
@@ -143,7 +135,7 @@ namespace ProjectEta.UI
             _boardInputWasEnabled = _boardInputController != null && _boardInputController.enabled; // 보드 입력 기존 상태 저장
             _routeMapWasEnabled = _routeMapBoardController != null && _routeMapBoardController.enabled; // 지도 입력 기존 상태 저장
 
-            if (_battleController != null) _battleController.enabled = false; // 튜토리얼 중 Space 전투 진행 입력 차단
+            if (_battleController != null) _battleController.enabled = false; // 튜토리얼 중 행동 완료 전투 입력 차단
             if (_boardInputController != null) _boardInputController.enabled = false; // 튜토리얼 중 보드 입력 차단
             if (_routeMapBoardController != null) _routeMapBoardController.enabled = false; // 튜토리얼 중 지도 입력 차단
 
@@ -166,7 +158,7 @@ namespace ProjectEta.UI
 
             Canvas canvas = canvasObject.GetComponent<Canvas>(); // 튜토리얼 Canvas 조회
             canvas.renderMode = RenderMode.ScreenSpaceOverlay; // 전체 화면 오버레이 적용
-            canvas.sortingOrder = 2250; // Pause보다 높은 튜토리얼 우선순위 적용
+            canvas.sortingOrder = UiLayerOrder.Tutorial; // 공통 튜토리얼 계층 적용
 
             CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>(); // 튜토리얼 CanvasScaler 조회
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; // 기준 해상도 스케일 적용
@@ -212,9 +204,29 @@ namespace ProjectEta.UI
             int pageNumber = _pageIndex + 1; // 사용자 표시 페이지 번호 계산
             _pageIndexText.text = $"{pageNumber} / {PageTitles.Length}"; // 현재 페이지 번호 적용
             _titleText.text = PageTitles[_pageIndex]; // 현재 페이지 제목 적용
-            _bodyText.text = PageBodies[_pageIndex]; // 현재 페이지 본문 적용
+            _bodyText.text = GetPageBody(_pageIndex); // 현재 조작키를 반영한 페이지 본문 적용
             _nextLabel.text = _pageIndex == PageTitles.Length - 1 ? "시작" : "다음"; // 마지막 페이지 시작 문구 적용
             if (_previousButton != null) _previousButton.interactable = _pageIndex > 0; // 첫 페이지 이전 버튼 비활성 적용
+        }
+
+        private static string GetPageBody(int pageIndex)
+        {
+            string completeAction = GameInputBindingService.GetDisplayName(GameInputAction.CompleteAction); // 현재 행동 완료 키 문구 조회
+            string pause = GameInputBindingService.GetDisplayName(GameInputAction.Pause); // 현재 Pause 키 문구 조회
+
+            switch (pageIndex)
+            {
+                case 0:
+                    return "손패의 카드를 선택해 전투 보드에 기물을 배치합니다.\n초기 배치에서는 King을 아군 영역에 반드시 배치해야 합니다."; // 배치 안내 반환
+                case 1:
+                    return $"보드의 기물을 선택하면 이동하거나 공격할 수 있는 대상이 표시됩니다.\n행동을 마치면 {completeAction}로 다음 흐름을 진행합니다."; // 현재 행동 완료 키 반영
+                case 2:
+                    return "King의 HP가 0이 되면 현재 런이 실패합니다.\n기물을 배치하고 경로를 선택할 때 King의 생존을 우선하세요."; // King 보호 안내 반환
+                case 3:
+                    return "전투에서 승리하면 Route Map에서 다음 Stage를 선택합니다.\n노드의 색상과 바닥 문양으로 Battle, Reward, Shop, Event, Boss를 구분할 수 있습니다."; // Route Map 안내 반환
+                default:
+                    return $"Reward와 Shop에서 카드를 확보하고 Fusion으로 더 강한 기물을 만들 수 있습니다.\n{pause}의 조작법 메뉴에서 이 안내를 다시 볼 수 있습니다."; // 현재 Pause 키 반영
+            }
         }
 
         private static GameObject CreateImage(string name, Transform parent, Vector2 position, Vector2 size, Color color)

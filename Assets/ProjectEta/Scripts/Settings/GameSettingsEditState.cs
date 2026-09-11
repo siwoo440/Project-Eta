@@ -1,4 +1,5 @@
 using UnityEngine; // FullScreenMode·Mathf 사용
+using UnityEngine.InputSystem; // Key 조작키 사용
 
 namespace ProjectEta.Settings
 {
@@ -51,6 +52,23 @@ namespace ProjectEta.Settings
             Editing.SettingsVersion = GameSettingsData.CurrentVersion; // 최신 설정 버전 유지
         }
 
+        public void SetControlKey(GameInputAction action, Key key)
+        {
+            string normalized = GameInputBindingRules.NormalizeKeyName(key.ToString(), GetDefaultControlKeyName(action)); // 편집 조작키 표준 이름 계산
+
+            if (action == GameInputAction.Pause)
+            {
+                Editing.PauseKey = normalized; // Pause·뒤로가기 키 변경
+            }
+            else
+            {
+                Editing.CompleteActionKey = normalized; // 배치 종료·행동 완료 키 변경
+            }
+
+            Editing.SettingsVersion = GameSettingsData.CurrentVersion; // 최신 설정 버전 유지
+            Editing = Editing.Normalized(); // 조작키 편집값 안전 보정
+        }
+
         public GameSettingsData Apply()
         {
             Saved = Editing.Normalized(); // 편집값을 저장값으로 확정
@@ -87,10 +105,21 @@ namespace ProjectEta.Settings
                     Editing.BgmVolume = defaults.BgmVolume; // 사운드 기본 BGM 적용
                     Editing.SfxVolume = defaults.SfxVolume; // 사운드 기본 SFX 적용
                     break; // 사운드 초기화 종료
+                case SettingsCategory.Controls:
+                    Editing.CompleteActionKey = defaults.CompleteActionKey; // 행동 완료 기본 키 적용
+                    Editing.PauseKey = defaults.PauseKey; // Pause 기본 키 적용
+                    break; // 조작키 초기화 종료
             }
 
             Editing.SettingsVersion = GameSettingsData.CurrentVersion; // 최신 설정 버전 유지
             Editing = Editing.Normalized(); // 카테고리 초기화 후 안전 보정
+        }
+
+        private static string GetDefaultControlKeyName(GameInputAction action)
+        {
+            return action == GameInputAction.Pause
+                ? GameInputBindingRules.DefaultPauseKey // Pause 기본 키 이름 반환
+                : GameInputBindingRules.DefaultCompleteActionKey; // 행동 완료 기본 키 이름 반환
         }
     }
 }

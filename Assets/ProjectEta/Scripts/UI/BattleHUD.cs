@@ -9,7 +9,6 @@ namespace ProjectEta.UI
     [DefaultExecutionOrder(900)]
     public sealed class BattleHUD : MonoBehaviour
     {
-        private const int CanvasOrder = 190; // 일반 전투 UI보다 위인 HUD 정렬 순서
         private static readonly BindingFlags TurnLimitBindingFlags = BindingFlags.Instance | BindingFlags.NonPublic; // 비공개 인스턴스 필드 조회 규칙
         private static FieldInfo _turnLimitField; // BattleController 턴 제한 필드 캐시
         private static Font _runtimeFont; // 한글 런타임 폰트 캐시
@@ -135,7 +134,7 @@ namespace ProjectEta.UI
 
             _canvas = canvasObject.GetComponent<Canvas>(); // Canvas 참조 저장
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay; // 화면 고정 UI 모드 적용
-            _canvas.sortingOrder = CanvasOrder; // 승패 버튼보다 아래 HUD 정렬 적용
+            _canvas.sortingOrder = UiLayerOrder.BattleHud; // 공통 전투 HUD 계층 적용
 
             CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>(); // CanvasScaler 조회
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; // 화면 크기 기반 UI 스케일 적용

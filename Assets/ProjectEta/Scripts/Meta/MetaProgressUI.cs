@@ -2,6 +2,7 @@ using UnityEngine; // MonoBehaviour·GameObject·Color·Vector2 사용
 using UnityEngine.EventSystems; // EventSystem 사용
 using UnityEngine.InputSystem.UI; // 새 Input System UI 입력 모듈 사용
 using UnityEngine.UI; // Canvas·Button·Image·Text 사용
+using ProjectEta.UI; // 공통 UI 계층 순서 사용
 
 namespace ProjectEta.Meta
 {
@@ -53,7 +54,7 @@ namespace ProjectEta.Meta
             canvasObject.transform.SetParent(transform, false); // 컨트롤러 호스트 자식 연결
             _canvas = canvasObject.GetComponent<Canvas>(); // Canvas 참조 확보
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay; // 런 종료 결과를 화면 위에 표시
-            _canvas.sortingOrder = 260; // 전투·지도 UI 위, 67일차 순간 알림 아래 배치
+            _canvas.sortingOrder = UiLayerOrder.RunResult; // 공통 런 결과 모달 계층 적용
 
             CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>(); // 해상도 대응 스케일러 확보
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; // 화면 크기 기반 스케일 사용

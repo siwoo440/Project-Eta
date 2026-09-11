@@ -1,11 +1,11 @@
 using System.Collections; // Coroutine·IEnumerator 사용
 using System.Collections.Generic; // HashSet<T> 사용
 using UnityEngine; // MonoBehaviour·GameObject·Debug 사용
-using UnityEngine.InputSystem; // Space 키 입력 사용
 using UnityEngine.SceneManagement; // 현재 씬 이름 확인
 using ProjectEta.Board; // BoardView·BoardInputController 사용
 using ProjectEta.Pieces; // PieceMovementType·PieceRuntimeState 사용
 using ProjectEta.Run; // RunState·RunSaveSystem 사용
+using ProjectEta.Settings; // 저장 조작키 사용
 using ProjectEta.UI; // 전투 UI 사용
 
 namespace ProjectEta.Battle
@@ -94,14 +94,14 @@ namespace ProjectEta.Battle
 
         private void Update()
         {
-            if (_turnManager == null || Keyboard.current == null)
+            if (_turnManager == null)
             {
-                return; // 턴 매니저·키보드 누락 시 입력 처리 차단
+                return; // 턴 매니저 누락 시 입력 처리 차단
             }
 
-            if (!Keyboard.current.spaceKey.wasPressedThisFrame)
+            if (!GameInputBindingService.WasPressedThisFrame(GameInputAction.CompleteAction))
             {
-                return; // Space 입력 없는 프레임 종료
+                return; // 저장된 행동 완료 키 입력 없는 프레임 종료
             }
 
             if (_turnManager.CurrentState == TurnState.DeploymentTurn)
@@ -363,19 +363,22 @@ namespace ProjectEta.Battle
 
             if (state == TurnState.DeploymentTurn && _turnManager.IsInitialDeployment && !_turnManager.IsInitialKingPlaced)
             {
-                Debug.Log("시작 배치 턴: 먼저 킹을 배치하세요. 킹 배치 후에도 원하는 카드를 계속 배치할 수 있으며 Space로 턴을 종료합니다."); // 시작 배치 안내
+                string completeActionKey = GameInputBindingService.GetDisplayName(GameInputAction.CompleteAction); // 현재 행동 완료 키 표시 문구 조회
+                Debug.Log($"시작 배치 턴: 먼저 킹을 배치하세요. 킹 배치 후에도 원하는 카드를 계속 배치할 수 있으며 {completeActionKey}로 턴을 종료합니다."); // 현재 조작키 기반 시작 배치 안내
                 return; // 초기 배치 후속 처리 종료
             }
 
             if (state == TurnState.DeploymentTurn && _turnManager.IsInitialDeployment)
             {
-                Debug.Log($"시작 배치 턴 계속: 현재 {_turnManager.DeployedCardCount}장 배치 / 자유 배치 후 Space로 턴 종료"); // 자유 배치 안내
+                string completeActionKey = GameInputBindingService.GetDisplayName(GameInputAction.CompleteAction); // 현재 행동 완료 키 표시 문구 조회
+                Debug.Log($"시작 배치 턴 계속: 현재 {_turnManager.DeployedCardCount}장 배치 / 자유 배치 후 {completeActionKey}로 턴 종료"); // 현재 조작키 기반 자유 배치 안내
                 return; // 초기 배치 유지
             }
 
             if (state == TurnState.DeploymentTurn)
             {
-                Debug.Log($"{turnNumber}턴 종료 - 배치 턴 시작: 원하는 만큼 자유롭게 배치한 뒤 Space로 배치 턴을 종료하세요."); // 주기 배치 안내
+                string completeActionKey = GameInputBindingService.GetDisplayName(GameInputAction.CompleteAction); // 현재 행동 완료 키 표시 문구 조회
+                Debug.Log($"{turnNumber}턴 종료 - 배치 턴 시작: 원하는 만큼 자유롭게 배치한 뒤 {completeActionKey}로 배치 턴을 종료하세요."); // 현재 조작키 기반 주기 배치 안내
                 return; // 배치 턴 처리 종료
             }
 
