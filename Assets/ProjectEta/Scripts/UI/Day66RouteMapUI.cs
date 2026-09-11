@@ -70,8 +70,9 @@ namespace ProjectEta.UI
 
         private void RefreshHeader()
         {
+            int currentPhase = RunPhaseProgressService.GetCurrentPhase(_runState); // 현재 1~5 RouteMap 페이즈 조회
             _titleText.text = "ROUTE MAP"; // 지도 화면 제목 표시
-            _progressText.text = $"Stage {_runState.RouteMap.CurrentDepth} / {RoundState.FinalRound}    ·    다음 스테이지를 선택하세요"; // 현재 깊이·선택 안내 표시
+            _progressText.text = $"PHASE {currentPhase}/{RunPhaseProgressService.TotalPhases}    ·    STAGE {_runState.RouteMap.CurrentDepth}/{RoundState.FinalRound}    ·    다음 스테이지를 선택하세요"; // 페이즈·깊이·선택 안내 표시
             _legendText.text = "BATTLE 성채    ELITE 요새    REWARD 보물고    SHOP 상점    EVENT 마법탑    BOSS 성채"; // 건물 범례 표시
         }
 

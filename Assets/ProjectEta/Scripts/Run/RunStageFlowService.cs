@@ -58,12 +58,15 @@ namespace ProjectEta.Run
 
             if (runState.CurrentRound >= RoundState.FinalRound)
             {
-                runState.Flow.CompleteRun(); // 최종 깊이 안전 완료
+                if (RunPhaseProgressService.TryAdvanceToNextPhase(runState)) return true; // 1~4페이즈 마지막 깊이는 다음 페이즈로 직접 전환
+
+                runState.Flow.CompleteRun(); // 5페이즈 마지막 깊이만 최종 런 완료 처리
                 return true; // 최종 비전투 완료 성공 반환
             }
 
             runState.RouteMap.PreparePrototypeAfterBattle(runState.CurrentRound); // 전체 Route Graph를 유지하며 현재 스테이지 완료·다음 선택 개방
             runState.Flow.EnterMap(); // 다음 Stage 선택 지도 흐름 복귀
+            RunPhaseProgressService.TryNormalizeFirstPhaseRoute(runState); // 첫 스테이지 뒤 기존 단일판 경로를 1페이즈 규칙으로 정규화
             return true; // 비전투 완료 성공 반환
         }
 
@@ -72,8 +75,26 @@ namespace ProjectEta.Run
             if (runState == null || runState.CurrentFlowPhase != RunFlowPhase.Battle) return false; // 런 누락·전투 외 결과 처리 차단
             if (outcome == BattleOutcome.None) return false; // 미결정 전투 결과 차단
 
-            runState.HandleBattleOutcome(outcome); // 기존 RoundState·RouteMap·Completed·Failed 전투 결과 로직 재사용
-            return true; // 전투 결과 통합 처리 성공 반환
+            runState.RecordBattleOutcome(outcome); // 전투 결과를 라운드 상태에 먼저 기록
+
+            if (outcome == BattleOutcome.Defeat)
+            {
+                runState.Flow.FailRun(); // 패배는 즉시 런 실패 상태로 전환
+                return true; // 패배 처리 성공 반환
+            }
+
+            if (runState.CurrentRound >= RoundState.FinalRound)
+            {
+                if (RunPhaseProgressService.TryAdvanceToNextPhase(runState)) return true; // 1~4페이즈 마지막 승리는 Completed 없이 다음 페이즈로 직접 전환
+
+                runState.Flow.CompleteRun(); // 5페이즈 마지막 승리만 최종 런 완료 처리
+                return true; // 최종 승리 처리 성공 반환
+            }
+
+            runState.RouteMap.PreparePrototypeAfterBattle(runState.CurrentRound); // 현재 스테이지 완료 후 다음 깊이 선택 상태 준비
+            runState.Flow.EnterMap(); // 동일 체스판을 경로 지도 모드로 전환
+            RunPhaseProgressService.TryNormalizeFirstPhaseRoute(runState); // 첫 승리 뒤 기존 단일판 경로를 1페이즈 규칙으로 정규화
+            return true; // 일반 전투 승리 처리 성공 반환
         }
 
         public static bool CompleteBattleReward(RunState runState)

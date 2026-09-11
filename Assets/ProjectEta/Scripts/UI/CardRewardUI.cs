@@ -39,13 +39,21 @@ namespace ProjectEta.UI // 카드 보상 UI 네임스페이스
 
         public bool IsVisible => _root != null && _root.activeSelf; // 현재 카드 보상 화면 표시 여부
 
-        public void Show(IReadOnlyList<PieceDefinition> candidates, CardRewardSource source, System.Action<PieceDefinition> selectionCallback) // 카드 후보 화면 표시
+        public void Show(IReadOnlyList<PieceDefinition> candidates, CardRewardSource source, System.Action<PieceDefinition> selectionCallback) // 기존 호출 호환 카드 후보 화면 표시
+        {
+            Show(candidates, source, null, selectionCallback); // 품질 정보 없는 기존 호출을 통합 표시로 위임
+        }
+
+        public void Show(IReadOnlyList<PieceDefinition> candidates, CardRewardSource source, CardRewardProfile profile, System.Action<PieceDefinition> selectionCallback) // Stage·품질을 포함한 카드 후보 화면 표시
         {
             EnsureUI(); // 보상 Canvas 최초 생성
             ClearCardObjects(); // 이전 후보 UI 제거
             _selectionCallback = selectionCallback; // 현재 선택 콜백 저장
             _selectedDefinition = null; // 이전 선택 카드 초기화
-            _titleText.text = source == CardRewardSource.RewardNode ? "REWARD STAGE · 카드 1장 선택" : "BATTLE REWARD · 카드 1장 선택"; // 보상 발생 경로 표시
+            string sourceTitle = source == CardRewardSource.RewardNode ? "REWARD STAGE" : "BATTLE REWARD"; // 보상 발생 경로 제목 계산
+            _titleText.text = profile == null
+                ? $"{sourceTitle} · 카드 1장 선택" // 기존 호출 기본 제목 표시
+                : $"{sourceTitle} · S{profile.Stage} · {profile.DisplayName}"; // 현재 Stage·보상 품질 표시
             RefreshRunStatus(); // 현재 런 Gold·HP·보유 카드 표시
             RefreshDetailPanel(); // 상세 패널 초기화
             RefreshConfirmButton(); // 확정 버튼 초기 비활성화

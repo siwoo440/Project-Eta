@@ -70,13 +70,15 @@ namespace ProjectEta.Run
             if (!RunSaveSystem.TrySave(_runState)) return; // 실제 디스크 저장 실패 시 식별값 갱신 차단
 
             _lastCheckpointKey = checkpointKey; // 저장 성공 안전 지점 기록
-            Debug.Log($"68일차 런 자동 저장: Phase={_runState.CurrentFlowPhase} / Stage={_runState.CurrentRound} / Node={_runState.RouteMap.CurrentNodeId}"); // 자동 저장 결과 출력
-            SystemToastUI.Push("저장 완료", $"STAGE {_runState.CurrentRound} · {GetFlowLabel(_runState.CurrentFlowPhase)}", 1.8f); // 화면 우상단 저장 완료 안내 등록
+            int routePhase = RunPhaseProgressService.GetCurrentPhase(_runState); // 현재 RouteMap 페이즈 조회
+            Debug.Log($"71일차 런 자동 저장: RoutePhase={routePhase} / Flow={_runState.CurrentFlowPhase} / Stage={_runState.CurrentRound} / Node={_runState.RouteMap.CurrentNodeId}"); // 자동 저장 결과 출력
+            SystemToastUI.Push("저장 완료", $"PHASE {routePhase}/{RunPhaseProgressService.TotalPhases} · STAGE {_runState.CurrentRound} · {GetFlowLabel(_runState.CurrentFlowPhase)}", 1.8f); // 화면 우상단 페이즈 포함 저장 완료 안내 등록
         }
 
         private static string CreateCheckpointKey(RunState runState)
         {
-            return $"{runState.CurrentFlowPhase}|{runState.CurrentRound}|{runState.RouteMap.CurrentNodeId}|{runState.RouteMap.SelectedNodeId}"; // 진행 위치 중심 안전 지점 키 생성
+            int routePhase = RunPhaseProgressService.GetCurrentPhase(runState); // 페이즈 전환 직후 별도 안전 지점 저장 보장
+            return $"{routePhase}|{runState.CurrentFlowPhase}|{runState.CurrentRound}|{runState.RouteMap.CurrentNodeId}|{runState.RouteMap.SelectedNodeId}"; // 페이즈·진행 위치 중심 안전 지점 키 생성
         }
 
         private static string GetFlowLabel(RunFlowPhase phase)

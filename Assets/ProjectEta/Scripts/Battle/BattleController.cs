@@ -301,12 +301,12 @@ namespace ProjectEta.Battle
         {
             if (_fusionPanelUI == null)
             {
-                _fusionPanelUI = GetComponent<FusionPanelUI>(); // 기존 FusionPanelUI 탐색
+                _fusionPanelUI = GetComponent<FusionPanelUI>(); // 기존 합성 UI 탐색
             }
 
             if (_fusionPanelUI == null)
             {
-                _fusionPanelUI = gameObject.AddComponent<FusionPanelUI>(); // FusionPanelUI 자동 추가
+                _fusionPanelUI = gameObject.AddComponent<FusionPanelUI>(); // 합성 UI 자동 추가
             }
 
             _fusionPanelUI.Bind(_boardInputController); // 실제 합성 상태 연결
@@ -316,7 +316,7 @@ namespace ProjectEta.Battle
         {
             if (_pieceInfoPanelUI == null)
             {
-                _pieceInfoPanelUI = GetComponent<PieceInfoPanelUI>(); // 기존 PieceInfoPanelUI 탐색
+                _pieceInfoPanelUI = GetComponent<PieceInfoPanelUI>(); // 기존 기물 정보 UI 탐색
             }
 
             if (_pieceInfoPanelUI == null)
@@ -331,7 +331,7 @@ namespace ProjectEta.Battle
         {
             if (_combatLogUI == null)
             {
-                _combatLogUI = GetComponent<CombatLogUI>(); // 기존 CombatLogUI 탐색
+                _combatLogUI = GetComponent<CombatLogUI>(); // 기존 전투 로그 UI 탐색
             }
 
             if (_combatLogUI == null)
