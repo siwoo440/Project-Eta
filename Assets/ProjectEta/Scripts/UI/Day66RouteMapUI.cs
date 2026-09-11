@@ -26,10 +26,16 @@ namespace ProjectEta.UI
         private string _lastHoverNodeId = string.Empty; // 이전 Hover 노드 ID
         private static Font _runtimeFont; // 한글 런타임 폰트 캐시
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void AutoCreateForBattleScene()
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void RegisterSceneLoadedCallback()
         {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 생성 차단
+            SceneManager.sceneLoaded -= HandleSceneLoaded; // 중복 씬 로드 콜백 제거
+            SceneManager.sceneLoaded += HandleSceneLoaded; // Battle 씬 진입 감시 등록
+        }
+
+        private static void HandleSceneLoaded(Scene scene, LoadSceneMode loadSceneMode)
+        {
+            if (scene.name != "Battle") return; // Battle 씬 외 생성 차단
             if (Object.FindFirstObjectByType<Day66RouteMapUI>() != null) return; // 중복 생성 차단
 
             GameObject host = new GameObject("Day66RouteMapUI"); // 66일차 RouteMap UI 호스트 생성

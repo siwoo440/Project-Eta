@@ -1,34 +1,97 @@
-using System.Collections.Generic; // List<T>와 IReadOnlyList<T>를 사용하기 위한 네임스페이스
-using UnityEngine; // ScriptableObject, SerializeField 등을 사용하기 위한 네임스페이스
-using ProjectEta.Pieces; // PieceDefinition을 사용하기 위한 네임스페이스
+using System.Collections.Generic; // List<T>와 IReadOnlyList<T> 사용
+using UnityEngine; // ScriptableObject·SerializeField 사용
+using ProjectEta.Pieces; // PieceDefinition 사용
 
-namespace ProjectEta.Fusion // 합성 관련 타입을 모아두는 네임스페이스
+namespace ProjectEta.Fusion
 {
-    [CreateAssetMenu(fileName = "FusionRecipeDatabase", menuName = "ProjectEta/Fusion Recipe Database")] // 에디터 메뉴에서 에셋 생성 가능하게 등록
-    public class FusionRecipeDatabase : ScriptableObject // 재료 2장으로 일치하는 FusionRecipe를 찾아주는 조회용 데이터 에셋
+    [CreateAssetMenu(fileName = "FusionRecipeDatabase", menuName = "ProjectEta/Fusion Recipe Database")]
+    public class FusionRecipeDatabase : ScriptableObject
     {
-        [SerializeField] private List<FusionRecipe> _recipes = new List<FusionRecipe>(); // 등록된 합성 레시피 목록
+        [SerializeField] private List<FusionRecipe> _recipes = new List<FusionRecipe>(); // 등록 Fusion Recipe 목록
 
-        public IReadOnlyList<FusionRecipe> Recipes => _recipes; // 26일차: 등록 레시피 전체 연결 상태를 검증하기 위한 읽기 전용 목록
+        public IReadOnlyList<FusionRecipe> Recipes => _recipes; // 등록 Recipe 전체 읽기 전용 노출
 
-        public bool TryFindRecipe(PieceDefinition materialA, PieceDefinition materialB, out FusionRecipe recipe) // 재료 2장(순서 무관)으로 일치하는 레시피를 찾는 메서드
+        public bool TryFindRecipe(PieceDefinition materialA, PieceDefinition materialB, out FusionRecipe recipe)
         {
-            for (int i = 0; i < _recipes.Count; i++) // 등록된 레시피를 처음부터 순회
+            for (int i = 0; i < _recipes.Count; i++)
             {
-                var candidate = _recipes[i]; // 이번 순회의 레시피 후보
-                if (candidate == null) continue; // 비어있는 항목은 건너뜀
+                FusionRecipe candidate = _recipes[i]; // 현재 Recipe 후보 조회
+                if (candidate == null) continue; // 빈 Recipe 제외
 
-                bool matchesInOrder = candidate.MaterialA == materialA && candidate.MaterialB == materialB; // 등록된 순서 그대로 일치하는지 확인
-                bool matchesReversed = candidate.MaterialA == materialB && candidate.MaterialB == materialA; // 반대 순서로 일치하는지 확인
-                if (matchesInOrder || matchesReversed) // 둘 중 하나라도 일치하면
+                bool matchesInOrder = candidate.MaterialA == materialA && candidate.MaterialB == materialB; // 등록 순서 일치 여부 계산
+                bool matchesReversed = candidate.MaterialA == materialB && candidate.MaterialB == materialA; // 반대 순서 일치 여부 계산
+
+                if (matchesInOrder || matchesReversed)
                 {
-                    recipe = candidate; // 찾은 레시피 반환값에 저장
-                    return true; // 매칭 성공 반환
+                    recipe = candidate; // 일치 Recipe 반환
+                    return true; // Recipe 검색 성공 반환
                 }
             }
 
-            recipe = null; // 끝까지 찾지 못하면 결과 없음
-            return false; // 매칭 실패 반환
+            recipe = null; // 검색 실패 결과 초기화
+            return false; // Recipe 검색 실패 반환
+        }
+
+        public bool TryFindRecipeById(string recipeId, out FusionRecipe recipe)
+        {
+            if (string.IsNullOrEmpty(recipeId))
+            {
+                recipe = null; // 빈 ID 검색 결과 초기화
+                return false; // 빈 ID 검색 차단
+            }
+
+            for (int i = 0; i < _recipes.Count; i++)
+            {
+                FusionRecipe candidate = _recipes[i]; // 현재 Recipe 후보 조회
+                if (candidate == null) continue; // 빈 Recipe 제외
+
+                if (candidate.RecipeId == recipeId)
+                {
+                    recipe = candidate; // ID 일치 Recipe 반환
+                    return true; // ID 검색 성공 반환
+                }
+            }
+
+            recipe = null; // ID 검색 실패 결과 초기화
+            return false; // ID 검색 실패 반환
+        }
+
+        public IReadOnlyList<FusionRecipe> GetVisibleRecipes(FusionDiscoveryLog discoveryLog)
+        {
+            var result = new List<FusionRecipe>(); // 현재 공개 Recipe 목록 생성
+
+            for (int i = 0; i < _recipes.Count; i++)
+            {
+                FusionRecipe candidate = _recipes[i]; // 현재 Recipe 조회
+                if (candidate == null) continue; // 빈 Recipe 제외
+
+                if (!candidate.IsHiddenRecipe)
+                {
+                    result.Add(candidate); // 기본 공개 Recipe 등록
+                    continue; // 다음 Recipe 검사
+                }
+
+                if (discoveryLog != null && discoveryLog.IsDiscovered(candidate))
+                {
+                    result.Add(candidate); // 발견한 숨김 Recipe 등록
+                }
+            }
+
+            return result; // 현재 공개 Recipe 목록 반환
+        }
+
+        public IReadOnlyList<FusionRecipe> GetRecipesForResult(PieceDefinition resultDefinition)
+        {
+            var result = new List<FusionRecipe>(); // 결과 기물 기준 Recipe 목록 생성
+            if (resultDefinition == null) return result; // 결과 기물 누락 빈 목록 반환
+
+            for (int i = 0; i < _recipes.Count; i++)
+            {
+                FusionRecipe candidate = _recipes[i]; // 현재 Recipe 조회
+                if (candidate != null && candidate.Result == resultDefinition) result.Add(candidate); // 결과 기물 일치 Recipe 등록
+            }
+
+            return result; // 결과 기물 기준 Recipe 목록 반환
         }
     }
 }
