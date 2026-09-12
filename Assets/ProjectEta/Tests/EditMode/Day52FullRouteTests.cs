@@ -60,7 +60,7 @@ namespace ProjectEta.Tests.EditMode
         }
 
         [Test]
-        public void FullRoute_NormalDepthsUseBattleRewardShopEventOnly()
+        public void FullRoute_NormalDepthsUseBattleEliteRewardShopEventOnly()
         {
             IReadOnlyList<StageNode> nodes = StageRouteGenerator.CreateFullRoute(520052); // 전체 경로 생성
 
@@ -70,12 +70,12 @@ namespace ProjectEta.Tests.EditMode
                 if (node.Depth == 5 || node.Depth == 10) continue; // 보스 깊이 제외
 
                 Assert.IsTrue(StageDefinitionCatalog.TryParseStageType(node.StageDefinitionId, out StageType stageType)); // 일반 노드 타입 파싱 검증
-                Assert.AreNotEqual(StageType.Elite, stageType); // 52일차 자동 경로 Elite 제외 검증
                 Assert.IsTrue(
                     stageType == StageType.Battle ||
+                    stageType == StageType.Elite ||
                     stageType == StageType.Reward ||
                     stageType == StageType.Shop ||
-                    stageType == StageType.Event); // 52일차 허용 타입 검증
+                    stageType == StageType.Event); // 75일차 전체 경로 허용 타입 검증
             }
         }
 

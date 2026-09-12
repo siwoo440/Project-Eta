@@ -16,6 +16,7 @@ namespace ProjectEta.Run
 
         private static readonly StageType[] FullRouteOptionalStageTypes =
         {
+            StageType.Elite, // 75일차 전체 경로 Elite 노드
             StageType.Reward, // 52일차 전체 경로 보상 노드
             StageType.Shop, // 52일차 전체 경로 상점 노드
             StageType.Event // 52일차 전체 경로 이벤트 노드
@@ -89,10 +90,17 @@ namespace ProjectEta.Run
             int branchCount = depth % 2 == 0 ? 3 : 2; // Day45 호환 짝수 깊이 3분기·홀수 깊이 2분기 유지
             List<int> xPositions = BuildFullRouteXPositions(centerX, branchCount, ref random); // 동일 중심 열 안에서 인접 가능한 X 좌표 생성
             int battleIndex = random.NextInt(branchCount); // 일반 전투가 배치될 분기 위치 결정
-            var optionalTypes = new List<StageType>(FullRouteOptionalStageTypes); // 비전투 타입 후보 복사
+            var optionalTypes = new List<StageType>(FullRouteOptionalStageTypes); // 전체 선택형 Stage 후보 복사
             Shuffle(optionalTypes, ref random); // Seed 기반 타입 순서 섞기
+
+            if (depth == 8)
+            {
+                optionalTypes.Remove(StageType.Elite); // 중복 Elite 후보 제거
+                optionalTypes.Insert(0, StageType.Elite); // 후반 경로에 최소 1개 Elite 강제 배치
+            }
+
             var nodes = new List<StageNode>(branchCount); // 현재 깊이 노드 목록 생성
-            int optionalIndex = 0; // 비전투 타입 순회 인덱스 초기화
+            int optionalIndex = 0; // 선택형 타입 순회 인덱스 초기화
 
             for (int i = 0; i < xPositions.Count; i++)
             {
