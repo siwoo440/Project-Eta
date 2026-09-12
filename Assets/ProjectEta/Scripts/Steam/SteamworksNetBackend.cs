@@ -1,82 +1,161 @@
 #if STEAMWORKS_NET
-using System; // 예외 처리 사용
-using Steamworks; // Steamworks.NET API 사용
+using Steamworks;
+#endif
 
 namespace ProjectEta.Steam
 {
-    public sealed class SteamworksNetBackend : ISteamRuntimeBackend, ISteamOverlayBackend
+#if STEAMWORKS_NET
+    public sealed class SteamworksNetBackend : ISteamRuntimeBackend, ISteamOverlayBackend, ISteamCloudBackend
     {
-        private Callback<GameOverlayActivated_t> _overlayCallback; // Steam Overlay 활성 Callback
-        private bool _initialized; // SteamAPI 초기화 상태
+        private bool initialized;
 
-        public string BackendName => "Steamworks.NET"; // 진단용 Backend 이름
-        public event Action<bool> OverlayActiveChanged; // Overlay 활성 상태 이벤트
+        public string Name => "Steamworks.NET";
+        public bool IsAvailable => true;
+        public bool IsInitialized => initialized;
+        public bool IsOverlayEnabled => initialized && SteamUtils.IsOverlayEnabled();
+        public bool IsCloudEnabled => initialized
+            && SteamRemoteStorage.IsCloudEnabledForAccount()
+            && SteamRemoteStorage.IsCloudEnabledForApp();
 
-        public bool Initialize()
+        public bool Initialize(uint appId)
         {
-            if (_initialized) return true; // 중복 SteamAPI.Init 차단
+            if (initialized)
+            {
+                return true;
+            }
 
-            try
+            if (SteamAPI.RestartAppIfNecessary(new AppId_t(appId)))
             {
-                if (!SteamAPI.Init()) return false; // Steam Client·AppID 초기화 실패 반환
-                _overlayCallback = Callback<GameOverlayActivated_t>.Create(HandleOverlayActivated); // Overlay Callback 등록
-                _initialized = true; // Steam Runtime 활성 상태 저장
-                return true; // 초기화 성공 반환
+                return false;
             }
-            catch (DllNotFoundException)
-            {
-                return false; // Native Steam DLL 누락을 게임 실행 실패로 전파하지 않음
-            }
-            catch (TypeInitializationException)
-            {
-                return false; // Steamworks 초기 타입 로드 실패 안전 처리
-            }
+
+            initialized = SteamAPI.Init();
+            return initialized;
         }
 
-        public void RunCallbacks()
+        public void PumpCallbacks()
         {
-            if (!_initialized) return; // 미초기화 Callback 차단
-            SteamAPI.RunCallbacks(); // Steam 이벤트 처리
+            if (!initialized)
+            {
+                return;
+            }
+
+            SteamAPI.RunCallbacks();
+        }
+
+        public bool OpenOverlay(string dialog)
+        {
+            if (!initialized)
+            {
+                return false;
+            }
+
+            SteamFriends.ActivateGameOverlay(string.IsNullOrWhiteSpace(dialog) ? "Friends" : dialog);
+            return true;
+        }
+
+        public bool CloudFileExists(string fileName)
+        {
+            return IsCloudEnabled
+                && !string.IsNullOrWhiteSpace(fileName)
+                && SteamRemoteStorage.FileExists(fileName);
+        }
+
+        public bool TryReadCloudFile(string fileName, out byte[] data)
+        {
+            data = null;
+
+            if (!CloudFileExists(fileName))
+            {
+                return false;
+            }
+
+            int fileSize = SteamRemoteStorage.GetFileSize(fileName);
+            if (fileSize < 0)
+            {
+                return false;
+            }
+
+            byte[] buffer = new byte[fileSize];
+            if (fileSize == 0)
+            {
+                data = buffer;
+                return true;
+            }
+
+            int readSize = SteamRemoteStorage.FileRead(fileName, buffer, fileSize);
+            if (readSize != fileSize)
+            {
+                return false;
+            }
+
+            data = buffer;
+            return true;
+        }
+
+        public bool TryWriteCloudFile(string fileName, byte[] data)
+        {
+            if (!IsCloudEnabled || string.IsNullOrWhiteSpace(fileName) || data == null)
+            {
+                return false;
+            }
+
+            return SteamRemoteStorage.FileWrite(fileName, data, data.Length);
         }
 
         public void Shutdown()
         {
-            if (!_initialized) return; // 중복 Shutdown 차단
-
-            _overlayCallback?.Dispose(); // Overlay Callback 해제
-            _overlayCallback = null; // Callback 참조 제거
-            SteamAPI.Shutdown(); // Steam Runtime 종료
-            _initialized = false; // 초기화 상태 해제
-        }
-
-        public bool IsOverlayEnabled()
-        {
-            return _initialized && SteamUtils.IsOverlayEnabled(); // Steam Client Overlay 활성 가능 여부 반환
-        }
-
-        public bool OpenOverlay(SteamOverlayPage page)
-        {
-            if (!IsOverlayEnabled()) return false; // Overlay 비활성 상태 차단
-            SteamFriends.ActivateGameOverlay(ToOverlayDialog(page)); // 지정 Steam Overlay 열기
-            return true; // 호출 요청 성공 반환
-        }
-
-        private void HandleOverlayActivated(GameOverlayActivated_t callback)
-        {
-            OverlayActiveChanged?.Invoke(callback.m_bActive != 0); // Steam Overlay 활성 상태 전달
-        }
-
-        private static string ToOverlayDialog(SteamOverlayPage page)
-        {
-            switch (page)
+            if (!initialized)
             {
-                case SteamOverlayPage.Community: return "Community"; // 커뮤니티 Overlay
-                case SteamOverlayPage.Players: return "Players"; // 최근 플레이어 Overlay
-                case SteamOverlayPage.Settings: return "Settings"; // Steam 설정 Overlay
-                case SteamOverlayPage.Achievements: return "Achievements"; // 업적 Overlay
-                default: return "Friends"; // 기본 친구 Overlay
+                return;
             }
+
+            SteamAPI.Shutdown();
+            initialized = false;
         }
     }
-}
+#else
+    public sealed class SteamworksNetBackend : ISteamRuntimeBackend, ISteamOverlayBackend, ISteamCloudBackend
+    {
+        public string Name => "Steamworks.NET (Unavailable)";
+        public bool IsAvailable => false;
+        public bool IsInitialized => false;
+        public bool IsOverlayEnabled => false;
+        public bool IsCloudEnabled => false;
+
+        public bool Initialize(uint appId)
+        {
+            return false;
+        }
+
+        public void PumpCallbacks()
+        {
+        }
+
+        public bool OpenOverlay(string dialog)
+        {
+            return false;
+        }
+
+        public bool CloudFileExists(string fileName)
+        {
+            return false;
+        }
+
+        public bool TryReadCloudFile(string fileName, out byte[] data)
+        {
+            data = null;
+            return false;
+        }
+
+        public bool TryWriteCloudFile(string fileName, byte[] data)
+        {
+            return false;
+        }
+
+        public void Shutdown()
+        {
+        }
+    }
 #endif
+}
