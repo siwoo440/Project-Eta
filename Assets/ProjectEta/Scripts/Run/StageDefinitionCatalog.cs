@@ -5,10 +5,11 @@ using ProjectEta.Round; // RoundDefinition 사용
 
 namespace ProjectEta.Run // 스테이지 런타임 카탈로그 네임스페이스
 {
-    public static class StageDefinitionCatalog // StageDefinitionId를 실제 StageDefinition으로 변환하는 45일차 런타임 카탈로그
+    public static class StageDefinitionCatalog // StageDefinitionId를 실제 StageDefinition으로 변환하는 런타임 카탈로그
     {
         private const string NormalRoundResourceName = "PrototypeRound36"; // 일반·엘리트 전투 기본 RoundDefinition
-        private const string BossRoundResourceName = "PrototypeBossRound40"; // 중간·최종 보스 기본 RoundDefinition
+        private const string MidBossRoundResourceName = "MidBossRound74"; // 74일차 중간 보스 전용 RoundDefinition
+        private const string FinalBossRoundResourceName = "FinalBossRound74"; // 74일차 최종 보스 전용 RoundDefinition
         private static readonly Dictionary<string, StageDefinition> Cache = new Dictionary<string, StageDefinition>(); // 동일 ID 런타임 정의 재사용 캐시
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] // Play Mode 시작 시 정적 캐시 초기화
@@ -28,7 +29,7 @@ namespace ProjectEta.Run // 스테이지 런타임 카탈로그 네임스페이�
             if (Cache.TryGetValue(stageDefinitionId, out var cached) && cached != null) return cached; // 기존 런타임 정의 재사용
             if (!TryParseStageType(stageDefinitionId, out var stageType)) stageType = StageType.Battle; // 파싱 실패 시 일반 전투 fallback
 
-            RoundDefinition roundDefinition = LoadRoundDefinition(stageType); // 타입에 맞는 기존 라운드 데이터 로드
+            RoundDefinition roundDefinition = LoadRoundDefinition(stageType); // 타입에 맞는 라운드 데이터 로드
             var definition = ScriptableObject.CreateInstance<StageDefinition>(); // 런타임 StageDefinition 생성
             definition.hideFlags = HideFlags.HideAndDontSave; // 에셋으로 저장되지 않는 런타임 전용 객체 지정
             definition.ConfigureRuntime(stageDefinitionId, GetDisplayName(stageType, depth), stageType, roundDefinition, GetRewardProfileId(stageType)); // 실제 설정 주입
@@ -46,10 +47,11 @@ namespace ProjectEta.Run // 스테이지 런타임 카탈로그 네임스페이�
             return Enum.TryParse(token, true, out stageType); // 대소문자 무시 StageType 변환
         }
 
-        private static RoundDefinition LoadRoundDefinition(StageType stageType) // 전투형 스테이지의 기존 RoundDefinition 선택
+        private static RoundDefinition LoadRoundDefinition(StageType stageType) // 전투형 스테이지의 RoundDefinition 선택
         {
-            if (stageType == StageType.MidBoss || stageType == StageType.FinalBoss) return Resources.Load<RoundDefinition>(BossRoundResourceName); // 보스 라운드 데이터 로드
-            if (stageType == StageType.Battle || stageType == StageType.Elite) return Resources.Load<RoundDefinition>(NormalRoundResourceName); // 일반 라운드 데이터 로드
+            if (stageType == StageType.MidBoss) return Resources.Load<RoundDefinition>(MidBossRoundResourceName); // 중간 보스 전용 라운드 로드
+            if (stageType == StageType.FinalBoss) return Resources.Load<RoundDefinition>(FinalBossRoundResourceName); // 최종 보스 전용 라운드 로드
+            if (stageType == StageType.Battle || stageType == StageType.Elite) return Resources.Load<RoundDefinition>(NormalRoundResourceName); // 일반·Elite 라운드 로드
             return null; // 비전투 스테이지는 전투 데이터 없음
         }
 
@@ -67,11 +69,12 @@ namespace ProjectEta.Run // 스테이지 런타임 카탈로그 네임스페이�
             }
         }
 
-        private static string GetRewardProfileId(StageType stageType) // 이후 46·47일차가 사용할 임시 보상 프로필 ID 생성
+        private static string GetRewardProfileId(StageType stageType) // 스테이지별 보상 프로필 ID 생성
         {
             if (stageType == StageType.Reward) return "PrototypeRewardNode"; // 전용 카드 보상 노드 프로필
             if (stageType == StageType.Elite) return "PrototypeEliteReward"; // 엘리트 전투 보상 프로필
-            if (stageType == StageType.MidBoss || stageType == StageType.FinalBoss) return "PrototypeBossReward"; // 보스 보상 프로필
+            if (stageType == StageType.MidBoss) return "MidBossReward74"; // 중간 보스 전용 보상 프로필
+            if (stageType == StageType.FinalBoss) return "FinalBossReward74"; // 최종 보스 전용 보상 프로필
             if (stageType == StageType.Shop) return "PrototypeShop"; // 상점 프로필
             if (stageType == StageType.Event) return "PrototypeEvent"; // 이벤트 프로필
             return "PrototypeBattleReward"; // 일반 전투 보상 프로필
