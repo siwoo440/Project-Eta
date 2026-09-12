@@ -11,11 +11,7 @@ namespace ProjectEta.Run
 
         public static bool CanUsePiece(PieceDefinition piece)
         {
-            if (piece == null) return false; // 빈 기물 제외
-            if (piece.MovementType == PieceMovementType.King) return false; // 플레이어 King 제외
-            if (piece.Category == PieceCategory.Fusion) return false; // Fusion 기물 제외
-            if (piece.Category == PieceCategory.Boss) return false; // Boss 전용 기물 제외
-            return true; // 일반 적 후보 허용
+            return RunContentPoolRules.CanUseAsEnemy(piece); // 공통 Enemy Pool 정책 결과 반환
         }
 
         public static int GetPieceThreatScore(PieceDefinition piece)
