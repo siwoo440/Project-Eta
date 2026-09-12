@@ -1,5 +1,5 @@
 using System; // StringComparison 사용
-using System.Collections.Generic; // HashSet<T> 사용
+using System.Collections.Generic; // HashSet<T>·List<T> 사용
 using System.Reflection; // 기존 BattleController 턴 제한 필드 호환 사용
 using UnityEngine; // MonoBehaviour·Resources·Vector2Int 사용
 using ProjectEta.Battle; // BattleController·TurnManager·TurnState 사용
@@ -11,7 +11,7 @@ using ProjectEta.Round; // RoundDefinition·EnemySpawnDefinition 사용
 
 namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이스
 {
-    public sealed class StageBattleRuntimeController : MonoBehaviour // StageDefinition의 RoundDefinition을 현재 새 BattleState에 적용하는 45일차 런타임
+    public sealed class StageBattleRuntimeController : MonoBehaviour // StageDefinition의 RoundDefinition을 현재 새 BattleState에 적용하는 런타임
     {
         private const string PieceCatalogResourceName = "PlayerStartingDeck26"; // 26종 PieceDefinition 카탈로그 Resources 이름
         private readonly HashSet<int> _processedReinforcementIndices = new HashSet<int>(); // 이번 스테이지에서 처리한 증원 인덱스
@@ -45,30 +45,38 @@ namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이
 
             if (_runState == null || _turnManager == null || _boardInputController == null || _boardView == null) // 필수 런타임 객체 확인
             {
-                Debug.LogError("45일차 StageBattleRuntimeController 구성 실패: RunState·TurnManager·BoardInputController·BoardView를 확인하세요."); // 누락 객체 기록
+                Debug.LogError("73일차 StageBattleRuntimeController 구성 실패: RunState·TurnManager·BoardInputController·BoardView를 확인하세요."); // 누락 객체 기록
                 return false; // 구성 실패 반환
             }
 
             if (_roundDefinition == null) // 전투형 스테이지에 RoundDefinition이 없으면
             {
-                Debug.LogError($"45일차 스테이지 전투 구성 실패: {stageDefinition.StageId}의 RoundDefinition을 찾지 못했습니다."); // 데이터 누락 기록
+                Debug.LogError($"73일차 스테이지 전투 구성 실패: {stageDefinition.StageId}의 RoundDefinition을 찾지 못했습니다."); // 데이터 누락 기록
                 return false; // 구성 실패 반환
             }
 
             if (_pieceCatalog == null) // 카탈로그 리소스가 없으면
             {
-                Debug.LogError($"45일차 스테이지 전투 구성 실패: Resources/{PieceCatalogResourceName}를 찾지 못했습니다."); // 카탈로그 누락 기록
+                Debug.LogError($"73일차 스테이지 전투 구성 실패: Resources/{PieceCatalogResourceName}를 찾지 못했습니다."); // 카탈로그 누락 기록
                 return false; // 구성 실패 반환
             }
 
             ApplyTurnLimit(); // StageDefinition의 RoundDefinition 턴 제한을 기존 BattleController에 적용
-            SpawnInitialEnemies(); // 일반 시작 적 구성 적용
+
+            if (_stageDefinition.StageType == StageType.Battle || _stageDefinition.StageType == StageType.Elite)
+            {
+                SpawnGeneratedEncounter(); // 일반·Elite 전투는 Seed 기반 Encounter 적용
+            }
+            else
+            {
+                SpawnInitialEnemies(); // Boss 전투는 기존 수동 적 편성 유지
+            }
+
             EnsureConfiguredBoss(); // 보스 스테이지면 2×2 보스 적용
-            if (_stageDefinition.StageType == StageType.Elite) SpawnEliteBonusEnemy(); // 엘리트는 프로토타입 추가 적 1기 배치
             BindTurnEvents(); // 증원·킹 HP 동기화 이벤트 연결
             _configured = true; // 구성 완료 기록
 
-            Debug.Log($"45일차 스테이지 전투 적용: {_stageDefinition.DisplayName} / Type={_stageDefinition.StageType} / TurnLimit={TurnLimit} / Enemy={CountCurrentEnemies(_runState.Board)}"); // 적용 결과 기록
+            Debug.Log($"73일차 스테이지 전투 적용: {_stageDefinition.DisplayName} / Type={_stageDefinition.StageType} / TurnLimit={TurnLimit} / Enemy={CountCurrentEnemies(_runState.Board)}"); // 적용 결과 기록
             return true; // 정상 구성 반환
         }
 
@@ -82,20 +90,82 @@ namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이
         {
             for (int i = 0; i < _roundDefinition.InitialEnemies.Count; i++) // 시작 적 목록 순회
             {
-                var spawn = _roundDefinition.InitialEnemies[i]; // 현재 스폰 데이터 조회
+                EnemySpawnDefinition spawn = _roundDefinition.InitialEnemies[i]; // 현재 스폰 데이터 조회
                 if (spawn == null) continue; // 빈 항목 제외
                 TrySpawnEnemy(spawn, "스테이지 시작 적"); // 기존 PieceView 스폰 경로 재사용
             }
         }
 
-        private void SpawnEliteBonusEnemy() // 별도 엘리트 RoundDefinition 제작 전 임시 강화 적 1기 추가
+        private void SpawnGeneratedEncounter() // 일반·Elite 전투의 적 편성을 진행도와 Seed 기반으로 생성
         {
-            PieceDefinition bonusDefinition = FindFirstNonKingDefinition(); // 카탈로그에서 일반 기물 하나 선택
-            if (bonusDefinition == null) return; // 후보 기물 없으면 추가 생성 생략
-            if (!TryFindFreeEnemyCell(out var cell)) return; // 적 진영 빈 칸이 없으면 추가 생성 생략
+            List<PieceDefinition> sourcePool = BuildEnemySourcePool(); // 현재 적 후보 Pool 생성
+            int phase = RunPhaseProgressService.GetCurrentPhase(_runState); // 현재 RouteMap Phase 조회
+            int stage = Mathf.Clamp(_runState.CurrentRound, RoundState.FirstRound, RoundState.FinalRound); // 현재 Stage 번호 보정
+            int mapSeed = _runState.RouteMap != null ? _runState.RouteMap.MapSeed : 0; // 현재 RouteMap Seed 조회
+            string nodeId = _runState.RouteMap != null ? _runState.RouteMap.CurrentNodeId : string.Empty; // 현재 RouteMap 노드 ID 조회
 
-            var runtimePiece = _boardInputController.SpawnTestEnemy(bonusDefinition, cell); // 기존 스폰 경로로 엘리트 추가 적 생성
-            if (runtimePiece != null) Debug.Log($"45일차 엘리트 추가 적: {bonusDefinition.DisplayName} @ {cell}"); // 추가 적 결과 기록
+            EnemyEncounterResult encounter = EnemyEncounterGenerator.Generate(
+                sourcePool,
+                _roundDefinition,
+                _stageDefinition.StageType,
+                mapSeed,
+                phase,
+                stage,
+                nodeId); // 일반·Elite Encounter 생성
+
+            IReadOnlyList<EnemyEncounterContentIssue> issues = EnemyEncounterContentValidator.Validate(encounter); // Encounter 무결성 검사
+            if (issues.Count > 0)
+            {
+                Debug.LogWarning($"73일차 Encounter 검증 실패: Issues={issues.Count} / Type={_stageDefinition.StageType} / Node={nodeId}"); // 검증 실패 기록
+                SpawnInitialEnemies(); // 기존 RoundDefinition 적 편성으로 안전 대체
+                return; // 생성 Encounter 적용 중단
+            }
+
+            int spawned = 0; // 실제 생성 적 수 초기화
+            for (int i = 0; i < encounter.Spawns.Count; i++)
+            {
+                EnemyEncounterSpawn spawn = encounter.Spawns[i]; // 현재 Encounter 배치 조회
+                if (spawn == null || spawn.Piece == null) continue; // 빈 배치 제외
+
+                PieceRuntimeState runtimePiece = _boardInputController.SpawnTestEnemy(spawn.Piece, spawn.Position); // 기존 보드·PieceView 생성 경로 사용
+                if (runtimePiece == null) continue; // 점유·경계 실패 제외
+                spawned++; // 실제 생성 수 누적
+                Debug.Log($"73일차 Encounter 적: {spawn.Piece.DisplayName} @ {spawn.Position}"); // 생성 결과 기록
+            }
+
+            if (spawned <= 0)
+            {
+                Debug.LogWarning("73일차 Encounter 적 생성 실패: 기존 RoundDefinition 편성으로 대체합니다."); // 전체 생성 실패 기록
+                SpawnInitialEnemies(); // 기존 편성으로 안전 대체
+                return; // 후속 로그 생략
+            }
+
+            Debug.Log($"73일차 Enemy Encounter: Type={_stageDefinition.StageType} / Phase={phase} / Stage={stage} / Seed={encounter.Seed} / Requested={encounter.Spawns.Count} / Spawned={spawned} / Threat={encounter.ThreatScore}"); // Encounter 재현 정보 기록
+        }
+
+        private List<PieceDefinition> BuildEnemySourcePool() // 카탈로그·Resources에서 일반 적 후보 수집
+        {
+            var pool = new List<PieceDefinition>(); // 적 후보 Pool 생성
+
+            for (int i = 0; i < _pieceCatalog.Cards.Count; i++)
+            {
+                AddEnemyCandidate(pool, _pieceCatalog.Cards[i]); // 시작 덱 카탈로그 후보 등록
+            }
+
+            PieceDefinition[] resources = Resources.LoadAll<PieceDefinition>(string.Empty); // 전체 PieceDefinition Resources 조회
+            for (int i = 0; i < resources.Length; i++)
+            {
+                AddEnemyCandidate(pool, resources[i]); // 독립 적 기물 후보 등록
+            }
+
+            return pool; // 일반 적 후보 Pool 반환
+        }
+
+        private static void AddEnemyCandidate(List<PieceDefinition> pool, PieceDefinition definition) // 일반 Enemy Pool 후보 등록
+        {
+            if (pool == null || !EnemyEncounterRules.CanUsePiece(definition)) return; // 빈 Pool·금지 기물 제외
+            if (pool.Contains(definition)) return; // 같은 에셋 중복 제외
+            pool.Add(definition); // 일반 적 후보 등록
         }
 
         private void EnsureConfiguredBoss() // MidBoss·FinalBoss RoundDefinition의 대형 보스 실제 생성
@@ -147,7 +217,7 @@ namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이
             for (int i = 0; i < _roundDefinition.Reinforcements.Count; i++) // 증원 목록 순회
             {
                 if (_processedReinforcementIndices.Contains(i)) continue; // 이미 처리한 증원 제외
-                var spawn = _roundDefinition.Reinforcements[i]; // 현재 증원 데이터 조회
+                EnemySpawnDefinition spawn = _roundDefinition.Reinforcements[i]; // 현재 증원 데이터 조회
                 if (spawn == null) // 빈 데이터 처리
                 {
                     _processedReinforcementIndices.Add(i); // 반복 방지 완료 표시
@@ -195,38 +265,6 @@ namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이
             }
 
             return null; // 일치 기물 없음
-        }
-
-        private PieceDefinition FindFirstNonKingDefinition() // 엘리트 추가 적으로 사용할 일반 기물 하나 선택
-        {
-            for (int i = 0; i < _pieceCatalog.Cards.Count; i++) // 기물 카탈로그 순회
-            {
-                PieceDefinition definition = _pieceCatalog.Cards[i]; // 현재 기물 데이터 조회
-                if (definition == null) continue; // 빈 데이터 제외
-                if (definition.MovementType == PieceMovementType.King) continue; // 플레이어 전용 킹 제외
-                return definition; // 첫 일반 기물 반환
-            }
-
-            return null; // 일반 기물 없음
-        }
-
-        private bool TryFindFreeEnemyCell(out Vector2Int cell) // 엘리트 추가 적용 적 진영 빈 칸 탐색
-        {
-            for (int y = BoardState.Height - 1; y >= BoardState.Height / 2; y--) // 적 진영 위쪽부터 순회
-            {
-                for (int x = 0; x < BoardState.Width; x++) // 현재 행 모든 칸 순회
-                {
-                    var tile = _runState.Board.GetTile(new Vector2Int(x, y)); // 실제 새 BoardState 타일 조회
-                    if (tile != null && tile.IsEnemyPlacementArea && !tile.IsOccupied) // 적 배치 영역 빈 칸 확인
-                    {
-                        cell = tile.BoardPosition; // 발견 좌표 반환
-                        return true; // 탐색 성공 반환
-                    }
-                }
-            }
-
-            cell = default; // 실패 기본값 지정
-            return false; // 빈 칸 없음 반환
         }
 
         private void SyncPlayerKingHp() // 새 전투에 다시 배치한 킹 기물 HP를 런 전체 KingHp와 동기화
