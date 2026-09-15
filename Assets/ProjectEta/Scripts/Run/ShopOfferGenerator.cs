@@ -12,7 +12,8 @@ namespace ProjectEta.Run
             int mapSeed,
             int phase,
             int stage,
-            string nodeId)
+            string nodeId,
+            IReadOnlyList<PieceDefinition> deadCards = null) // 사망 보유 카드 목록
         {
             int safeCount = candidateCount < 0 ? 0 : candidateCount; // 요청 상품 수 보정
             int safePhase = NormalizePhase(phase); // 페이즈 범위 보정
@@ -20,7 +21,7 @@ namespace ProjectEta.Run
             int ownedCount = ownedCards != null ? ownedCards.Count : 0; // 보유 카드 수 계산
             int seed = CreateSeed(mapSeed, safePhase, safeStage, nodeId, ownedCount); // 상점 고유 시드 생성
             CardRewardProfile profile = CreateShopProfile(safePhase, safeStage); // 상점 전용 등급 프로필 생성
-            IReadOnlyList<PieceDefinition> cards = CardRewardGenerator.Generate(sourcePool, ownedCards, safeCount, seed, profile); // 기존 해금·중복 규칙 기반 상품 카드 생성
+            IReadOnlyList<PieceDefinition> cards = CardRewardGenerator.Generate(sourcePool, ownedCards, deadCards, safeCount, seed, profile); // 전체 소유 카드 기반 상품 카드 생성
             var offers = new List<ShopOffer>(cards.Count); // 최종 상품 목록 생성
 
             for (int i = 0; i < cards.Count; i++)

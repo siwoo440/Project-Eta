@@ -1,8 +1,11 @@
 using System.Collections; // Run 완료 지연 확인 Coroutine 사용
-using System.Collections.Generic; // Achievement 큐와 카드 Snapshot 사용
+using System.Collections.Generic; // Achievement 큐 사용
 using UnityEngine; // MonoBehaviour·GameObject 사용
 using UnityEngine.SceneManagement; // 씬 전환 통합 처리
 using ProjectEta.Battle; // BattleController·TurnManager·BattleOutcome 사용
+using ProjectEta.Board; // BoardInputController 합성 이벤트 사용
+using ProjectEta.Cards; // DeckState 카드 획득 이벤트 사용
+using ProjectEta.Fusion; // FusionRecipe 합성 결과 사용
 using ProjectEta.Pieces; // PieceDefinition·PieceGrade 사용
 using ProjectEta.Run; // RunState·RunFlowPhase 사용
 
@@ -17,14 +20,12 @@ namespace ProjectEta.Steam
         private readonly HashSet<string> pendingAchievementIds = new HashSet<string>(); // Steam 준비 전 대기 Achievement ID
         private readonly HashSet<string> completedAchievementIds = new HashSet<string>(); // 현재 실행 중 처리 완료 Achievement ID
         private readonly List<string> flushBuffer = new List<string>(); // Achievement 큐 순회 버퍼
-        private readonly Dictionary<PieceDefinition, int> previousOwnedCounts = new Dictionary<PieceDefinition, int>(); // 이전 보유 카드 개수 Snapshot
-        private readonly Dictionary<PieceDefinition, int> currentOwnedCounts = new Dictionary<PieceDefinition, int>(); // 현재 보유 카드 개수 Snapshot
 
         private BattleController battleController; // 현재 BattleController
+        private BoardInputController boardInputController; // 현재 합성 입력 Controller
+        private DeckState deckState; // 현재 플레이어 카드 보유 상태
         private TurnManager turnManager; // 현재 TurnManager
         private RunState runState; // 현재 RunState
-        private int previousOwnedTotal; // 이전 보유 카드 총수
-        private bool hasOwnedSnapshot; // 보유 카드 Snapshot 준비 상태
         private Coroutine postBattleCoroutine; // 전투 후 Run 완료 확인 Coroutine
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -56,7 +57,6 @@ namespace ProjectEta.Steam
         private void Update() // Steam 게임 이벤트 감시 및 대기 Achievement 처리
         {
             EnsureBattleBinding(); // 현재 전투 상태 연결
-            RefreshOwnedCardSnapshot(); // 합성·5성 획득 상태 감시
             FlushPendingAchievements(); // Steam 준비 완료 Achievement 처리
         }
 
@@ -75,7 +75,6 @@ namespace ProjectEta.Steam
         private void HandleSceneLoaded(Scene scene, LoadSceneMode mode) // 씬별 Steam 통합 갱신
         {
             UnbindBattle(); // 이전 씬 전투 연결 정리
-            ResetOwnedCardSnapshot(); // 이전 런 카드 Snapshot 정리
 
             if (scene.name == "MainMenu")
             {
@@ -96,27 +95,40 @@ namespace ProjectEta.Steam
 
         private void EnsureBattleBinding() // 현재 BattleController와 TurnManager 연결
         {
-            if (battleController != null
-                && turnManager != null
-                && runState != null
-                && battleController.TurnManager == turnManager
-                && battleController.RunState == runState)
+            BattleController foundController = FindFirstObjectByType<BattleController>(); // 현재 씬 BattleController 탐색
+            BoardInputController foundBoardInput = FindFirstObjectByType<BoardInputController>(); // 현재 씬 합성 입력 탐색
+            if (foundController == null || foundController.TurnManager == null || foundController.RunState == null)
             {
                 return;
             }
 
-            BattleController foundController = FindFirstObjectByType<BattleController>(); // 현재 씬 BattleController 탐색
-            if (foundController == null || foundController.TurnManager == null || foundController.RunState == null)
+            if (battleController == foundController
+                && boardInputController == foundBoardInput
+                && deckState == foundController.RunState.Deck
+                && turnManager == foundController.TurnManager
+                && runState == foundController.RunState)
             {
                 return;
             }
 
             UnbindBattle(); // 이전 전투 이벤트 연결 해제
             battleController = foundController; // 현재 BattleController 저장
+            boardInputController = foundBoardInput; // 현재 합성 입력 저장
+            deckState = foundController.RunState.Deck; // 현재 플레이어 카드 보유 상태 저장
             turnManager = foundController.TurnManager; // 현재 TurnManager 저장
             runState = foundController.RunState; // 현재 RunState 저장
             turnManager.TurnChanged += HandleTurnChanged; // 전투 종료 이벤트 감시 연결
-            ResetOwnedCardSnapshot(); // 새 Run 보유 카드 Snapshot 초기화
+
+            if (boardInputController != null)
+            {
+                boardInputController.FusionCompleted += HandleFusionCompleted; // 실제 합성 완료 이벤트 감시 연결
+            }
+
+            if (deckState != null)
+            {
+                deckState.CardAcquired += HandleCardAcquired; // 보상·상점·이벤트 카드 획득 감시 연결
+                QueueExistingCardAchievements(deckState); // 복원된 5성 카드 Achievement 동기화
+            }
         }
 
         private void UnbindBattle() // 현재 전투 이벤트 연결 해제
@@ -126,6 +138,16 @@ namespace ProjectEta.Steam
                 turnManager.TurnChanged -= HandleTurnChanged; // TurnManager 이벤트 구독 해제
             }
 
+            if (boardInputController != null)
+            {
+                boardInputController.FusionCompleted -= HandleFusionCompleted; // 합성 완료 이벤트 구독 해제
+            }
+
+            if (deckState != null)
+            {
+                deckState.CardAcquired -= HandleCardAcquired; // 카드 획득 이벤트 구독 해제
+            }
+
             if (postBattleCoroutine != null)
             {
                 StopCoroutine(postBattleCoroutine); // 이전 전투 후속 확인 중단
@@ -133,6 +155,8 @@ namespace ProjectEta.Steam
             }
 
             battleController = null; // BattleController 참조 초기화
+            boardInputController = null; // 합성 입력 참조 초기화
+            deckState = null; // 카드 보유 상태 참조 초기화
             turnManager = null; // TurnManager 참조 초기화
             runState = null; // RunState 참조 초기화
         }
@@ -170,85 +194,58 @@ namespace ProjectEta.Steam
             postBattleCoroutine = null; // Run 완료 확인 Coroutine 참조 정리
         }
 
-        private void RefreshOwnedCardSnapshot() // 보유 카드 변화에서 합성·5성 획득 감지
+        private void HandleFusionCompleted(FusionRecipe recipe) // 실제 합성 성공 Achievement 연결
         {
-            if (runState == null || runState.Deck == null || runState.Deck.OwnedCardPool == null)
+            if (recipe == null || recipe.Result == null)
             {
                 return;
             }
 
-            currentOwnedCounts.Clear(); // 현재 카드 Snapshot 버퍼 초기화
-            int currentOwnedTotal = 0; // 현재 보유 카드 총수 초기화
-            bool hasFiveStar = false; // 현재 5성 카드 보유 상태 초기화
-
-            for (int i = 0; i < runState.Deck.OwnedCardPool.Count; i++)
-            {
-                PieceDefinition card = runState.Deck.OwnedCardPool[i]; // 현재 보유 카드 조회
-                if (card == null)
-                {
-                    continue;
-                }
-
-                currentOwnedTotal++; // 유효 보유 카드 총수 증가
-                hasFiveStar |= card.Grade == PieceGrade.FiveStar; // 5성 카드 보유 여부 누적
-
-                if (!currentOwnedCounts.TryGetValue(card, out int count))
-                {
-                    count = 0; // 첫 카드 개수 기본값
-                }
-
-                currentOwnedCounts[card] = count + 1; // 카드 정의별 보유 개수 기록
-            }
-
-            if (hasFiveStar)
-            {
-                SteamGameEventBridge.QueueCardAcquired(PieceGrade.FiveStar, QueueAchievement); // 모든 획득 경로의 5성 Achievement 보장
-            }
-
-            if (hasOwnedSnapshot)
-            {
-                bool hasAddedCard = false; // 이전 Snapshot 대비 새 카드 존재 여부
-                PieceGrade addedGrade = PieceGrade.OneStar; // 합성 결과 후보 등급 기본값
-
-                foreach (KeyValuePair<PieceDefinition, int> pair in currentOwnedCounts)
-                {
-                    previousOwnedCounts.TryGetValue(pair.Key, out int previousCount); // 이전 동일 카드 보유 개수 조회
-                    if (pair.Value <= previousCount)
-                    {
-                        continue;
-                    }
-
-                    hasAddedCard = true; // 새로 증가한 카드 존재 기록
-
-                    if ((int)pair.Key.Grade > (int)addedGrade)
-                    {
-                        addedGrade = pair.Key.Grade; // 증가 카드 중 가장 높은 등급 보존
-                    }
-                }
-
-                if (SteamGameEventBridge.IsFusionPoolDelta(previousOwnedTotal, currentOwnedTotal, hasAddedCard))
-                {
-                    SteamGameEventBridge.QueueFusionCompleted(addedGrade, QueueAchievement); // 재료 2→결과 1 변화 기반 합성 Achievement 등록
-                }
-            }
-
-            previousOwnedCounts.Clear(); // 이전 Snapshot 저장소 초기화
-
-            foreach (KeyValuePair<PieceDefinition, int> pair in currentOwnedCounts)
-            {
-                previousOwnedCounts[pair.Key] = pair.Value; // 현재 카드 개수를 다음 프레임 기준으로 저장
-            }
-
-            previousOwnedTotal = currentOwnedTotal; // 현재 보유 총수를 다음 프레임 기준으로 저장
-            hasOwnedSnapshot = true; // 카드 Snapshot 준비 완료 표시
+            SteamGameEventBridge.QueueFusionCompleted(recipe.Result.Grade, QueueAchievement); // 합성과 5성 Achievement 큐 등록
         }
 
-        private void ResetOwnedCardSnapshot() // 카드 Snapshot 상태 초기화
+        private void HandleCardAcquired(PieceDefinition card) // 실제 외부 카드 획득 Achievement 연결
         {
-            previousOwnedCounts.Clear(); // 이전 카드 개수 제거
-            currentOwnedCounts.Clear(); // 현재 카드 개수 제거
-            previousOwnedTotal = 0; // 이전 카드 총수 초기화
-            hasOwnedSnapshot = false; // Snapshot 미준비 상태 복원
+            if (card == null)
+            {
+                return;
+            }
+
+            SteamGameEventBridge.QueueCardAcquired(card.Grade, QueueAchievement); // 5성 카드 획득 Achievement 큐 등록
+        }
+
+        private void QueueExistingCardAchievements(DeckState currentDeck) // 복원 카드 Achievement 상태 동기화
+        {
+            if (currentDeck == null)
+            {
+                return;
+            }
+
+            if (!HasFiveStar(currentDeck.OwnedCardPool) && !HasFiveStar(currentDeck.DeadCardPile)) // 정상·사망 5성 보유 여부 확인
+            {
+                return;
+            }
+
+            SteamGameEventBridge.QueueCardAcquired(PieceGrade.FiveStar, QueueAchievement); // 복원된 5성 Achievement 큐 등록
+        }
+
+        private static bool HasFiveStar(IReadOnlyList<PieceDefinition> cards) // 카드 목록의 5성 보유 여부 확인
+        {
+            if (cards == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < cards.Count; i++)
+            {
+                PieceDefinition card = cards[i]; // 현재 복원 카드 조회
+                if (card != null && card.Grade == PieceGrade.FiveStar)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void QueueAchievement(string apiName) // Achievement ID 안전 큐 등록

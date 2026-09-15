@@ -26,7 +26,7 @@ namespace ProjectEta.Run
             result = null; // 기본 실패 결과 초기화
             if (runState == null || economy == null || offer == null || offer.Card == null) return false; // 필수 상태 누락 차단
             if (offer.IsPurchased) return false; // 구매 완료 상품 재구매 차단
-            if (!CardRewardRules.CanOffer(offer.Card, runState.Deck.OwnedCardPool)) return false; // 획득 규칙 위반 상품 차단
+            if (!CardRewardRules.CanOffer(offer.Card, runState.Deck.OwnedCardPool, runState.Deck.DeadCardPile)) return false; // 정상·사망 보유 기준 획득 규칙 위반 상품 차단
             if (!economy.TrySpend(offer.Price)) return false; // Gold 부족 구매 차단
 
             if (!CardRewardRules.TryAddOwnedCard(runState.Deck, offer.Card))

@@ -382,10 +382,27 @@ namespace ProjectEta.Run
         public int CountOwnedCopies(PieceDefinition definition)
         {
             if (definition == null) return 0; // 기준 정의 누락 처리
+            string pieceId = definition.PieceId; // 기준 기물 식별자 조회
+            bool usePieceId = !string.IsNullOrWhiteSpace(pieceId); // 유효 식별자 비교 여부 결정
 
             int count = 0; // 누적 수 초기화
-            foreach (var card in Deck.OwnedCardPool) if (card == definition) count++; // 정상 보유 풀 포함
-            foreach (var card in Deck.DeadCardPile) if (card == definition) count++; // 사망 카드 소유권 포함
+
+            foreach (var card in Deck.OwnedCardPool) // 정상 보유 카드 순회
+            {
+                if (usePieceId ? card != null && string.Equals(card.PieceId, pieceId, StringComparison.Ordinal) : card == definition) // 동일 카드 판정
+                {
+                    count++; // 정상 보유 수 증가
+                }
+            }
+
+            foreach (var card in Deck.DeadCardPile) // 사망 보유 카드 순회
+            {
+                if (usePieceId ? card != null && string.Equals(card.PieceId, pieceId, StringComparison.Ordinal) : card == definition) // 동일 카드 판정
+                {
+                    count++; // 사망 보유 수 증가
+                }
+            }
+
             return count; // 총 보유 수 반환
         }
 

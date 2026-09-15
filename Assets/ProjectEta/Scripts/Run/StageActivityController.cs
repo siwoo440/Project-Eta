@@ -126,7 +126,8 @@ namespace ProjectEta.Run
                 _runState.RouteMap.MapSeed,
                 phase,
                 _runState.CurrentRound,
-                _runState.RouteMap.CurrentNodeId); // Phase·Stage·Node 기반 상품 생성
+                _runState.RouteMap.CurrentNodeId,
+                _runState.Deck.DeadCardPile); // Phase·Stage·Node·전체 소유 카드 기반 상품 생성
 
             for (int i = 0; i < generated.Count; i++)
             {
@@ -187,7 +188,7 @@ namespace ProjectEta.Run
                 ShopOffer offer = _shopOffers[i]; // 현재 상품 조회
                 if (offer == null || offer.Card == null) continue; // 빈 상품 제외
                 PieceDefinition card = offer.Card; // 상품 카드 조회
-                bool canBuy = !offer.IsPurchased && _economy.Currency >= offer.Price && CardRewardRules.CanOffer(card, _runState.Deck.OwnedCardPool); // 현재 구매 가능 여부 계산
+                bool canBuy = !offer.IsPurchased && _economy.Currency >= offer.Price && CardRewardRules.CanOffer(card, _runState.Deck.OwnedCardPool, _runState.Deck.DeadCardPile); // 정상·사망 보유 기준 현재 구매 가능 여부 계산
                 ShopOffer captured = offer; // 버튼 콜백 상품 고정
                 string title = offer.IsPurchased ? $"✓ {card.DisplayName}  {GetStars(card)}" : $"{card.DisplayName}  {GetStars(card)}"; // 구매 상태 제목 생성
                 string description = offer.IsPurchased ? "구매 완료" : $"HP {card.BaseHp} / ATK {card.BaseAtk}   ·   {offer.Price} Gold"; // 구매 상태 설명 생성
@@ -355,7 +356,7 @@ namespace ProjectEta.Run
             {
                 ShopOffer offer = _shopOffers[i]; // 현재 상품 조회
                 if (offer == null || offer.Card == null || offer.IsPurchased) continue; // 빈 상품·구매 완료 제외
-                if (CardRewardRules.CanOffer(offer.Card, _runState.Deck.OwnedCardPool)) return true; // 실제 구매 가능 상품 확인
+                if (CardRewardRules.CanOffer(offer.Card, _runState.Deck.OwnedCardPool, _runState.Deck.DeadCardPile)) return true; // 정상·사망 보유 기준 구매 가능 상품 확인
             }
 
             return false; // 구매 가능 상품 없음
@@ -497,6 +498,7 @@ namespace ProjectEta.Run
             return CardRewardGenerator.Generate(
                 _cardCatalog.Cards,
                 _runState.Deck.OwnedCardPool,
+                _runState.Deck.DeadCardPile,
                 StageEventRules.EventCardChoiceCount,
                 seed,
                 profile); // 이벤트 카드 후보 생성

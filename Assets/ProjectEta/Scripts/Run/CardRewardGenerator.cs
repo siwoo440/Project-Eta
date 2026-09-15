@@ -15,7 +15,12 @@ namespace ProjectEta.Run
 
         public static IReadOnlyList<PieceDefinition> Generate(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, int candidateCount, int seed, RunContentUnlockSnapshot snapshot)
         {
-            List<PieceDefinition> eligible = BuildEligible(sourcePool, ownedCards, snapshot); // 기존 획득 가능 후보 생성
+            return GenerateUniform(sourcePool, ownedCards, null, candidateCount, seed, snapshot); // 기존 균등 후보 생성 위임
+        }
+
+        private static IReadOnlyList<PieceDefinition> GenerateUniform(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, IReadOnlyList<PieceDefinition> deadCards, int candidateCount, int seed, RunContentUnlockSnapshot snapshot) // 전체 소유 카드 기반 균등 후보 생성
+        {
+            List<PieceDefinition> eligible = BuildEligible(sourcePool, ownedCards, deadCards, snapshot); // 전체 소유 기준 획득 가능 후보 생성
             var random = new Random(seed); // 현재 보상 독립 난수 생성기
 
             for (int i = eligible.Count - 1; i > 0; i--)
@@ -36,11 +41,22 @@ namespace ProjectEta.Run
             return Generate(sourcePool, ownedCards, candidateCount, seed, snapshot, profile); // 품질 기반 후보 생성 위임
         }
 
+        public static IReadOnlyList<PieceDefinition> Generate(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, IReadOnlyList<PieceDefinition> deadCards, int candidateCount, int seed, CardRewardProfile profile) // 사망 카드 포함 후보 생성
+        {
+            RunContentUnlockSnapshot snapshot = RunContentUnlockSnapshotService.GetOrCreateForActiveRun(MetaProgressService.Current); // 현재 런 해금 Snapshot 조회
+            return Generate(sourcePool, ownedCards, deadCards, candidateCount, seed, snapshot, profile); // 전체 소유 카드 기반 후보 생성 위임
+        }
+
         public static IReadOnlyList<PieceDefinition> Generate(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, int candidateCount, int seed, RunContentUnlockSnapshot snapshot, CardRewardProfile profile)
         {
-            if (profile == null) return Generate(sourcePool, ownedCards, candidateCount, seed, snapshot); // 품질 누락 시 기존 생성 방식 유지
+            return Generate(sourcePool, ownedCards, null, candidateCount, seed, snapshot, profile); // 기존 호출의 사망 카드 없는 후보 생성
+        }
 
-            List<PieceDefinition> remaining = BuildEligible(sourcePool, ownedCards, snapshot); // 현재 획득 가능한 전체 후보 생성
+        private static IReadOnlyList<PieceDefinition> Generate(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, IReadOnlyList<PieceDefinition> deadCards, int candidateCount, int seed, RunContentUnlockSnapshot snapshot, CardRewardProfile profile) // 전체 소유 카드 기반 품질 후보 생성
+        {
+            if (profile == null) return GenerateUniform(sourcePool, ownedCards, deadCards, candidateCount, seed, snapshot); // 품질 누락 시 전체 소유 기준 균등 후보 생성
+
+            List<PieceDefinition> remaining = BuildEligible(sourcePool, ownedCards, deadCards, snapshot); // 현재 획득 가능한 전체 후보 생성
             int safeCount = Math.Max(0, Math.Min(candidateCount, remaining.Count)); // 실제 생성 가능한 후보 수 계산
             var result = new List<PieceDefinition>(safeCount); // 최종 가중 선택 결과
             var random = new Random(seed); // 동일 Seed 재현용 독립 난수 생성기
@@ -57,6 +73,11 @@ namespace ProjectEta.Run
 
         private static List<PieceDefinition> BuildEligible(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, RunContentUnlockSnapshot snapshot)
         {
+            return BuildEligible(sourcePool, ownedCards, null, snapshot); // 기존 호출의 사망 카드 없는 후보 생성
+        }
+
+        private static List<PieceDefinition> BuildEligible(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, IReadOnlyList<PieceDefinition> deadCards, RunContentUnlockSnapshot snapshot) // 전체 소유 카드 기반 후보 생성
+        {
             var eligible = new List<PieceDefinition>(); // 획득 가능 후보 임시 목록
             var uniqueIds = new HashSet<string>(StringComparer.Ordinal); // 동일 PieceId 후보 중복 차단 집합
 
@@ -66,7 +87,7 @@ namespace ProjectEta.Run
             {
                 PieceDefinition definition = sourcePool[i]; // 현재 카드 정의 조회
                 if (!MetaContentAvailabilityService.IsPieceAvailable(definition, snapshot)) continue; // 잠긴 영구 해금 기물 제외
-                if (!CardRewardRules.CanOffer(definition, ownedCards)) continue; // 일반 Reward 획득 불가 카드 제외
+                if (!CardRewardRules.CanOffer(definition, ownedCards, deadCards)) continue; // 일반 Reward 획득 불가 카드 제외
                 if (!uniqueIds.Add(definition.PieceId)) continue; // 동일 카드 중복 후보 제외
                 eligible.Add(definition); // 정상 후보 등록
             }

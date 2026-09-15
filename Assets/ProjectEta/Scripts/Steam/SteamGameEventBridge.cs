@@ -57,11 +57,5 @@ namespace ProjectEta.Steam
             queueAchievement(SteamAchievementIds.FirstRunClear); // 첫 Run 클리어 Achievement 등록
         }
 
-        public static bool IsFusionPoolDelta(int previousTotal, int currentTotal, bool hasAddedCard) // 보유 카드 변화 기반 합성 성공 판정
-        {
-            return previousTotal >= 2
-                && currentTotal == previousTotal - 1
-                && hasAddedCard; // 재료 2장 제거와 결과 1장 추가 형태 확인
-        }
     }
 }

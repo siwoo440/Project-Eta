@@ -4,6 +4,7 @@ using NUnit.Framework; // EditMode 테스트 어트리뷰트와 Assert를 사용
 using UnityEngine; // GameObject, ScriptableObject, Object, Vector2Int를 사용하기 위한 네임스페이스
 using ProjectEta.Battle; // TurnManager를 사용하기 위한 네임스페이스
 using ProjectEta.Board; // BoardView, BoardInputController를 사용하기 위한 네임스페이스
+using ProjectEta.Cards; // 공통 카드 보유 상한을 사용하기 위한 네임스페이스
 using ProjectEta.Fusion; // FusionRecipe, FusionRecipeDatabase를 사용하기 위한 네임스페이스
 using ProjectEta.Pieces; // PieceDefinition을 사용하기 위한 네임스페이스
 using ProjectEta.Run; // RunState를 사용하기 위한 네임스페이스
@@ -243,11 +244,11 @@ namespace ProjectEta.Tests.EditMode // 프로젝트 η EditMode 테스트 네임
             }
         }
 
-        [Test] // 22일차: 4·5성 기물의 동일 기물 보유 상한이 기획서 기본안과 일치하는지 검증
+        [Test] // 81일차: 모든 등급의 동일 기물 보유 상한이 공통 규칙과 일치하는지 검증
         public void GetOwnedLimit_MatchesDesignDocumentLimits()
         {
-            Assert.AreEqual(int.MaxValue, FusionRuleValidator.GetOwnedLimit(PieceGrade.OneStar)); // 1성은 제한 없음
-            Assert.AreEqual(int.MaxValue, FusionRuleValidator.GetOwnedLimit(PieceGrade.ThreeStar)); // 3성도 제한 없음
+            Assert.AreEqual(CardOwnershipRules.DefaultOwnedLimit, FusionRuleValidator.GetOwnedLimit(PieceGrade.OneStar)); // 1성은 기본 보유 상한 적용
+            Assert.AreEqual(CardOwnershipRules.DefaultOwnedLimit, FusionRuleValidator.GetOwnedLimit(PieceGrade.ThreeStar)); // 3성도 기본 보유 상한 적용
             Assert.AreEqual(FusionRuleValidator.FourStarOwnedLimit, FusionRuleValidator.GetOwnedLimit(PieceGrade.FourStar)); // 4성은 지정된 상한
             Assert.AreEqual(FusionRuleValidator.FiveStarOwnedLimit, FusionRuleValidator.GetOwnedLimit(PieceGrade.FiveStar)); // 5성은 지정된 상한
             Assert.AreEqual(1, FusionRuleValidator.FiveStarOwnedLimit); // 5성은 동일 최상위 기물 1개 제한이어야 함

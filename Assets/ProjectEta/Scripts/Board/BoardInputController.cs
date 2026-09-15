@@ -53,6 +53,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         public event Action HandChanged; // 18일차: Draw·소환 등 실제 플레이어 손패가 바뀔 때 카드 UI에 알리는 이벤트
         public event Action DeckChanged; // 19일차: 보유 풀·드로우 더미·죽은 카드 더미 구성이 바뀔 때 덱/무덤 패널 UI에 알리는 이벤트
         public event Action FusionSelectionChanged; // 21일차: 합성 모드 On/Off, 재료 선택, 결과 미리보기가 바뀔 때 합성 패널 UI에 알리는 이벤트
+        public event Action<FusionRecipe> FusionCompleted; // 81일차: 실제 합성 성공과 사용 레시피를 알리는 이벤트
         public event Action<FusionRecipe> HiddenRecipeDiscovered; // 22일차: 숨김 합성식을 이번 합성으로 처음 발견했을 때 알리는 이벤트
         public event Action<PieceRuntimeState> SelectionChanged; // 31일차: 보드 위 기물 선택이 바뀌거나 해제될 때(null) 정보 패널 UI에 알리는 이벤트
 
@@ -402,6 +403,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             if (_selectedCard == materialA || _selectedCard == materialB) _selectedCard = null; // 합성에 쓰인 카드가 숫자키로 선택돼 있었다면 선택 해제
 
             Debug.Log($"합성: {materialA.DisplayName} + {materialB.DisplayName} -> {recipe.Result.DisplayName}"); // 합성 결과를 콘솔에 출력
+            FusionCompleted?.Invoke(recipe); // 실제 합성 성공 이벤트 전달
 
             if (_runState != null && _runState.FusionDiscovery.TryMarkDiscovered(recipe)) // 22일차: 숨김 레시피를 이번 합성으로 처음 성공시켰으면
             {

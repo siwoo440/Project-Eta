@@ -14,10 +14,19 @@ namespace ProjectEta.Cards
         public IReadOnlyList<PieceDefinition> DrawPile => _drawPile; // 외부에서 읽는 드로우 더미
         public IReadOnlyList<PieceDefinition> DeadCardPile => _deadCardPile; // 외부에서 읽는 죽은 카드 더미
 
+        public event Action<PieceDefinition> CardAcquired; // 외부 카드 획득 완료 이벤트
+
         public void AddToOwnedPool(PieceDefinition card)
         {
             if (card == null) return; // null 카드는 상태에 넣지 않고 종료
             _ownedCardPool.Add(card); // 보유 카드 풀에 카드 추가
+        }
+
+        public void AddAcquiredCard(PieceDefinition card) // 보상·상점·이벤트 카드 획득 등록
+        {
+            if (card == null) return; // null 획득 카드 차단
+            _ownedCardPool.Add(card); // 보유 카드 풀에 획득 카드 추가
+            CardAcquired?.Invoke(card); // 실제 획득 카드 이벤트 전달
         }
 
         public bool RemoveFromOwnedPool(PieceDefinition card)

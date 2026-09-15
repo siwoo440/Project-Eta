@@ -1,11 +1,12 @@
+using ProjectEta.Cards; // 공통 카드 보유 상한 사용
 using ProjectEta.Pieces; // PieceDefinition, PieceGrade, PieceCategory를 사용하기 위한 네임스페이스
 
 namespace ProjectEta.Fusion // 합성 관련 타입을 모아두는 네임스페이스
 {
     public static class FusionRuleValidator // 22일차: 기획서 5.7 합성 등급·수량 규칙을 한 곳에서 판정하는 정적 검증기
     {
-        public const int FourStarOwnedLimit = 2; // 4성 기물은 동일 기물 기준 최대 2개까지 보유 가능(기획서 "제한을 둘 수 있다"의 기본안)
-        public const int FiveStarOwnedLimit = 1; // 5성 기물은 동일 최상위 기물 1개로 제한(기획서 기본안)
+        public const int FourStarOwnedLimit = CardOwnershipRules.FourStarOwnedLimit; // 기존 호출 호환용 4성 보유 상한
+        public const int FiveStarOwnedLimit = CardOwnershipRules.FiveStarOwnedLimit; // 기존 호출 호환용 5성 보유 상한
 
         public static bool IsFusableMaterial(PieceDefinition material) // 해당 기물이 합성 재료로 사용 가능한 분류인지 판정하는 메서드
         {
@@ -15,14 +16,12 @@ namespace ProjectEta.Fusion // 합성 관련 타입을 모아두는 네임스페
 
         public static int GetOwnedLimit(PieceGrade grade) // 등급별 동일 기물 보유 상한을 반환하는 메서드
         {
-            if (grade == PieceGrade.FiveStar) return FiveStarOwnedLimit; // 5성은 1개 제한
-            if (grade == PieceGrade.FourStar) return FourStarOwnedLimit; // 4성은 2개 제한
-            return int.MaxValue; // 1~3성은 별도 상한 없음
+            return CardOwnershipRules.GetOwnedLimit(grade); // 공통 등급별 보유 상한 반환
         }
 
         public static bool HasOwnedLimit(PieceGrade grade) // 해당 등급에 수량 제한이 걸려 있는지 확인하는 메서드
         {
-            return GetOwnedLimit(grade) != int.MaxValue; // 상한이 무제한이 아니면 제한이 있는 등급
+            return grade == PieceGrade.FourStar || grade == PieceGrade.FiveStar; // 보드 배치 제한 대상 등급 반환
         }
 
         public static bool IsGradeStepValid(FusionRecipe recipe) // 합성 결과가 "한 번에 한 등급" 상승 규칙을 지키는지 판정하는 메서드

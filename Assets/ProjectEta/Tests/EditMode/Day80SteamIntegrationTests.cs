@@ -58,20 +58,5 @@ namespace ProjectEta.Steam.Tests
             Assert.That(queued, Is.EquivalentTo(new[] { SteamAchievementIds.FirstRunClear })); // 첫 Run 클리어 ID 등록 검증
         }
 
-        [Test]
-        public void IsFusionPoolDelta_WhenTwoMaterialsBecomeOneResult_ReturnsTrue() // 합성 보유 풀 변화 판정 검증
-        {
-            bool result = SteamGameEventBridge.IsFusionPoolDelta(6, 5, true); // 재료 2장 제거·결과 1장 추가 형태 전달
-
-            Assert.That(result, Is.True); // 합성 변화로 판정 검증
-        }
-
-        [Test]
-        public void IsFusionPoolDelta_WhenOnlyCardRemoved_ReturnsFalse() // 단순 카드 제거 합성 오판 방지 검증
-        {
-            bool result = SteamGameEventBridge.IsFusionPoolDelta(6, 5, false); // 카드 제거만 발생한 형태 전달
-
-            Assert.That(result, Is.False); // 합성 변화 아님 검증
-        }
     }
 }

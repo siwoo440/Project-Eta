@@ -127,7 +127,7 @@ namespace ProjectEta.Run
             int safeRewardStage = Mathf.Clamp(rewardStage, RoundState.FirstRound, RoundState.FinalRound); // 보상 계산 Stage 범위 보정
             CardRewardProfile profile = CardRewardQualityRules.GetProfile(safeRewardStage, source, rewardProfileId); // Stage·Source·ProfileId 기반 품질 계산
             int seed = CreateRewardSeed(source, safeRewardStage); // 현재 런 상태 기반 재현 가능한 시드 생성
-            var candidates = CardRewardGenerator.Generate(_rewardCatalog.Cards, _runState.Deck.OwnedCardPool, CandidateCount, seed, profile); // 품질 가중 카드 3택 후보 생성
+            var candidates = CardRewardGenerator.Generate(_rewardCatalog.Cards, _runState.Deck.OwnedCardPool, _runState.Deck.DeadCardPile, CandidateCount, seed, profile); // 정상·사망 보유 카드 기반 품질 가중 후보 생성
 
             if (candidates.Count == 0)
             {
