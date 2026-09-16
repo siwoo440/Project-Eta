@@ -24,9 +24,12 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         [SerializeField] private PieceDefinition _bishopDefinition; // 프로토타입 시작 풀에 넣을 비숍 카드 데이터
         [SerializeField] private PieceDefinition _rookDefinition; // 프로토타입 시작 풀에 넣을 룩 카드 데이터
         [SerializeField] private PieceDefinition _queenDefinition; // 프로토타입 시작 풀에 넣을 퀸 카드 데이터
+        [SerializeField] private PieceDatabase _pieceDatabase; // 84일차: 합성 성장 진단에 사용할 전체 기물 데이터베이스
         [SerializeField] private FusionRecipeDatabase _fusionRecipeDatabase; // 21일차: 재료 2장으로 합성 레시피를 조회할 데이터베이스
 
         public RunState RunState => _runState; // 현재 입력이 변경하는 실제 런 상태
+        public PieceDatabase PieceDatabase => _pieceDatabase; // 84일차: F1 합성 콘텐츠 진단용 기물 데이터베이스
+        public FusionRecipeDatabase FusionRecipeDatabase => _fusionRecipeDatabase; // 84일차: F1 합성 콘텐츠 진단용 레시피 데이터베이스
         public HandState HandState => _handState; // 현재 입력이 변경하는 실제 플레이어 손패 상태
         public HandState EnemyHandState => _enemyHandState; // 17일차 추가: 적 턴 자동 소환에 사용하는 프로토타입 적 손패
         public DeckState EnemyDeck => _enemyDeck; // 20일차 추가: 플레이어와 동일한 구조의 적 보유 풀·드로우·죽은 카드 더미

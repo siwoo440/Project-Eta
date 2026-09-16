@@ -4,6 +4,9 @@ using UnityEngine.InputSystem; // F1·마우스 입력 사용
 using UnityEngine.SceneManagement; // 현재 씬 확인
 using ProjectEta.AI; // AI 점수·성능 정보 사용
 using ProjectEta.Battle; // 전투 상태·결과·배속 사용
+using ProjectEta.Board; // 보드 입력과 합성 데이터베이스 사용
+using ProjectEta.Fusion; // 합성 성장 콘텐츠 진단 사용
+using ProjectEta.Pieces; // 기물 등급 표시 사용
 using ProjectEta.Run; // 런 흐름·경제 상태 사용
 using ProjectEta.SceneFlow; // Battle 초기화 진단 사용
 using ProjectEta.UI; // 개발 빌드 표시 정책 사용
@@ -29,7 +32,9 @@ namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
         private readonly AIDebugScoreSnapshotBuilder _snapshotBuilder = new AIDebugScoreSnapshotBuilder(); // AI 점수 스냅샷 생성기
         private AIDebugScoreSnapshot _snapshot = AIDebugScoreSnapshot.Empty(); // 최신 AI 점수 정보
         private BattleRuntimeDiagnostics _runtimeDiagnostics = BattleRuntimeDiagnostics.Empty; // 최신 Battle 초기화 진단
+        private FusionProgressionReport _fusionProgression = FusionProgressionReport.Empty; // 최신 1~5성 합성 성장 진단
         private BattleController _battleController; // 현재 전투 관리자
+        private BoardInputController _boardInputController; // 현재 합성 데이터 연결 관리자
         private Rect _windowRect; // 왼쪽 패널 영역
         private Vector2 _statusScrollPosition; // 상태 페이지 스크롤 위치
         private Vector2 _battleScrollPosition; // 전투 페이지 스크롤 위치
@@ -151,13 +156,19 @@ namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
             if (SceneManager.GetActiveScene().name != "Battle") // Battle 씬 여부 확인
             { // 조건 범위
                 _battleController = null; // 이전 전투 참조 제거
+                _boardInputController = null; // 이전 합성 데이터 참조 제거
                 _snapshot = AIDebugScoreSnapshot.Empty(); // AI 정보 초기화
                 _runtimeDiagnostics = BattleRuntimeDiagnostics.Empty; // Battle 진단 초기화
+                _fusionProgression = FusionProgressionReport.Empty; // 합성 성장 진단 초기화
                 return; // 갱신 종료
             } // 조건 종료
 
             _runtimeDiagnostics = SceneRuntimeBootstrap.RefreshBattleDiagnostics(); // 현재 관리자 누락·중복 갱신
             if (_battleController == null) _battleController = Object.FindFirstObjectByType<BattleController>(); // 전투 관리자 최초 탐색
+            if (_boardInputController == null) _boardInputController = Object.FindFirstObjectByType<BoardInputController>(); // 합성 데이터 관리자 최초 탐색
+            _fusionProgression = _boardInputController != null // 보드 입력 연결 여부 확인
+                ? FusionProgressionAnalyzer.Analyze(_boardInputController.PieceDatabase, _boardInputController.FusionRecipeDatabase) // 실제 등록 콘텐츠 분석
+                : FusionProgressionReport.Empty; // 연결 전 빈 결과 적용
 
             if (_currentPage != AiScorePage) return; // AI 페이지 외 평가 생략
             if (_battleController == null || _battleController.RunState == null) // AI 평가 필수 상태 확인
@@ -286,6 +297,19 @@ namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
                 } // 반복 종료
 
                 EndSection(); // 초기화 진단 구역 종료
+            } // 조건 종료
+
+            if (_fusionProgression != FusionProgressionReport.Empty) // 합성 콘텐츠 진단 존재 확인
+            { // 조건 범위
+                BeginSection("합성 성장"); // 합성 성장 진단 구역 시작
+                DrawKeyValue("상태", BuildFusionProgressionStatus(_fusionProgression)); // 전체 성장 상태 출력
+                DrawKeyValue("DB 연결", _fusionProgression.AreDatabasesConnected ? "정상" : "확인 필요"); // 기물·레시피 DB 연결 상태 출력
+                GUILayout.Label(_fusionProgression.BuildGradeSummary(), _mutedLabelStyle); // 등급별 기물·레시피 수 출력
+                DrawKeyValue("다음 기물", FormatMissingGrade(_fusionProgression.FirstMissingPieceGrade)); // 첫 누락 기물 등급 출력
+                DrawKeyValue("다음 레시피", FormatMissingGrade(_fusionProgression.FirstMissingRecipeGrade)); // 첫 누락 결과 레시피 등급 출력
+                DrawKeyValue("경로 단절", FormatMissingGrade(_fusionProgression.FirstUnreachableGrade)); // 1성 시작 첫 도달 불가 등급 출력
+                DrawKeyValue("데이터 문제", _fusionProgression.ContentIssueCount.ToString()); // 잘못된 레시피 수 출력
+                EndSection(); // 합성 성장 진단 구역 종료
             } // 조건 종료
 
             if (_battleController == null || _battleController.RunState == null) // 전투 상태 누락 확인
@@ -473,6 +497,17 @@ namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
         private static string GetCurrencyText(RunState runState) // 현재 런 재화 문자열 반환
         { // 메서드 범위
             return RunEconomyService.TryGet(runState, out RunEconomyState economy) ? economy.Currency.ToString() : "-"; // 기존 경제 상태만 읽기
+        } // 메서드 종료
+
+        private static string FormatMissingGrade(PieceGrade? grade) // 누락 등급 표시 문자열 생성
+        { // 메서드 범위
+            return grade.HasValue ? $"{(int)grade.Value}성" : "없음"; // 누락 등급 또는 완료 문구 반환
+        } // 메서드 종료
+
+        private static string BuildFusionProgressionStatus(FusionProgressionReport report) // 합성 성장 상태 문구 생성
+        { // 메서드 범위
+            if (report == null || !report.AreDatabasesConnected) return "DB 연결 확인"; // DB 누락 상태 반환
+            return report.HasCompleteGradeCoverage ? "1~5성 연결 완료" : "상위 등급 등록 필요"; // 성장 완성 여부 문구 반환
         } // 메서드 종료
 
         private static string FormatEntry(AIDebugScoreEntry entry) // AI 점수 한 줄 생성
