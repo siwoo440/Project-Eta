@@ -14,7 +14,6 @@ namespace ProjectEta.UI
         private const string RoundSummaryCanvasName = "RoundSummaryCanvas"; // 기존 중앙 중복 라운드 Canvas 이름
         private const string TurnStatusCanvasName = "TurnStatusCanvas"; // 기존 중앙 턴 상태 Canvas 이름
         private const string DeploymentBannerCanvasName = "DeploymentTurnBannerCanvas"; // 기존 중앙 배치 배너 Canvas 이름
-        private const string BossLabel = "BOSS"; // 보스 체력바 식별용 고정 라벨
         private static readonly Vector2 TopLeftAnchor = new Vector2(0f, 1f); // 좌측 상단 공통 앵커 값
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -37,7 +36,6 @@ namespace ProjectEta.UI
             ApplyBattleHudLayout(); // 핵심 Battle HUD를 좌측 상단으로 정렬
             ApplyKingPlacementLayout(); // King 배치 안내를 Battle HUD 아래로 정렬
             ApplyInteractionLayout(); // 행동 안내를 King 안내 아래로 정렬
-            ApplyBossBarLayout(); // 보스 체력바를 상단 중앙 같은 선으로 정렬
             SuppressLegacyOverlays(); // 중앙 중복 UI와 조작 범례 숨김
         }
 
@@ -159,60 +157,6 @@ namespace ProjectEta.UI
             {
                 legendTransform.gameObject.SetActive(false); // 불필요한 조작·색상 범례 Text 제거
             }
-        }
-
-        private static void ApplyBossBarLayout()
-        {
-            Text[] texts = Object.FindObjectsByType<Text>(FindObjectsSortMode.None); // 활성 Text 전체 조회
-
-            for (int index = 0; index < texts.Length; index++)
-            {
-                Text text = texts[index]; // 현재 Text 조회
-
-                if (text == null || text.text.Trim() != BossLabel)
-                {
-                    continue; // BOSS 라벨이 아니면 건너뜀
-                }
-
-                RectTransform bossRoot = FindBossPanelRoot(text.transform); // BOSS 라벨이 속한 패널 루트 조회
-
-                if (bossRoot == null)
-                {
-                    continue; // 보스 패널 루트를 찾지 못하면 다음 후보 확인
-                }
-
-                bossRoot.anchorMin = new Vector2(0.5f, 1f); // 화면 상단 중앙 앵커 시작 적용
-                bossRoot.anchorMax = new Vector2(0.5f, 1f); // 화면 상단 중앙 앵커 끝 적용
-                bossRoot.pivot = new Vector2(0.5f, 1f); // 패널 상단 중앙 피벗 적용
-                bossRoot.anchoredPosition = new Vector2(0f, -18f); // 좌측 HUD와 같은 상단 기준선 적용
-                return; // 첫 활성 보스 체력바 보정 후 종료
-            }
-        }
-
-        private static RectTransform FindBossPanelRoot(Transform bossLabelTransform)
-        {
-            Transform current = bossLabelTransform.parent; // BOSS 라벨의 부모부터 탐색 시작
-            RectTransform highestImageRect = null; // Canvas 아래 가장 바깥 배경 패널 후보 저장
-
-            while (current != null)
-            {
-                if (current.GetComponent<Canvas>() != null)
-                {
-                    break; // Canvas 자체는 이동 대상에서 제외
-                }
-
-                RectTransform rect = current as RectTransform; // 현재 UI RectTransform 변환
-                Image image = current.GetComponent<Image>(); // 현재 배경 Image 조회
-
-                if (rect != null && image != null)
-                {
-                    highestImageRect = rect; // 더 바깥쪽 Image 패널을 계속 후보로 갱신
-                }
-
-                current = current.parent; // 상위 UI 계층으로 이동
-            }
-
-            return highestImageRect; // 보스 체력바 최상위 배경 패널 반환
         }
 
         private static void ApplyTextLayout(Transform parent, string childName, Vector2 position, Vector2 size, TextAnchor alignment, int fontSize, HorizontalWrapMode horizontalOverflow)

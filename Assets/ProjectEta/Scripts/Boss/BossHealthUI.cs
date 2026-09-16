@@ -198,7 +198,7 @@ namespace ProjectEta.Boss // 보스 전투 관련 타입을 모아두는 네임�
             panelRect.anchorMin = new Vector2(0.5f, 1f); // 화면 상단 중앙 앵커
             panelRect.anchorMax = new Vector2(0.5f, 1f); // 화면 상단 중앙 앵커
             panelRect.pivot = new Vector2(0.5f, 1f); // 윗중앙 기준 배치
-            panelRect.anchoredPosition = new Vector2(0f, -146f); // RoundSummaryUI 바로 아래에 배치
+            panelRect.anchoredPosition = new Vector2(0f, -18f); // 화면 상단에서 18픽셀 떨어진 위치 적용
             panelRect.sizeDelta = new Vector2(620f, 54f); // 이름·HP·체력바가 들어가는 폭과 높이
 
             var panelImage = panelObject.GetComponent<Image>(); // 패널 배경 이미지 조회

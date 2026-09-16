@@ -11,8 +11,8 @@ namespace ProjectEta.Board
     public sealed class FullRouteMapPreviewController : MonoBehaviour
     {
         private const float FutureNodeHeight = 0.024f; // 미래 노드 원판 높이
-        private const float FutureNodeRadius = 0.18f; // 미래 일반 노드 반지름
-        private const float BossNodeRadius = 0.23f; // 보스 노드 강조 반지름
+        private const float FutureNodeRadius = 0.756f; // 미래 일반 노드 현재 크기 대비 70% 반지름
+        private const float BossNodeRadius = 0.966f; // 보스 노드 현재 크기 대비 70% 강조 반지름
         private const float PreviewPathHeight = 0.012f; // 전체 경로선 보드 높이
 
         private static readonly Color FutureDimColor = new Color(0.13f, 0.15f, 0.17f); // 미래 노드 톤다운 기준색
@@ -25,6 +25,7 @@ namespace ProjectEta.Board
         private RunState _runState; // 현재 전체 런 상태
         private GameObject _previewRoot; // 52일차 전체 경로 미리보기 루트
         private readonly List<Material> _runtimeMaterials = new List<Material>(); // 런타임 생성 머티리얼 정리 목록
+        private IReadOnlyDictionary<string, Vector3> _nodePositions; // 전체 노드·경로 공통 시각 좌표표
         private string _lastPreviewKey = string.Empty; // 현재 지도 진행 상태 비교 키
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -84,7 +85,7 @@ namespace ProjectEta.Board
 
             if (_runState.CurrentFlowPhase != RunFlowPhase.Map)
             {
-                if (_previewRoot != null) DestroyPreview(); // 보상·상점·이벤트 동안 전체 지도 건물 잔존 차단
+                if (_previewRoot != null) DestroyPreview(); // 보상·상점·이벤트 동안 전체 지도 아이콘 잔존 차단
                 _lastPreviewKey = string.Empty; // 실제 Map 복귀 시 재생성 허용
                 return;
             }
@@ -108,6 +109,9 @@ namespace ProjectEta.Board
             DestroyPreview(); // 이전 전체 경로 미리보기 제거
 
             RouteMapState route = _runState.RouteMap; // 현재 전체 경로 상태 조회
+            IReadOnlyDictionary<string, Vector3> sharedPositions = _routeMapBoardController.NodePositions; // 현재 지도 컨트롤러 좌표표 조회
+            bool sharesAllNodes = sharedPositions != null && sharedPositions.Count == route.Nodes.Count; // 전체 노드 좌표 포함 여부 확인
+            _nodePositions = sharesAllNodes ? sharedPositions : RouteMapVisualLayout.Build(route, _boardView.TileSize); // 동일 좌표표 우선 재사용과 손상 상태 대체 생성
             _previewRoot = new GameObject("RouteMapFullGraph_Day52"); // 전체 그래프 시각 루트 생성
             _previewRoot.transform.SetParent(_boardView.transform, false); // 기존 보드 로컬 좌표계 재사용
 
@@ -150,7 +154,7 @@ namespace ProjectEta.Board
                         selectableIds.Contains(target.NodeId); // 기존 RouteMapBoardController가 현재→선택 후보 선을 그리는지 확인
 
                     if (existingControllerDraws) continue; // 동일 연결선 중복 표시 차단
-                    CreatePreviewPathLine(source.Position, target.Position); // 미래·과거 전체 그래프 연결선 생성
+                    CreatePreviewPathLine(source, target); // 미래·과거 공통 좌표 연결선 생성
                 }
             }
         }
@@ -160,7 +164,7 @@ namespace ProjectEta.Board
             var marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder); // 비클릭 미래·과거 노드 원판 생성
             marker.name = $"RouteMap_FullNode_{node.NodeId}"; // 노드 ID 기반 계층창 이름 적용
             marker.transform.SetParent(_previewRoot.transform, false); // 전체 경로 루트 자식 배치
-            marker.transform.localPosition = GetNodeLocalPosition(node.Position) + new Vector3(0f, FutureNodeHeight * 0.5f, 0f); // 2x2 중앙 기준 위치에 노드 배치
+            marker.transform.localPosition = GetNodeLocalPosition(node) + new Vector3(0f, FutureNodeHeight * 0.5f, 0f); // 공통 좌표표 기준 미래 노드 배치
 
             StageType stageType = ResolveStageType(node); // 저장 가능한 StageDefinition ID에서 스테이지 타입 복원
             bool boss = stageType == StageType.MidBoss || stageType == StageType.FinalBoss; // 보스 노드 여부 계산
@@ -175,25 +179,25 @@ namespace ProjectEta.Board
             Renderer renderer = marker.GetComponent<Renderer>(); // 미래·과거 노드 렌더러 조회
             renderer.sharedMaterial = CreateMaterial(displayColor); // 비클릭 노드 머티리얼 적용
             RemoveCollider(marker); // 미래·과거 노드 클릭 충돌 제거
-            CreatePreviewBuilding(node, stageType, renderer); // 미리보기 노드 생성과 동시에 건물 구성
+            CreatePreviewIcon(node, stageType, renderer); // 미리보기 노드 생성과 동시에 아이콘 구성
         }
 
-        private void CreatePreviewBuilding(StageNode node, StageType stageType, Renderer signalRenderer) // 미래·방문 노드 바닥형 모델 직접 생성
+        private void CreatePreviewIcon(StageNode node, StageType stageType, Renderer signalRenderer) // 미래·방문 노드 원판 아이콘 직접 생성
         {
-            GameObject host = new GameObject($"RouteMap_FullBuildingHost_{node.NodeId}"); // 마커 비균일 스케일과 분리된 발판 호스트 생성
-            host.transform.SetParent(_previewRoot.transform, false); // 전체 지도 미리보기 수명에 발판 연결
-            host.transform.localPosition = GetNodeLocalPosition(node.Position); // 2x2 중앙 기준 위치 배치
+            GameObject host = new GameObject($"RouteMap_FullIconHost_{node.NodeId}"); // 마커 비균일 스케일과 분리된 아이콘 호스트 생성
+            host.transform.SetParent(_previewRoot.transform, false); // 전체 지도 미리보기 수명에 아이콘 연결
+            host.transform.localPosition = GetNodeLocalPosition(node); // 공통 좌표표 기준 미래 아이콘 배치
             host.transform.localRotation = Quaternion.identity; // 보드 정방향 유지
-            host.transform.localScale = Vector3.one; // 발판 원본 비율 유지
+            host.transform.localScale = Vector3.one; // 아이콘 원본 비율 유지
 
-            Day66RouteNodeBuildingModel model = host.AddComponent<Day66RouteNodeBuildingModel>(); // StageType별 바닥형 노드 모델 생성
-            model.Initialize(signalRenderer, stageType, _boardView.TileSize); // 방문·미래 표시 색상 신호 연결
+            RouteNodeIconPresenter presenter = host.AddComponent<RouteNodeIconPresenter>(); // StageType별 단일 아이콘 표시기 생성
+            presenter.Initialize(signalRenderer, stageType, _boardView.TileSize); // 방문·미래 노드 아이콘 연결
         }
 
-        private void CreatePreviewPathLine(Vector2Int fromCell, Vector2Int toCell)
-        {
-            Vector3 from = GetNodeLocalPosition(fromCell); // 출발 노드 2x2 중앙 위치 계산
-            Vector3 to = GetNodeLocalPosition(toCell); // 도착 노드 2x2 중앙 위치 계산
+        private void CreatePreviewPathLine(StageNode fromNode, StageNode toNode) // 두 노드를 잇는 전체 지도 경로선 생성
+        { // 경로선 생성 시작
+            Vector3 from = GetNodeLocalPosition(fromNode); // 출발 노드 공통 시각 위치 계산
+            Vector3 to = GetNodeLocalPosition(toNode); // 도착 노드 공통 시각 위치 계산
             Vector3 delta = to - from; // 연결 방향·길이 계산
             float distance = new Vector2(delta.x, delta.z).magnitude; // 평면 연결 거리 계산
 
@@ -231,11 +235,14 @@ namespace ProjectEta.Board
 
         private Vector3 GetNodeLocalPosition(Vector2Int cell)
         {
-            float xOffset = cell.x >= BoardState.Width - 1 ? -0.5f : 0.5f; // 우측 가장자리 노드 내부 정렬 오프셋 계산
-            float zOffset = cell.y >= BoardState.Height - 1 ? -0.5f : 0.5f; // 상단 가장자리 노드 내부 정렬 오프셋 계산
-            Vector3 basePosition = BoardView.BoardToLocalPosition(cell, _boardView.TileSize); // 기본 보드 셀 중심 위치 계산
-            return basePosition + new Vector3(_boardView.TileSize * xOffset, 0f, _boardView.TileSize * zOffset); // 2x2 중앙 위치 반환
+            return RouteMapVisualLayout.GetNodeLocalPosition(cell, _boardView.TileSize); // 현재·미래 노드 공통 사각형 배치 적용
         }
+
+        private Vector3 GetNodeLocalPosition(StageNode node) // 노드 ID 기반 공통 시각 좌표 조회
+        { // 좌표 조회 시작
+            if (node != null && _nodePositions != null && _nodePositions.TryGetValue(node.NodeId, out Vector3 position)) return position; // 공유 좌표 존재 시 반환
+            return node != null ? GetNodeLocalPosition(node.Position) : Vector3.zero; // 손상 지도용 논리 좌표 대체
+        } // 좌표 조회 종료
 
         private Material CreateMaterial(Color color)
         {
@@ -261,6 +268,7 @@ namespace ProjectEta.Board
 
         private void DestroyPreview()
         {
+            _nodePositions = null; // 전체 시각 좌표표 초기화
             if (_previewRoot != null)
             {
                 Destroy(_previewRoot); // 전체 경로 시각 루트 제거

@@ -9,6 +9,7 @@ namespace ProjectEta.Board // 보드 경로 지도 시각화 네임스페이스
         private Color _hoverColor; // 마우스 오버 색상
         private Color _selectedColor; // 선택 완료 색상
         private Color _dimmedColor; // 비선택 후보 색상
+        private RouteNodeSelectionHighlight _selectionHighlight; // 다음 이동 가능 노드 금빛 고리
         private bool _hovered; // 현재 마우스 오버 여부
         private bool _selected; // 현재 선택 노드 여부
         private bool _dimmed; // 다른 노드 선택 후 흐리게 표시 여부
@@ -23,6 +24,9 @@ namespace ProjectEta.Board // 보드 경로 지도 시각화 네임스페이스
             _hoverColor = hoverColor; // 오버 색 저장
             _selectedColor = selectedColor; // 선택 색 저장
             _dimmedColor = dimmedColor; // 흐림 색 저장
+            _selectionHighlight = GetComponent<RouteNodeSelectionHighlight>(); // 기존 금빛 고리 컴포넌트 조회
+            if (_selectionHighlight == null) _selectionHighlight = gameObject.AddComponent<RouteNodeSelectionHighlight>(); // 금빛 고리 컴포넌트 생성
+            _selectionHighlight.Initialize(); // 선택 가능 상태 반짝임 시작
             ApplyColor(); // 초기 색상 반영
         }
 
@@ -37,16 +41,17 @@ namespace ProjectEta.Board // 보드 경로 지도 시각화 네임스페이스
             _selected = selected; // 선택 여부 기록
             _dimmed = dimmed; // 흐림 여부 기록
             _hovered = false; // 선택 후 오버 표시 해제
+            if (_selectionHighlight != null) _selectionHighlight.SetVisible(!selected && !dimmed); // 선택 확정 뒤 후보 고리 제거
             ApplyColor(); // 표시 색상 갱신
         }
 
         private void ApplyColor() // 현재 상태 우선순위에 맞춰 머티리얼 색상 적용
         {
             if (_renderer == null) return; // 렌더러 누락 방어
-            if (_selected) _renderer.material.color = _selectedColor; // 선택 노드 색상 적용
-            else if (_dimmed) _renderer.material.color = _dimmedColor; // 비선택 후보 흐림 적용
-            else if (_hovered) _renderer.material.color = _hoverColor; // 마우스 오버 색상 적용
-            else _renderer.material.color = _normalColor; // 기본 선택 가능 색상 적용
+            if (_selected) _renderer.sharedMaterial.color = _selectedColor; // 선택 노드 색상 적용
+            else if (_dimmed) _renderer.sharedMaterial.color = _dimmedColor; // 비선택 후보 흐림 적용
+            else if (_hovered) _renderer.sharedMaterial.color = _hoverColor; // 마우스 오버 색상 적용
+            else _renderer.sharedMaterial.color = _normalColor; // 기본 선택 가능 색상 적용
         }
     }
 }

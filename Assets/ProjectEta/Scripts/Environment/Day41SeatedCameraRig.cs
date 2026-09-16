@@ -1,6 +1,7 @@
 using UnityEngine; // 카메라·Transform·수학 기능
 using UnityEngine.InputSystem; // 키보드·마우스 입력
 using ProjectEta.Board; // 기존 TableCameraRig 호환
+using ProjectEta.Debugging; // F1 패널 카메라 입력 관통 차단
 
 namespace ProjectEta.Environment // 전투 공간 프레젠테이션 네임스페이스
 {
@@ -130,6 +131,7 @@ namespace ProjectEta.Environment // 전투 공간 프레젠테이션 네임스�
         private void HandleOpponentLookInput() // 상대 시점 마우스 자유 회전 처리
         {
             if (_currentView != Day41CameraView.Opponent) return; // 상대 시점 외 입력 제외
+            if (ProjectEtaDebugWindow.IsPointerOverPanel) return; // F1 패널 위 우클릭 드래그 차단
             if (Mouse.current == null || !Mouse.current.rightButton.isPressed) return; // 우클릭 드래그 외 입력 제외
 
             Vector2 delta = Mouse.current.delta.ReadValue(); // 마우스 이동량 조회
@@ -141,6 +143,7 @@ namespace ProjectEta.Environment // 전투 공간 프레젠테이션 네임스�
         private void HandleZoomInput() // 상대 좌석을 벗어나지 않는 시야각 줌
         {
             if (_currentView != Day41CameraView.Opponent) return; // 상대 시점 외 줌 제외
+            if (ProjectEtaDebugWindow.IsPointerOverPanel) return; // F1 패널 위 마우스 휠 차단
             if (_camera == null || Mouse.current == null) return; // 입력 장치·카메라 누락 제외
 
             float scroll = Mouse.current.scroll.ReadValue().y; // 마우스 휠 값 조회

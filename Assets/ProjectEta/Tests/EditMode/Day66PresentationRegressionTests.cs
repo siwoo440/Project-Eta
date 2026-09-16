@@ -1,6 +1,6 @@
 using NUnit.Framework; // EditMode 단위 테스트 사용
 using UnityEngine; // GameObject 사용
-using ProjectEta.Board; // 66일차 지도 표시 규칙·건물 모델 사용
+using ProjectEta.Board; // 66일차 지도 표시 규칙·노드 아이콘 사용
 using ProjectEta.Run; // BoardMode·RunFlowPhase·StageType 사용
 
 namespace ProjectEta.Tests.EditMode
@@ -31,16 +31,17 @@ namespace ProjectEta.Tests.EditMode
         }
 
         [Test]
-        public void RouteBuildingModel_상점건물은_복수파츠를_즉시생성한다()
+        public void RouteNodeIcon_상점노드는_단일아이콘을_즉시생성한다()
         {
-            GameObject host = new GameObject("BuildingTestHost"); // 건물 테스트 Host 생성
-            Day66RouteNodeBuildingModel model = host.AddComponent<Day66RouteNodeBuildingModel>(); // 실제 건물 모델 컴포넌트 추가
+            GameObject host = new GameObject("RouteNodeIconTestHost"); // 아이콘 테스트 Host 생성
+            RouteNodeIconPresenter presenter = host.AddComponent<RouteNodeIconPresenter>(); // 실제 노드 아이콘 표시기 추가
 
-            model.Initialize(null, StageType.Shop, 1f); // 상점 건물 즉시 생성
+            presenter.Initialize(null, StageType.Shop, 1f); // 상점 아이콘 즉시 생성
 
-            Assert.IsNotNull(model.VisualRoot); // Host 자식 건물 Root 생성 검증
-            Assert.AreEqual(host.transform, model.VisualRoot.transform.parent); // 건물 Root가 Host에 직접 연결되는지 검증
-            Assert.GreaterOrEqual(model.PartCount, 7); // 단순 점이 아닌 다중 파츠 건물 검증
+            Assert.IsNotNull(presenter.VisualRoot); // Host 자식 아이콘 Root 생성 검증
+            Assert.AreEqual(host.transform, presenter.VisualRoot.transform.parent); // 아이콘 Root의 Host 직접 연결 검증
+            Assert.AreEqual(1, presenter.PartCount); // 기존 입체 모델 대신 단일 아이콘 표면 검증
+            Assert.AreEqual("RouteShopIcon", presenter.VisualRoot.GetComponentInChildren<Renderer>().sharedMaterial.mainTexture.name); // 상점 아이콘 텍스처 검증
 
             Object.DestroyImmediate(host); // 테스트 오브젝트 정리
         }

@@ -7,6 +7,7 @@ using UnityEngine.InputSystem; // 새 Input System(Mouse, Keyboard)을 사용하
 using UnityEngine.Rendering; // 드래그 중 기물 고스트 머티리얼의 투명 블렌딩을 설정하기 위한 네임스페이스
 using ProjectEta.Battle; // TurnManager, TurnState를 사용하기 위한 네임스페이스
 using ProjectEta.Cards; // HandState, DeckState를 사용하기 위한 네임스페이스
+using ProjectEta.Debugging; // F1 패널 클릭 관통 차단
 using ProjectEta.Fusion; // 21일차: FusionRecipe, FusionRecipeDatabase를 사용하기 위한 네임스페이스
 using ProjectEta.Pieces; // PieceDefinition, PieceRuntimeState, PieceView를 사용하기 위한 네임스페이스
 using ProjectEta.Run; // RunState를 사용하기 위한 네임스페이스
@@ -572,7 +573,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
         private static bool IsPointerOverInteractiveUI() // 버그 수정: 카드 더미 버튼·패널 등 화면 UI를 클릭했을 때 같은 클릭이 3D 보드로도 전달되지 않도록 확인하는 메서드
         {
-            return EventSystem.current != null && EventSystem.current.IsPointerOverGameObject(); // 현재 클릭이 UI Raycast에 먼저 잡혔는지 확인
+            return ProjectEtaDebugWindow.IsPointerOverPanel || (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()); // F1 패널 또는 UI Raycast 위 클릭 확인
         }
 
         private void HandleCardSelectionInput() // 숫자키로 현재 손패 슬롯을 선택하는 메서드

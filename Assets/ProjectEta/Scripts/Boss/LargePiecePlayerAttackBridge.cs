@@ -3,6 +3,7 @@ using UnityEngine; // MonoBehaviour, Camera, Physics, RaycastHit 등을 사용�
 using UnityEngine.InputSystem; // 새 Input System의 Mouse를 사용하기 위한 네임스페이스
 using UnityEngine.SceneManagement; // Battle 씬에서만 자동 생성하기 위한 네임스페이스
 using ProjectEta.Board; // BoardInputController를 사용하기 위한 네임스페이스
+using ProjectEta.Debugging; // F1 패널 클릭 관통 차단
 using ProjectEta.Pieces; // PieceView와 PieceRuntimeState를 사용하기 위한 네임스페이스
 
 namespace ProjectEta.Boss // 대형 보스 관련 런타임 호환 브리지를 모아두는 네임스페이스
@@ -49,6 +50,7 @@ namespace ProjectEta.Boss // 대형 보스 관련 런타임 호환 브리지를 
         {
             if (!_isReady || _boardInput == null || _camera == null) return; // 아직 연결되지 않았으면 처리하지 않음
             if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame) return; // 이번 프레임 왼쪽 클릭이 아니면 종료
+            if (ProjectEtaDebugWindow.IsPointerOverPanel) return; // F1 패널 클릭의 대형 보스 공격 관통 차단
             if (!_boardInput.CanUseCombatInput) return; // 일반 플레이어 행동 턴이 아니면 보스 공격 보정 금지
             if (_boardInput.SelectedPiece == null || _boardInput.PendingMovement == null) return; // 아군 기물을 먼저 선택한 상태가 아니면 기존 입력에 맡김
             if (_boardInput.RunState?.Board == null) return; // 실제 보드 상태가 없으면 처리 불가
