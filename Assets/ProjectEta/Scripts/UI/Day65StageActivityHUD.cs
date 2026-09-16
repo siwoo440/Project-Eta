@@ -1,5 +1,4 @@
 using UnityEngine; // MonoBehaviour·GameObject·Color·Vector2 사용
-using UnityEngine.SceneManagement; // Battle 씬 자동 생성 확인
 using UnityEngine.UI; // Canvas·Image·Text 사용
 using ProjectEta.Battle; // BattleController 사용
 using ProjectEta.Run; // RunState·RunEconomyState·RunFlowPhase 사용
@@ -26,23 +25,6 @@ namespace ProjectEta.UI // 65일차 UI 네임스페이스
         private Text _resultText; // 선택 결과 문구
         private float _resultRemaining; // 결과 토스트 남은 시간
         private RunFlowPhase _lastObservedPhase = RunFlowPhase.Battle; // 직전 프레임 흐름 상태
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // Battle 씬 로드 후 자동 설치
-        private static void AutoCreateForBattleScene() // 씬 수동 배치 없이 65일차 HUD 생성
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") // Battle 씬 여부 확인
-            {
-                return; // 다른 씬 생성 차단
-            }
-
-            if (Object.FindFirstObjectByType<Day65StageActivityHUD>() != null) // 기존 HUD 존재 여부 확인
-            {
-                return; // 중복 생성 차단
-            }
-
-            var host = new GameObject("Day65StageActivityHUD"); // 65일차 공통 HUD 호스트 생성
-            host.AddComponent<Day65StageActivityHUD>(); // 자동 표시 컴포넌트 추가
-        }
 
         private void Awake() // HUD 초기화
         {

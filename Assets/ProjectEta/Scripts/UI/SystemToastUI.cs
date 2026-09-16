@@ -26,13 +26,6 @@ namespace ProjectEta.UI
             _pending = new SystemNotificationQueue(); // 이전 플레이 세션 대기 알림 초기화
         }
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void AutoCreateForBattleScene()
-        {
-            if (SceneManager.GetActiveScene().name != SceneFlowController.BattleSceneName) return; // Battle 씬 외 생성 차단
-            EnsureInstance(); // Battle 시스템 Toast 인스턴스 보장
-        }
-
         public static void Push(string title, string body, float duration = 1.8f)
         {
             _pending.Enqueue(new SystemNotificationMessage(title, body, duration)); // 시스템 알림 대기 Queue 등록

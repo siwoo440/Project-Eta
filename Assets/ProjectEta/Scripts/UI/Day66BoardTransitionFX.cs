@@ -3,7 +3,6 @@ using System.Collections.Generic; // 전환 대상·렌더러 목록 사용
 using UnityEngine; // MonoBehaviour·Transform·Renderer 사용
 using UnityEngine.EventSystems; // 전환 중 UI 입력 차단 사용
 using UnityEngine.InputSystem.UI; // 새 Input System EventSystem 사용
-using UnityEngine.SceneManagement; // Battle 씬 자동 생성 사용
 using UnityEngine.UI; // 투명 입력 차단 Canvas 사용
 using ProjectEta.Battle; // BattleController 사용
 using ProjectEta.Board; // BoardView 사용
@@ -54,16 +53,6 @@ namespace ProjectEta.UI
         private Canvas _blockerCanvas; // 전환 중 입력 차단 Canvas
         private GameObject _blockerRoot; // 투명 전체 화면 차단 루트
         private EventSystem _createdEventSystem; // 직접 생성 EventSystem
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void AutoCreateForBattleScene()
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 생성 차단
-            if (Object.FindFirstObjectByType<Day66BoardTransitionFX>() != null) return; // 중복 전환 관리자 차단
-
-            GameObject host = new GameObject("Day66BoardTransitionFX"); // 66일차 보드 전환 연출 호스트 생성
-            host.AddComponent<Day66BoardTransitionFX>(); // 자동 전환 연출 컴포넌트 추가
-        }
 
         private void Awake()
         {

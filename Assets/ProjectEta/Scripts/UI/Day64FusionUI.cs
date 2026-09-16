@@ -2,7 +2,6 @@ using System.Collections.Generic; // 카드 입력 오버레이 목록 사용
 using UnityEngine; // MonoBehaviour·GameObject·Color·Vector2 사용
 using UnityEngine.EventSystems; // 포인터 클릭·EventSystem 사용
 using UnityEngine.InputSystem.UI; // 새 Input System UI 입력 모듈 사용
-using UnityEngine.SceneManagement; // Battle 씬 자동 생성 확인
 using UnityEngine.UI; // Canvas·Button·Image·Text 사용
 using ProjectEta.Board; // BoardInputController 사용
 using ProjectEta.Fusion; // FusionRecipe·FusionBlockReason·FusionHandSelectionState 사용
@@ -42,23 +41,6 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 네임스페이스
         private float _discoveryNoticeRemaining; // Recipe 발견 알림 남은 시간
         private EventSystem _createdEventSystem; // 직접 만든 EventSystem 참조
         private GameObject _legacyFusionCanvas; // 21~22일차 구형 Fusion Canvas 참조
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // Battle 씬 진입 뒤 자동 설치
-        private static void AutoCreateForBattleScene() // 씬 수동 배치 없이 64일차 UI 자동 생성
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") // Battle 씬 여부 확인
-            {
-                return; // 다른 씬 생성 차단
-            }
-
-            if (Object.FindFirstObjectByType<Day64FusionUI>() != null) // 기존 64일차 UI 확인
-            {
-                return; // 중복 생성 차단
-            }
-
-            var host = new GameObject("Day64FusionUI"); // 64일차 Fusion UI 호스트 생성
-            host.AddComponent<Day64FusionUI>(); // 자동 동작 컴포넌트 추가
-        }
 
         private void Awake() // 컴포넌트 초기화
         {

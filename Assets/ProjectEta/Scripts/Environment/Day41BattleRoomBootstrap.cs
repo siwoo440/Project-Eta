@@ -28,17 +28,6 @@ namespace ProjectEta.Environment // 전투 공간 프레젠테이션 네임스�
         private Palette _palette; // 현재 환경 재질 팔레트
         private int _createdPartCount; // 생성된 모델 파트 수
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // Battle 씬 진입 직후 자동 환경 생성
-        private static void AutoCreateForBattleScene() // 씬 수정 없이 41일차 환경 자동 주입
-        {
-            Scene activeScene = SceneManager.GetActiveScene(); // 현재 활성 씬 조회
-            if (!Day41BattleRoomLayout.IsBattleScene(activeScene.name)) return; // Battle 씬 외 생성 방지
-            if (GameObject.Find(Day41BattleRoomLayout.RootName) != null) return; // 중복 환경 루트 생성 방지
-
-            GameObject root = new GameObject(Day41BattleRoomLayout.RootName); // 환경 루트 생성
-            root.AddComponent<Day41BattleRoomBootstrap>(); // 모델 생성 부트스트랩 연결
-        }
-
         private void Awake() // 환경 모델 생성 시작
         {
             if (!Day41BattleRoomLayout.IsBattleScene(SceneManager.GetActiveScene().name)) return; // Battle 씬 외 실행 방지

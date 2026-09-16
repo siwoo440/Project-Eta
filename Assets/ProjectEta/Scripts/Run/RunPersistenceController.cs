@@ -1,5 +1,4 @@
 using UnityEngine; // MonoBehaviour·Time 사용
-using UnityEngine.SceneManagement; // Battle 씬 자동 생성 사용
 using ProjectEta.Battle; // BattleController 사용
 using ProjectEta.UI; // 시스템 저장 Toast 사용
 
@@ -15,16 +14,6 @@ namespace ProjectEta.Run
         private string _lastCheckpointKey = string.Empty; // 마지막 저장 안전 지점 식별값
         private float _nextSavePollTime; // 다음 저장 검사 시간
         private bool _terminalSaveCleared; // 현재 종료 런 세이브 삭제 완료 여부
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void AutoCreateForBattleScene()
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 생성 차단
-            if (Object.FindFirstObjectByType<RunPersistenceController>() != null) return; // 중복 저장 관리자 차단
-
-            var host = new GameObject("RunPersistenceController_Day51"); // 런 저장 호스트 생성
-            host.AddComponent<RunPersistenceController>(); // 자동 저장 관리자 추가
-        }
 
         private void Update()
         {

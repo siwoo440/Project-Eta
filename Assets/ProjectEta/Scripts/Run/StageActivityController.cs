@@ -1,7 +1,6 @@
 using System.Collections; // 초기화 대기 코루틴 사용
 using System.Collections.Generic; // 상점 카드·UI 옵션 목록 사용
 using UnityEngine; // MonoBehaviour·Resources 사용
-using UnityEngine.SceneManagement; // Battle 씬 자동 생성
 using ProjectEta.Battle; // BattleController 사용
 using ProjectEta.Board; // BoardView·RouteMapBoardController 사용
 using ProjectEta.Cards; // PlayerStartingDeckCatalog 사용
@@ -34,16 +33,6 @@ namespace ProjectEta.Run
         private int _removePageIndex; // 카드 제거 페이지 번호
         private int _upgradePageIndex; // 카드 강화 페이지 번호
         private int _eventUpgradePageIndex; // 이벤트 무료 강화 페이지 번호
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void AutoCreateForBattleScene()
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 생성 차단
-            if (Object.FindFirstObjectByType<StageActivityController>() != null) return; // 중복 생성 차단
-
-            var host = new GameObject("StageActivityController_Day47"); // 비전투 호스트 생성
-            host.AddComponent<StageActivityController>(); // 비전투 관리자 추가
-        }
 
         private IEnumerator Start()
         {

@@ -1,7 +1,6 @@
 using System.Collections; // 초기화·치명타 이동 코루틴 사용
 using System.Collections.Generic; // Dictionary<T> 사용
 using UnityEngine; // MonoBehaviour·Vector3·RuntimeInitializeOnLoadMethod 사용
-using UnityEngine.SceneManagement; // Battle 씬 자동 생성 판정
 using ProjectEta.Battle; // BattleHooks·CombatResult 사용
 using ProjectEta.Board; // BoardInputController·BoardView 사용
 
@@ -18,16 +17,6 @@ namespace ProjectEta.Pieces // 기물 전투 연출 네임스페이스
         private BoardInputController _boardInputController; // 기존 전투 입력·훅 접근
         private BattleHooks _battleHooks; // 전투 공격 전후 이벤트 버스
         private BoardView _boardView; // 보드 좌표→로컬 위치 변환 기준
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // Battle 씬 로드 후 자동 생성
-        private static void AutoCreateForBattleScene() // 씬 수정 없이 치명타 연출 브리지 자동 주입
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 생성 차단
-            if (Object.FindFirstObjectByType<LethalAttackVisualBridge>() != null) return; // 중복 생성 차단
-
-            var host = new GameObject("LethalAttackVisualBridge_Day44"); // 치명타 연출 호스트 생성
-            host.AddComponent<LethalAttackVisualBridge>(); // 연출 브리지 컴포넌트 추가
-        }
 
         private IEnumerator Start() // BoardInputController·BattleHooks 준비 후 이벤트 연결
         {

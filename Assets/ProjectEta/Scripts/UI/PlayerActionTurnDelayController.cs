@@ -1,6 +1,5 @@
 using System.Collections; // 연출 완료 대기 코루틴 사용
 using UnityEngine; // MonoBehaviour·WaitForSeconds 사용
-using UnityEngine.SceneManagement; // Battle 씬 자동 생성 판정
 using ProjectEta.Battle; // BattleController·TurnManager 사용
 
 namespace ProjectEta.UI // 전투 흐름 보조 런타임 네임스페이스
@@ -14,16 +13,6 @@ namespace ProjectEta.UI // 전투 흐름 보조 런타임 네임스페이스
         private TurnManager _turnManager; // 실제 턴 상태 객체
         private Coroutine _releaseCoroutine; // 현재 플레이어 연출 대기 코루틴
         private bool _isBound; // 런타임 연결 여부
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // Battle 씬 로드 후 자동 생성
-        private static void AutoCreateForBattleScene() // 씬·Inspector 수정 없이 턴 연출 게이트 자동 주입
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 생성 차단
-            if (Object.FindFirstObjectByType<PlayerActionTurnDelayController>() != null) return; // 중복 생성 차단
-
-            var host = new GameObject("PlayerActionTurnDelayController_Day44"); // 턴 지연 게이트 호스트 생성
-            host.AddComponent<PlayerActionTurnDelayController>(); // 런타임 게이트 컴포넌트 추가
-        }
 
         private IEnumerator Start() // BattleController 자동 생성 순서와 무관하게 안전하게 연결
         {

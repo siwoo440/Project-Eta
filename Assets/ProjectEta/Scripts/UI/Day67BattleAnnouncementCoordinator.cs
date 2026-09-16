@@ -1,5 +1,4 @@
 using UnityEngine; // MonoBehaviour·GameObject 사용
-using UnityEngine.SceneManagement; // Battle 씬 자동 생성 판정
 using ProjectEta.Battle; // BattleController·TurnManager 사용
 using ProjectEta.Boss; // BossPhaseStatusUI 사용
 using ProjectEta.King; // KingRunStateService 사용
@@ -23,24 +22,14 @@ namespace ProjectEta.UI
         private bool _lastStrategyPending; // 이전 전략형 준비 상태
         private bool _bossPhase2Shown; // 현재 전투 보스 2페이즈 알림 표시 여부
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void AutoCreateForBattleScene()
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 생성 차단
-            if (Object.FindFirstObjectByType<Day67BattleAnnouncementCoordinator>() != null) return; // 중복 관리자 생성 차단
-
-            GameObject host = new GameObject("Day67BattleAnnouncementCoordinator"); // 67일차 전투 알림 호스트 생성
-            host.AddComponent<Day67BattleAnnouncementUI>(); // 공통 알림 Canvas 추가
-            host.AddComponent<Day67BattleAnnouncementCoordinator>(); // 상태 연결 관리자 추가
-        }
-
         private void Awake()
         {
-            _announcementUI = GetComponent<Day67BattleAnnouncementUI>(); // 같은 호스트 알림 UI 연결
+            ResolveAnnouncementUI(); // 같은 호스트 알림 UI 최초 연결
         }
 
         private void Update()
         {
+            ResolveAnnouncementUI(); // 중앙 부트스트랩이 뒤늦게 보강한 UI 참조 복구
             ResolveBindings(); // 전투·런·턴 참조 최신화
             if (_runState == null || _announcementUI == null) return; // 필수 상태 준비 전 종료
 
@@ -49,6 +38,10 @@ namespace ProjectEta.UI
             PollBossPhase(); // 실제 보스 Phase 2 UI 활성 상태 감지
         }
 
+        private void ResolveAnnouncementUI() // 같은 호스트 전투 알림 UI 참조 보장
+        { // 메서드 범위
+            if (_announcementUI == null) _announcementUI = GetComponent<Day67BattleAnnouncementUI>(); // 초기화 순서와 무관하게 UI 재연결
+        } // 메서드 종료
         private void ResolveBindings()
         {
             if (_battleController == null) _battleController = Object.FindFirstObjectByType<BattleController>(); // BattleController 지연 탐색

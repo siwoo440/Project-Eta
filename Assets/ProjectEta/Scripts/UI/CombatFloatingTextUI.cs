@@ -1,6 +1,5 @@
 using System.Collections; // IEnumerator 코루틴을 사용하기 위한 네임스페이스
 using UnityEngine; // MonoBehaviour와 화면 좌표 계산을 사용하기 위한 네임스페이스
-using UnityEngine.SceneManagement; // 현재 Scene 이름 확인을 사용하기 위한 네임스페이스
 using UnityEngine.UI; // Canvas와 Text UI를 사용하기 위한 네임스페이스
 using ProjectEta.Battle; // BattleController와 BattleHooks를 사용하기 위한 네임스페이스
 using ProjectEta.Board; // BoardView와 BoardState를 사용하기 위한 네임스페이스
@@ -20,23 +19,6 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
         private static Font _runtimeFont; // 피해 숫자용 런타임 폰트 캐시
 
         public int ActiveTextCount { get; private set; } // 현재 화면에 살아 있는 피해 숫자 개수
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // Battle Scene 로드 직후 자동 생성을 등록하는 특성
-        private static void AutoCreateForBattleScene() // Battle Scene에서 Floating Text UI를 자동 생성하는 메서드
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") // 현재 Scene이 Battle이 아니면
-            {
-                return; // 다른 Scene에는 전투 피해 숫자를 생성하지 않음
-            }
-
-            if (Object.FindFirstObjectByType<CombatFloatingTextUI>() != null) // 이미 같은 UI가 존재하면
-            {
-                return; // 중복 생성 차단
-            }
-
-            var host = new GameObject("CombatFloatingTextUI_Day63"); // 63일차 Floating Text 호스트 생성
-            host.AddComponent<CombatFloatingTextUI>(); // 자동 Bind를 수행할 컴포넌트 추가
-        }
 
         public static string FormatDamage(int amount) // 적용 피해량을 화면용 문자열로 변환하는 메서드
         {

@@ -1,7 +1,6 @@
 using System.Collections; // 초기화 대기 코루틴 사용
 using System.Collections.Generic; // HashSet<T>·List<T> 사용
 using UnityEngine; // MonoBehaviour·GameObject·Material·Color 사용
-using UnityEngine.SceneManagement; // Battle 씬 자동 생성 사용
 using ProjectEta.Battle; // BattleController 사용
 using ProjectEta.Run; // RouteMapState·StageNode·StageType 사용
 
@@ -27,16 +26,6 @@ namespace ProjectEta.Board
         private readonly List<Material> _runtimeMaterials = new List<Material>(); // 런타임 생성 머티리얼 정리 목록
         private IReadOnlyDictionary<string, Vector3> _nodePositions; // 전체 노드·경로 공통 시각 좌표표
         private string _lastPreviewKey = string.Empty; // 현재 지도 진행 상태 비교 키
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void AutoCreateForBattleScene()
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 생성 차단
-            if (Object.FindFirstObjectByType<FullRouteMapPreviewController>() != null) return; // 중복 미리보기 관리자 차단
-
-            var host = new GameObject("FullRouteMapPreviewController_Day52"); // 52일차 전체 경로 표시 호스트 생성
-            host.AddComponent<FullRouteMapPreviewController>(); // 전체 경로 미리보기 컴포넌트 추가
-        }
 
         private IEnumerator Start()
         {

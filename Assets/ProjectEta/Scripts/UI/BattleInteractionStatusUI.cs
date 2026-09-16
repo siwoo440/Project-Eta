@@ -1,6 +1,5 @@
 using System.Collections; // IEnumerator 코루틴을 사용하기 위한 네임스페이스
 using UnityEngine; // MonoBehaviour와 런타임 UI 생성을 사용하기 위한 네임스페이스
-using UnityEngine.SceneManagement; // 현재 Scene 이름 확인을 사용하기 위한 네임스페이스
 using UnityEngine.UI; // Canvas와 Text UI를 사용하기 위한 네임스페이스
 using ProjectEta.Battle; // BattleController와 TurnManager를 사용하기 위한 네임스페이스
 using ProjectEta.Board; // BoardInputController를 사용하기 위한 네임스페이스
@@ -18,23 +17,6 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
         private string _lastInstruction = string.Empty; // 동일 문구 반복 갱신 방지용 이전 안내 문구
         private bool _legacyOverlaysSuppressed; // 62일차 BattleHUD와 중복되는 구형 턴 UI 숨김 완료 여부
         private static Font _runtimeFont; // 한글 표시용 런타임 폰트 캐시
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // Battle Scene 로드 직후 자동 생성을 등록하는 특성
-        private static void AutoCreateForBattleScene() // Battle Scene에서 전투 입력 안내 UI를 자동 생성하는 메서드
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") // 현재 Scene이 Battle이 아니면
-            {
-                return; // 다른 Scene에는 전투 입력 안내를 생성하지 않음
-            }
-
-            if (Object.FindFirstObjectByType<BattleInteractionStatusUI>() != null) // 이미 같은 UI가 존재하면
-            {
-                return; // 중복 생성을 차단
-            }
-
-            var host = new GameObject("BattleInteractionStatusUI_Day63"); // 63일차 전투 입력 안내 호스트 생성
-            host.AddComponent<BattleInteractionStatusUI>(); // 자동 Bind를 수행할 컴포넌트 추가
-        }
 
         private void Start() // 런타임 생성 직후 호출되는 초기화 메서드
         {

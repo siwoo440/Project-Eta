@@ -1,6 +1,5 @@
 using System.Collections; // 스테이지 전환 코루틴 사용
 using UnityEngine; // MonoBehaviour·GameObject·WaitForSecondsRealtime 사용
-using UnityEngine.SceneManagement; // Battle 씬 자동 생성 판정
 using ProjectEta.Battle; // BattleController·TurnManager 사용
 using ProjectEta.Board; // RouteMapBoardController·BoardInputController 사용
 using ProjectEta.Pieces; // PieceDefinition·PieceMovementType 사용
@@ -19,16 +18,6 @@ namespace ProjectEta.Run // 로그라이트 스테이지 전환 네임스페이�
         private RunState _runState; // 전체 로그라이트 런 상태
         private StagePlaceholderUI _placeholderUI; // Shop·Event 임시 진입 화면
         private Coroutine _transitionCoroutine; // 현재 스테이지 전환 코루틴
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // Battle 씬 로드 후 자동 생성
-        private static void AutoCreateForBattleScene() // 씬·Inspector 수정 없이 45일차 전환기 자동 주입
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 생성 차단
-            if (UnityEngine.Object.FindFirstObjectByType<StageTransitionController>() != null) return; // 중복 생성 차단
-
-            var host = new GameObject("StageTransitionController_Day45"); // 스테이지 전환 호스트 생성
-            host.AddComponent<StageTransitionController>(); // 전환 관리자 컴포넌트 추가
-        }
 
         private IEnumerator Start() // BattleController·RouteMapBoardController 준비 후 이벤트 연결
         {

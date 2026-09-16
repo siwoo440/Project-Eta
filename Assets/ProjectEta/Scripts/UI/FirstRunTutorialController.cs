@@ -1,7 +1,6 @@
 using UnityEngine; // MonoBehaviour·GameObject·Time 사용
 using UnityEngine.EventSystems; // EventSystem 사용
 using UnityEngine.InputSystem.UI; // InputSystemUIInputModule 사용
-using UnityEngine.SceneManagement; // Battle 씬 자동 생성 사용
 using UnityEngine.UI; // Canvas·Button·Image·Text 사용
 using ProjectEta.Battle; // BattleController 사용
 using ProjectEta.Board; // BoardInputController·RouteMapBoardController 사용
@@ -48,16 +47,6 @@ namespace ProjectEta.UI
         private static void ResetStaticState()
         {
             _instance = null; // Domain Reload 비활성 환경 인스턴스 초기화
-        }
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void AutoCreateForBattleScene()
-        {
-            if (SceneManager.GetActiveScene().name != SceneFlowController.BattleSceneName) return; // Battle 씬 외 생성 차단
-            if (Object.FindFirstObjectByType<FirstRunTutorialController>() != null) return; // 중복 튜토리얼 관리자 차단
-
-            GameObject host = new GameObject("FirstRunTutorialController_Day68"); // 최초 튜토리얼 호스트 생성
-            host.AddComponent<FirstRunTutorialController>(); // 튜토리얼 관리자 추가
         }
 
         private void Awake()

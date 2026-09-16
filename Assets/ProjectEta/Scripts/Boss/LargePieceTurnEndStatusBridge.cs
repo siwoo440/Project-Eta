@@ -3,7 +3,6 @@ using System.Collections; // IEnumerator 코루틴을 사용하기 위한 네임
 using System.Collections.Generic; // HashSet<T>를 사용하기 위한 네임스페이스
 using System.Reflection; // 기존 BoardInputController private 상태 정산 경로와 호환하기 위한 네임스페이스
 using UnityEngine; // MonoBehaviour, Debug, GameObject, Vector2Int를 사용하기 위한 네임스페이스
-using UnityEngine.SceneManagement; // Battle 씬 여부 확인에 사용하는 네임스페이스
 using ProjectEta.Battle; // BattleHooks, TurnState를 사용하기 위한 네임스페이스
 using ProjectEta.Board; // BoardInputController, BoardState를 사용하기 위한 네임스페이스
 using ProjectEta.Pieces; // PieceRuntimeState와 상태 효과 정산기를 사용하기 위한 네임스페이스
@@ -17,16 +16,6 @@ namespace ProjectEta.Boss // 대형 기물 통합 호환 타입을 모아두는 
         private Action<TurnState, int> _legacyTurnEndHandler; // 기존 BoardInputController 턴 종료 핸들러 델리게이트
         private MethodInfo _removePieceMethod; // 기존 사망 처리 private 메서드
         private bool _isBound; // 교체 연결 완료 여부
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // Battle 씬 로드 직후 자동 실행
-        private static void AutoCreateForBattleScene() // Inspector 설정 없이 호환 브리지 생성
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 생성 방지
-            if (UnityEngine.Object.FindFirstObjectByType<LargePieceTurnEndStatusBridge>() != null) return; // 중복 생성 방지
-
-            var root = new GameObject("LargePieceTurnEndStatusBridge_Day40"); // 상태 효과 통합 브리지 오브젝트 생성
-            root.AddComponent<LargePieceTurnEndStatusBridge>(); // Start 코루틴 연결
-        }
 
         private IEnumerator Start() // BoardInputController의 BattleHooks 구독이 끝날 때까지 대기
         {

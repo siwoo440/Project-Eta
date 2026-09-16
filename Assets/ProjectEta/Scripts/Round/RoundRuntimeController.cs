@@ -3,7 +3,6 @@ using System.Collections; // IEnumerator 코루틴을 사용하기 위한 네임
 using System.Collections.Generic; // HashSet<T>를 사용하기 위한 네임스페이스
 using System.Reflection; // 기존 BattleController 턴 제한 필드와 호환하기 위한 네임스페이스
 using UnityEngine; // MonoBehaviour, Resources, Debug, Vector2Int를 사용하기 위한 네임스페이스
-using UnityEngine.SceneManagement; // 현재 씬이 Battle인지 확인하기 위한 네임스페이스
 using ProjectEta.Battle; // BattleController, TurnManager, TurnState를 사용하기 위한 네임스페이스
 using ProjectEta.Board; // BoardInputController, BoardState, BoardView를 사용하기 위한 네임스페이스
 using ProjectEta.Boss; // 2x2 보스 점유·시각 유틸리티를 사용하기 위한 네임스페이스
@@ -34,16 +33,6 @@ namespace ProjectEta.Round // 라운드 구성·증원 관련 타입을 모아�
         public int TurnLimit => _definition != null ? _definition.TurnLimit : 30; // 라운드 데이터가 없을 때 30턴 기본값
         public int CurrentEnemyCount => _runState != null ? CountCurrentEnemies(_runState.Board) : 0; // 실제 생존 적 수
         public event Action RoundStateChanged; // 적 구성·턴 상태 변경 통지 이벤트
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // Battle 씬 로드 직후 자동 실행
-        private static void AutoCreateForBattleScene() // 인스펙터 연결 없이 런타임 관리자 생성
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 실행 방지
-            if (UnityEngine.Object.FindFirstObjectByType<RoundRuntimeController>() != null) return; // 중복 생성 방지
-
-            var controllerObject = new GameObject("RoundRuntimeController_Day40"); // 40일차 통합 라운드 관리자 오브젝트 생성
-            controllerObject.AddComponent<RoundRuntimeController>(); // Start 코루틴 연결
-        }
 
         private IEnumerator Start() // BattleController 자동 초기화 완료를 기다리는 코루틴
         {

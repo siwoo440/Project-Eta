@@ -1,6 +1,5 @@
 using System.Collections; // 초기화 대기 코루틴 사용
 using UnityEngine; // MonoBehaviour·GameObject·Resources·Mathf 사용
-using UnityEngine.SceneManagement; // Battle 씬 자동 생성 판정
 using ProjectEta.Battle; // BattleController·TurnManager·TurnState·BattleOutcome 사용
 using ProjectEta.Board; // RouteMapBoardController 사용
 using ProjectEta.Cards; // PlayerStartingDeckCatalog 사용
@@ -26,16 +25,6 @@ namespace ProjectEta.Run
         private CardRewardSource _pendingBattleRewardSource = CardRewardSource.BattleVictory; // 완료 전투별 대기 보상 경로
         private int _pendingRewardStage = RoundState.FirstRound; // 전투 전환 전 보상 Stage 보존
         private string _pendingRewardProfileId = string.Empty; // StageDefinition 전용 보상 프로필 ID 보존
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void AutoCreateForBattleScene()
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 생성 차단
-            if (Object.FindFirstObjectByType<CardRewardController>() != null) return; // 중복 생성 차단
-
-            var host = new GameObject("CardRewardController_Day46"); // 카드 보상 호스트 생성
-            host.AddComponent<CardRewardController>(); // 카드 보상 관리자 추가
-        }
 
         private IEnumerator Start()
         {

@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement; // 현재 씬 확인
 using ProjectEta.AI; // AI 점수·성능 정보 사용
 using ProjectEta.Battle; // 전투 상태·결과·배속 사용
 using ProjectEta.Run; // 런 흐름·경제 상태 사용
+using ProjectEta.SceneFlow; // Battle 초기화 진단 사용
 using ProjectEta.UI; // 개발 빌드 표시 정책 사용
 
 namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
@@ -27,6 +28,7 @@ namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
 
         private readonly AIDebugScoreSnapshotBuilder _snapshotBuilder = new AIDebugScoreSnapshotBuilder(); // AI 점수 스냅샷 생성기
         private AIDebugScoreSnapshot _snapshot = AIDebugScoreSnapshot.Empty(); // 최신 AI 점수 정보
+        private BattleRuntimeDiagnostics _runtimeDiagnostics = BattleRuntimeDiagnostics.Empty; // 최신 Battle 초기화 진단
         private BattleController _battleController; // 현재 전투 관리자
         private Rect _windowRect; // 왼쪽 패널 영역
         private Vector2 _statusScrollPosition; // 상태 페이지 스크롤 위치
@@ -150,9 +152,11 @@ namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
             { // 조건 범위
                 _battleController = null; // 이전 전투 참조 제거
                 _snapshot = AIDebugScoreSnapshot.Empty(); // AI 정보 초기화
+                _runtimeDiagnostics = BattleRuntimeDiagnostics.Empty; // Battle 진단 초기화
                 return; // 갱신 종료
             } // 조건 종료
 
+            _runtimeDiagnostics = SceneRuntimeBootstrap.RefreshBattleDiagnostics(); // 현재 관리자 누락·중복 갱신
             if (_battleController == null) _battleController = Object.FindFirstObjectByType<BattleController>(); // 전투 관리자 최초 탐색
 
             if (_currentPage != AiScorePage) return; // AI 페이지 외 평가 생략
@@ -261,6 +265,28 @@ namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
             DrawKeyValue("Build", GetBuildLabel()); // 빌드 종류 출력
             DrawKeyValue("Debug Panel", "F1 / 왼쪽 고정"); // 패널 위치 출력
             EndSection(); // 실행 상태 구역 종료
+
+            if (_runtimeDiagnostics.RequiredCount > 0) // Battle 초기화 진단 존재 확인
+            { // 조건 범위
+                BeginSection("런타임 초기화"); // 초기화 진단 구역 시작
+                DrawKeyValue("상태", _runtimeDiagnostics.IsHealthy ? "정상" : "확인 필요"); // 전체 상태 출력
+                DrawKeyValue("관리자", $"{_runtimeDiagnostics.ReadyCount} / {_runtimeDiagnostics.RequiredCount}"); // 관리자 준비 수 출력
+                DrawKeyValue("누락", _runtimeDiagnostics.MissingNames.Count.ToString()); // 누락 수 출력
+                DrawKeyValue("중복", _runtimeDiagnostics.DuplicateNames.Count.ToString()); // 중복 수 출력
+                DrawKeyValue("초기화", $"{_runtimeDiagnostics.ElapsedMilliseconds:0.0} ms"); // 초기화 소요 시간 출력
+
+                for (int index = 0; index < _runtimeDiagnostics.MissingNames.Count; index++) // 누락 관리자 순회
+                { // 반복 범위
+                    GUILayout.Label($"누락 · {_runtimeDiagnostics.MissingNames[index]}", _mutedLabelStyle); // 누락 관리자 출력
+                } // 반복 종료
+
+                for (int index = 0; index < _runtimeDiagnostics.DuplicateNames.Count; index++) // 중복 관리자 순회
+                { // 반복 범위
+                    GUILayout.Label($"중복 · {_runtimeDiagnostics.DuplicateNames[index]}", _mutedLabelStyle); // 중복 관리자 출력
+                } // 반복 종료
+
+                EndSection(); // 초기화 진단 구역 종료
+            } // 조건 종료
 
             if (_battleController == null || _battleController.RunState == null) // 전투 상태 누락 확인
             { // 조건 범위

@@ -1,6 +1,5 @@
 using System.Collections; // IEnumerator 코루틴을 사용하기 위한 네임스페이스
 using UnityEngine; // MonoBehaviour, Resources, GameObject, Debug 등을 사용하기 위한 네임스페이스
-using UnityEngine.SceneManagement; // Battle 씬 여부 확인에 사용하는 네임스페이스
 using ProjectEta.Board; // BoardInputController와 BoardView를 사용하기 위한 네임스페이스
 using ProjectEta.Pieces; // PieceDefinition과 PieceRuntimeState를 사용하기 위한 네임스페이스
 using ProjectEta.Round; // RoundRuntimeController의 보스 라운드 여부를 확인하기 위한 네임스페이스
@@ -10,16 +9,6 @@ namespace ProjectEta.Boss // 대형 보스 기물 기반을 모아두는 네임�
     public sealed class PrototypeBoss37Spawner : MonoBehaviour // 일반 개발 전투에서만 37일차 프로토타입 보스를 자동 배치하는 호환 컴포넌트
     {
         private static readonly Vector2Int PrototypeAnchor = new Vector2Int(0, 8); // 기존 프로토타입 보스 기준 좌표
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // Battle 씬 로드 직후 자동 실행
-        private static void AutoCreateForBattleScene() // 인스펙터 설정 없이 프로토타입 보스 스포너 생성
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 생성 방지
-            if (Object.FindFirstObjectByType<PrototypeBoss37Spawner>() != null) return; // 중복 생성 방지
-
-            var root = new GameObject("PrototypeBoss37Spawner"); // 호환용 보스 스포너 오브젝트 생성
-            root.AddComponent<PrototypeBoss37Spawner>(); // Start 코루틴 연결
-        }
 
         private IEnumerator Start() // 라운드 초기화가 끝난 뒤 일반 테스트 라운드에만 기존 보스를 추가
         {

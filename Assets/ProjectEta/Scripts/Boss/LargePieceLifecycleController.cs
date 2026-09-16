@@ -1,7 +1,6 @@
 using System.Collections; // IEnumerator 코루틴을 사용하기 위한 네임스페이스
 using System.Collections.Generic; // Dictionary<T,T>와 HashSet<T>를 사용하기 위한 네임스페이스
 using UnityEngine; // MonoBehaviour, GameObject, Debug 등을 사용하기 위한 네임스페이스
-using UnityEngine.SceneManagement; // 현재 씬이 Battle인지 확인하기 위한 네임스페이스
 using ProjectEta.Battle; // BattleController와 BattleHooks를 사용하기 위한 네임스페이스
 using ProjectEta.Board; // BoardState와 BoardView를 사용하기 위한 네임스페이스
 using ProjectEta.Pieces; // PieceRuntimeState와 PieceView를 사용하기 위한 네임스페이스
@@ -15,16 +14,6 @@ namespace ProjectEta.Boss // 37일차 이후 대형 보스 기물 기반을 모�
         private BoardView _boardView; // 대형 기물 화면 위치 보정에 사용할 보드 뷰
         private readonly Dictionary<PieceRuntimeState, Vector2Int> _moveOrigins = new Dictionary<PieceRuntimeState, Vector2Int>(); // 기존 이동 전 대형 기물 기준 좌표 저장
         private float _nextScanTime; // 외부 스폰 대형 기물을 자동 감지할 다음 시간
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // Battle 씬 로드가 끝나면 자동 실행
-        private static void AutoCreateForBattleScene() // 인스펙터 연결 없이 대형 기물 호환 브리지를 생성하는 부트스트랩
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬이 아니면 생성하지 않음
-            if (Object.FindFirstObjectByType<LargePieceLifecycleController>() != null) return; // 이미 존재하면 중복 생성하지 않음
-
-            var root = new GameObject("LargePieceLifecycleController_Day37"); // 대형 점유 생명주기 전용 오브젝트 생성
-            root.AddComponent<LargePieceLifecycleController>(); // 코루틴으로 기존 전투 시스템에 연결
-        }
 
         private IEnumerator Start() // BattleController 자동 생성 순서와 무관하게 연결될 때까지 기다리는 초기화 코루틴
         {

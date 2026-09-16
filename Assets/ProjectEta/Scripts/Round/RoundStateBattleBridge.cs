@@ -1,6 +1,5 @@
 using System.Collections; // 초기화 대기 코루틴 사용
 using UnityEngine; // MonoBehaviour·GameObject 사용
-using UnityEngine.SceneManagement; // Battle 씬 판정 사용
 using ProjectEta.Battle; // BattleController·TurnManager 사용
 using ProjectEta.Run; // RunState·RoundProgressStatus 사용
 
@@ -13,16 +12,6 @@ namespace ProjectEta.Round // 라운드 런타임 연결 네임스페이스
         private TurnManager _turnManager; // 현재 턴 매니저
         private RunState _runState; // 현재 런 상태
         private bool _isBound; // 이벤트 연결 여부
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // Battle 씬 로드 후 자동 생성
-        private static void AutoCreateForBattleScene() // 씬 수정 없이 브리지 자동 주입
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 생성 방지
-            if (Object.FindFirstObjectByType<RoundStateBattleBridge>() != null) return; // 중복 생성 방지
-
-            var bridgeObject = new GameObject("RoundStateBattleBridge_Day43"); // 브리지 오브젝트 생성
-            bridgeObject.AddComponent<RoundStateBattleBridge>(); // 라운드·런 상태 연결 컴포넌트 추가
-        }
 
         private IEnumerator Start() // 기존 전투 시스템 준비 후 연결
         {

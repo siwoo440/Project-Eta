@@ -1,5 +1,4 @@
 using UnityEngine; // MonoBehaviour·GameObject 사용
-using UnityEngine.SceneManagement; // Battle 씬 자동 생성
 using ProjectEta.Battle; // BattleController·BattleHooks·TurnManager 사용
 using ProjectEta.Board; // BoardInputController 사용
 using ProjectEta.Pieces; // PieceRuntimeState 사용
@@ -18,18 +17,6 @@ namespace ProjectEta.King
         private StrategyKingSelectionUI _strategySelectionUI; // 전략형 전술적 준비 카드 선택 UI
         private RunFlowPhase _previousFlowPhase; // 직전 런 진행 단계
         private bool _hasPreviousFlowPhase; // 직전 진행 단계 존재 여부
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void AutoCreateForBattleScene()
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 생성 차단
-            if (Object.FindFirstObjectByType<KingAbilityController>() != null) return; // 중복 킹 능력 관리자 차단
-
-            var host = new GameObject("KingAbilityController_Day49"); // 49일차 호스트 이름 유지
-            host.AddComponent<KingAbilityController>(); // 공통 킹 능력 훅 관리자 추가
-            host.AddComponent<KingSelectionUI>(); // 첫 런 킹 선택·상태 UI 추가
-            host.AddComponent<StrategyKingSelectionUI>(); // 50일차 전략형 카드 선택 UI 추가
-        }
 
         private void Update()
         {

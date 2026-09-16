@@ -1,7 +1,6 @@
 using System.Collections; // IEnumerator를 사용하기 위한 네임스페이스
 using UnityEngine; // MonoBehaviour, Camera, Physics, RaycastHit 등을 사용하기 위한 네임스페이스
 using UnityEngine.InputSystem; // 새 Input System의 Mouse를 사용하기 위한 네임스페이스
-using UnityEngine.SceneManagement; // Battle 씬에서만 자동 생성하기 위한 네임스페이스
 using ProjectEta.Board; // BoardInputController를 사용하기 위한 네임스페이스
 using ProjectEta.Debugging; // F1 패널 클릭 관통 차단
 using ProjectEta.Pieces; // PieceView와 PieceRuntimeState를 사용하기 위한 네임스페이스
@@ -14,16 +13,6 @@ namespace ProjectEta.Boss // 대형 보스 관련 런타임 호환 브리지를 
         private BoardInputController _boardInput; // 현재 선택 기물과 공격 진입점을 가진 기존 입력 컨트롤러
         private Camera _camera; // 보스 모델 클릭 판정을 위한 현재 메인 카메라
         private bool _isReady; // 실제 Battle 입력 시스템과 연결됐는지 여부
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // Battle 씬 로드 직후 자동 실행
-        private static void AutoCreateForBattleScene() // 인스펙터 설정 없이 보스 피격 입력 브리지를 자동 생성하는 부트스트랩
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬이 아니면 생성하지 않음
-            if (Object.FindFirstObjectByType<LargePiecePlayerAttackBridge>() != null) return; // 이미 존재하면 중복 생성 금지
-
-            var bridgeObject = new GameObject("LargePiecePlayerAttackBridge_Day39"); // 보스 클릭 보정 전용 오브젝트 생성
-            bridgeObject.AddComponent<LargePiecePlayerAttackBridge>(); // 실제 입력 브리지 컴포넌트 추가
-        }
 
         private IEnumerator Start() // BattleController/BoardInputController 자동 생성 순서와 무관하게 안전하게 연결하는 코루틴
         {

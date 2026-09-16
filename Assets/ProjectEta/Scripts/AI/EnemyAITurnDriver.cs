@@ -1,6 +1,5 @@
 using System.Collections; // IEnumerator 코루틴을 사용하기 위한 네임스페이스
 using UnityEngine; // MonoBehaviour와 Debug를 사용하기 위한 네임스페이스
-using UnityEngine.SceneManagement; // 현재 씬이 Battle인지 확인하기 위한 네임스페이스
 using ProjectEta.Battle; // BattleController, TurnManager, TurnState를 사용하기 위한 네임스페이스
 using ProjectEta.Board; // BoardInputController와 BoardView를 사용하기 위한 네임스페이스
 using ProjectEta.Boss; // 38일차 2x2 보스 행동 플래너와 실행기를 사용하기 위한 네임스페이스
@@ -20,16 +19,6 @@ namespace ProjectEta.AI // 적 AI 관련 타입을 모아두는 네임스페이�
         private BossPhase2Controller _bossPhase2Controller; // 38일차 Phase 2 전환·텔레그래프·범위 공격을 EnemyTurn보다 먼저 처리할 관리자
         private Coroutine _enemyTurnCoroutine; // 한 EnemyTurn에 AI 실행이 중복되지 않도록 관리하는 코루틴
         private bool _isBound; // 실제 전투 객체와 이벤트 연결이 끝났는지 여부
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // Battle 씬 로드 후 자동 실행
-        private static void AutoCreateForBattleScene() // 씬에 수동 컴포넌트 배치 없이 AI 드라이버를 만드는 부트스트랩
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬이 아니면 생성하지 않음
-            if (UnityEngine.Object.FindFirstObjectByType<EnemyAITurnDriver>() != null) return; // 이미 존재하면 중복 생성 방지
-
-            var driverObject = new GameObject("EnemyAITurnDriver_Day39"); // 39일차 최적화 일반 AI+보스 통합 턴 드라이버 전용 오브젝트 생성
-            driverObject.AddComponent<EnemyAITurnDriver>(); // 컴포넌트 추가 후 Start에서 실제 전투 연결
-        }
 
         private IEnumerator Start() // BattleController 자동 생성 순서와 무관하게 안전하게 참조를 찾는 초기화 코루틴
         {

@@ -1,6 +1,5 @@
 using System.Collections; // 초기화 대기 코루틴 사용
 using UnityEngine; // MonoBehaviour·GameObject·Mathf 사용
-using UnityEngine.SceneManagement; // Battle 씬 자동 생성
 using ProjectEta.Battle; // BattleController 사용
 using ProjectEta.Run; // RunState·RunFlowPhase·RoundState 사용
 
@@ -13,16 +12,6 @@ namespace ProjectEta.Meta
         private RunState _runState; // 현재 감시 런 상태
         private MetaProgressUI _progressUI; // 런 종료 메타 보상·해금 UI
         private bool _rewardGranted; // 현재 RunState 종료 보상 중복 지급 차단
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void AutoCreateForBattleScene()
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 생성 차단
-            if (Object.FindFirstObjectByType<MetaProgressRunResultController>() != null) return; // 중복 관리자 생성 차단
-
-            var host = new GameObject("MetaProgressController_Day48"); // 기존 영구 성장 호스트 이름 유지
-            host.AddComponent<MetaProgressRunResultController>(); // 런 종료 메타 진행 관리자 추가
-        }
 
         private IEnumerator Start()
         {

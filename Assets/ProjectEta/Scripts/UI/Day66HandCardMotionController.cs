@@ -2,7 +2,6 @@ using System.Collections.Generic; // CardView·Offset 목록 사용
 using System.Linq; // FusionMaterials.Contains 사용
 using UnityEngine; // MonoBehaviour·RectTransformUtility 사용
 using UnityEngine.InputSystem; // Mouse 입력 사용
-using UnityEngine.SceneManagement; // Battle 씬 자동 생성
 using UnityEngine.UI; // HorizontalLayoutGroup 사용
 using ProjectEta.Board; // BoardInputController 사용
 
@@ -18,16 +17,6 @@ namespace ProjectEta.UI
         private readonly Dictionary<int, float> _offsetByInstanceId = new Dictionary<int, float>(); // 카드별 현재 이동 거리
         private BoardInputController _boardInput; // Fusion 선택 상태 제공 입력 컨트롤러
         private float _nextScanTime; // 다음 손패 탐색 시간
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void AutoCreateForBattleScene()
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 생성 차단
-            if (Object.FindFirstObjectByType<Day66HandCardMotionController>() != null) return; // 중복 생성 차단
-
-            GameObject host = new GameObject("Day66HandCardMotionController"); // 66일차 카드 모션 호스트 생성
-            host.AddComponent<Day66HandCardMotionController>(); // 손패 카드 상하 모션 추가
-        }
 
         private void Update()
         {
@@ -112,7 +101,9 @@ namespace ProjectEta.UI
             if (layout == null) return rect.anchoredPosition.y; // 레이아웃 없는 카드 현재 위치 사용
 
             float height = rect.rect.height > 0f ? rect.rect.height : rect.sizeDelta.y; // 카드 실제 높이 계산
-            return layout.padding.bottom + height * rect.pivot.y; // LowerCenter 손패 기본 Y 계산
+            RectTransform layoutRect = layout.GetComponent<RectTransform>(); // 손패 레이아웃 RectTransform 조회
+            float parentHeight = layoutRect != null ? layoutRect.rect.height : 0f; // 상단 앵커 기준 부모 높이 계산
+            return layout.padding.bottom + height * rect.pivot.y - parentHeight; // LowerCenter 상단 앵커 기준 Y 계산
         }
     }
 }

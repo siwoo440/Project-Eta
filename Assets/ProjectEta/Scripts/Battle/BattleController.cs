@@ -1,7 +1,6 @@
 using System.Collections; // Coroutine·IEnumerator 사용
 using System.Collections.Generic; // HashSet<T> 사용
 using UnityEngine; // MonoBehaviour·GameObject·Debug 사용
-using UnityEngine.SceneManagement; // 현재 씬 이름 확인
 using ProjectEta.Board; // BoardView·BoardInputController 사용
 using ProjectEta.Pieces; // PieceMovementType·PieceRuntimeState 사용
 using ProjectEta.Run; // RunState·RunSaveSystem 사용
@@ -41,23 +40,6 @@ namespace ProjectEta.Battle
         private CombatLogUI _combatLogUI; // 전투 로그 UI 참조
         private DeploymentTurnBannerUI _deploymentTurnBannerUI; // 배치 턴 배너 UI 참조
         private Coroutine _dummyEnemyTurnCoroutine; // 임시 적 턴 코루틴
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void AutoCreateForBattleScene()
-        {
-            if (SceneManager.GetActiveScene().name != "Battle")
-            {
-                return; // Battle 씬 외 생성 차단
-            }
-
-            if (Object.FindFirstObjectByType<BattleController>() != null)
-            {
-                return; // 중복 BattleController 생성 차단
-            }
-
-            var controllerObject = new GameObject("BattleController"); // 전투 상태 호스트 생성
-            controllerObject.AddComponent<BattleController>(); // BattleController 자동 추가
-        }
 
         private void Awake()
         {

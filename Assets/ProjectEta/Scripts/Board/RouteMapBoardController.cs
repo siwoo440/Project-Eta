@@ -3,7 +3,6 @@ using System.Collections.Generic; // List<T>·Dictionary<T>·HashSet<T> 사용
 using UnityEngine; // MonoBehaviour·GameObject·Material·Color·Physics 사용
 using UnityEngine.EventSystems; // UI 위 클릭 차단
 using UnityEngine.InputSystem; // 새 Input System 마우스 입력 사용
-using UnityEngine.SceneManagement; // Battle 씬 자동 생성 판정
 using ProjectEta.Battle; // BattleController 사용
 using ProjectEta.Debugging; // F1 패널 클릭 관통 차단
 using ProjectEta.Pieces; // PieceView 사용
@@ -50,16 +49,6 @@ namespace ProjectEta.Board // 보드 경로 지도 런타임 네임스페이스
         public bool IsMapModeActive => _mapModeActive; // 외부 스테이지 전환기가 지도 표시 여부 확인
         public IReadOnlyDictionary<string, Vector3> NodePositions => _nodePositions; // 전체 지도 표시기가 재사용할 공통 좌표표
         public event System.Action<StageNode> StageNodeSelected; // 킹 이동 연출 완료 뒤 실제 StageDefinition 진입 요청 이벤트
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // Battle 씬 로드 후 자동 생성
-        private static void AutoCreateForBattleScene() // 씬·Inspector 수정 없이 44일차 컨트롤러 자동 주입
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬 외 생성 차단
-            if (Object.FindFirstObjectByType<RouteMapBoardController>() != null) return; // 중복 생성 차단
-
-            var host = new GameObject("RouteMapBoardController_Day44"); // 지도 컨트롤러 호스트 생성
-            host.AddComponent<RouteMapBoardController>(); // 지도 시각화·입력 컴포넌트 추가
-        }
 
         private IEnumerator Start() // 기존 전투 보드 준비 후 런 상태 연결
         {

@@ -2,7 +2,6 @@ using System; // Random을 사용하기 위한 네임스페이스
 using System.Collections; // IEnumerator 코루틴을 사용하기 위한 네임스페이스
 using System.Collections.Generic; // HashSet<T>와 List<T>를 사용하기 위한 네임스페이스
 using UnityEngine; // MonoBehaviour, GameObject, Debug, Resources 등을 사용하기 위한 네임스페이스
-using UnityEngine.SceneManagement; // 현재 씬이 Battle인지 확인하기 위한 네임스페이스
 using ProjectEta.Battle; // BattleController를 사용하기 위한 네임스페이스
 using ProjectEta.Pieces; // PieceDefinition을 사용하기 위한 네임스페이스
 using ProjectEta.Run; // RunState를 사용하기 위한 네임스페이스
@@ -21,16 +20,6 @@ namespace ProjectEta.Cards // 카드·덱 관련 타입을 모아두는 네임�
             "rook", // 룩
             "queen" // 퀸
         };
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] // Battle 씬이 로드될 때 자동으로 부트스트랩을 준비
-        private static void AutoCreateForBattleScene() // 씬에 수동 컴포넌트 배치 없이 자동 실행하기 위한 진입점
-        {
-            if (SceneManager.GetActiveScene().name != "Battle") return; // Battle 씬이 아니면 아무 작업도 하지 않음
-            if (UnityEngine.Object.FindFirstObjectByType<PrototypePlayerDeck26Bootstrap>() != null) return; // 이미 존재하면 중복 생성하지 않음
-
-            var bootstrapObject = new GameObject("PrototypePlayerDeck26Bootstrap"); // 26종 덱 확장을 실행할 임시 오브젝트 생성
-            bootstrapObject.AddComponent<PrototypePlayerDeck26Bootstrap>(); // Start 코루틴이 실행되도록 컴포넌트 추가
-        }
 
         private IEnumerator Start() // BattleController와 기존 6종 시작 손패 구성이 끝난 뒤 실행하기 위한 코루틴
         {
