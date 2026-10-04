@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e9f1a6ef25279a438a7a43e588c0bae, type: 3}
+  m_Name: FlagBearer
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
+  _pieceId: flag_bearer
+  _displayName: 깃발병
+  _requiredMetaUnlockId: piece_flag_bearer
+  _category: 2
+  _grade: 1
+  _movementType: 9
+  _roleTags: 33
+  _immuneStatusTags: 0
+  _movementRules:
+  - _kind: 3
+    _vectors: []
+    _maxSteps: 1
+    _condition: 6
+  _baseHp: 2
+  _baseAtk: 1
+  _occupancySize: {x: 1, y: 1}
+  _cardArtwork: {fileID: 0}
+  _description: 진영 기준 전방과 좌우로 1칸 이동·공격한다. 인접 아군 공격력 오라는 공통 Aura 프레임워크 구현 시 연결한다. HP·ATK는 임시값.

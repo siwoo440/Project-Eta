@@ -1,9 +1,15 @@
-namespace ProjectEta.Pieces // 기물 이동 규칙 데이터 타입을 모아두는 네임스페이스
+namespace ProjectEta.Pieces
 {
-    public enum MovementConditionType // Conditional 이동 규칙에서 사용할 조건 종류
+    public enum MovementConditionType
     {
-        None = 0, // 별도 조건이 없는 기본값
-        Pawn = 1, // 프로젝트 η의 전진·공격 분리 폰 규칙
-        ChameleonCycle = 2 // Knight → Bishop → Rook → Queen 순환을 런타임 상태로 선택하는 카멜레온 규칙
+        None = 0, // 별도 조건 없음
+        Pawn = 1, // 폰 전진·공격 분리
+        ChameleonCycle = 2, // 카멜레온 순환 이동
+        Spearman = 3, // 창병 직교 이동·2칸 공격
+        Shooter = 4, // 사수 전방 대각선 슬라이드
+        ShieldGuard = 5, // 방패병 좌우·후방 이동
+        FlagBearer = 6, // 깃발병 전방·좌우 이동
+        Pursuer = 7, // 추격병 전방·후방 대각선 이동
+        Scout = 8 // 척후병 전방 대각선·좌우 이동
     }
 }

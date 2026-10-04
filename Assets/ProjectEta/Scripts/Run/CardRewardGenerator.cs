@@ -1,125 +1,157 @@
 using System; // Random 사용
-using System.Collections.Generic; // List<T>·HashSet<T>·IReadOnlyList<T> 사용
-using ProjectEta.Meta; // Meta Progress 기반 런 콘텐츠 가용성 사용
+using System.Collections.Generic; // List·HashSet·IReadOnlyList 사용
+using UnityEngine; // Resources 사용
+using Random = System.Random; // UnityEngine.Random과 충돌하지 않도록 시스템 난수 별칭 지정
+using ProjectEta.Cards; // PlayerStartingDeckCatalog 사용
+using ProjectEta.Meta; // Meta Progress 기반 가용성 사용
 using ProjectEta.Pieces; // PieceDefinition 사용
 
 namespace ProjectEta.Run
 {
     public static class CardRewardGenerator
     {
+        private const string UnlockablePieceCatalogResourceName = "PlayerUnlockablePiecePool86"; // 86일차 신규 1성 보충 풀
+        private static PlayerStartingDeckCatalog _unlockablePieceCatalog; // 신규 해금 기물 리소스 캐시
+
         public static IReadOnlyList<PieceDefinition> Generate(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, int candidateCount, int seed)
         {
-            RunContentUnlockSnapshot snapshot = RunContentUnlockSnapshotService.GetOrCreateForActiveRun(MetaProgressService.Current); // 현재 런 해금 Snapshot 조회
-            return Generate(sourcePool, ownedCards, candidateCount, seed, snapshot); // 기존 균등 후보 생성 유지
+            RunContentUnlockSnapshot snapshot = RunContentUnlockSnapshotService.GetOrCreateForActiveRun(MetaProgressService.Current); // 현재 런 Snapshot 조회
+            return Generate(sourcePool, ownedCards, candidateCount, seed, snapshot);
         }
 
         public static IReadOnlyList<PieceDefinition> Generate(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, int candidateCount, int seed, RunContentUnlockSnapshot snapshot)
         {
-            return GenerateUniform(sourcePool, ownedCards, null, candidateCount, seed, snapshot); // 기존 균등 후보 생성 위임
+            return GenerateUniform(sourcePool, ownedCards, null, candidateCount, seed, snapshot);
         }
 
-        private static IReadOnlyList<PieceDefinition> GenerateUniform(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, IReadOnlyList<PieceDefinition> deadCards, int candidateCount, int seed, RunContentUnlockSnapshot snapshot) // 전체 소유 카드 기반 균등 후보 생성
+        private static IReadOnlyList<PieceDefinition> GenerateUniform(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, IReadOnlyList<PieceDefinition> deadCards, int candidateCount, int seed, RunContentUnlockSnapshot snapshot)
         {
-            List<PieceDefinition> eligible = BuildEligible(sourcePool, ownedCards, deadCards, snapshot); // 전체 소유 기준 획득 가능 후보 생성
-            var random = new Random(seed); // 현재 보상 독립 난수 생성기
+            List<PieceDefinition> eligible = BuildEligible(sourcePool, ownedCards, deadCards, snapshot); // 전체 후보 생성
+            var random = new Random(seed); // 재현 가능한 난수 생성
 
             for (int i = eligible.Count - 1; i > 0; i--)
             {
                 int swapIndex = random.Next(i + 1); // 교환 위치 결정
-                PieceDefinition temporary = eligible[i]; // 현재 카드 임시 저장
-                eligible[i] = eligible[swapIndex]; // 랜덤 카드 현재 위치 이동
-                eligible[swapIndex] = temporary; // 현재 카드 랜덤 위치 이동
+                PieceDefinition temporary = eligible[i];
+                eligible[i] = eligible[swapIndex];
+                eligible[swapIndex] = temporary;
             }
 
-            int safeCount = Math.Max(0, Math.Min(candidateCount, eligible.Count)); // 실제 생성 가능한 후보 수 보정
-            return eligible.GetRange(0, safeCount); // 기존 균등 셔플 결과 반환
+            int safeCount = Math.Max(0, Math.Min(candidateCount, eligible.Count)); // 후보 수 보정
+            return eligible.GetRange(0, safeCount);
         }
 
         public static IReadOnlyList<PieceDefinition> Generate(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, int candidateCount, int seed, CardRewardProfile profile)
         {
-            RunContentUnlockSnapshot snapshot = RunContentUnlockSnapshotService.GetOrCreateForActiveRun(MetaProgressService.Current); // 현재 런 해금 Snapshot 조회
-            return Generate(sourcePool, ownedCards, candidateCount, seed, snapshot, profile); // 품질 기반 후보 생성 위임
+            RunContentUnlockSnapshot snapshot = RunContentUnlockSnapshotService.GetOrCreateForActiveRun(MetaProgressService.Current); // 현재 런 Snapshot 조회
+            return Generate(sourcePool, ownedCards, candidateCount, seed, snapshot, profile);
         }
 
-        public static IReadOnlyList<PieceDefinition> Generate(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, IReadOnlyList<PieceDefinition> deadCards, int candidateCount, int seed, CardRewardProfile profile) // 사망 카드 포함 후보 생성
+        public static IReadOnlyList<PieceDefinition> Generate(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, IReadOnlyList<PieceDefinition> deadCards, int candidateCount, int seed, CardRewardProfile profile)
         {
-            RunContentUnlockSnapshot snapshot = RunContentUnlockSnapshotService.GetOrCreateForActiveRun(MetaProgressService.Current); // 현재 런 해금 Snapshot 조회
-            return Generate(sourcePool, ownedCards, deadCards, candidateCount, seed, snapshot, profile); // 전체 소유 카드 기반 후보 생성 위임
+            RunContentUnlockSnapshot snapshot = RunContentUnlockSnapshotService.GetOrCreateForActiveRun(MetaProgressService.Current); // 현재 런 Snapshot 조회
+            return Generate(sourcePool, ownedCards, deadCards, candidateCount, seed, snapshot, profile);
         }
 
         public static IReadOnlyList<PieceDefinition> Generate(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, int candidateCount, int seed, RunContentUnlockSnapshot snapshot, CardRewardProfile profile)
         {
-            return Generate(sourcePool, ownedCards, null, candidateCount, seed, snapshot, profile); // 기존 호출의 사망 카드 없는 후보 생성
+            return Generate(sourcePool, ownedCards, null, candidateCount, seed, snapshot, profile);
         }
 
-        private static IReadOnlyList<PieceDefinition> Generate(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, IReadOnlyList<PieceDefinition> deadCards, int candidateCount, int seed, RunContentUnlockSnapshot snapshot, CardRewardProfile profile) // 전체 소유 카드 기반 품질 후보 생성
+        private static IReadOnlyList<PieceDefinition> Generate(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, IReadOnlyList<PieceDefinition> deadCards, int candidateCount, int seed, RunContentUnlockSnapshot snapshot, CardRewardProfile profile)
         {
-            if (profile == null) return GenerateUniform(sourcePool, ownedCards, deadCards, candidateCount, seed, snapshot); // 품질 누락 시 전체 소유 기준 균등 후보 생성
+            if (profile == null) return GenerateUniform(sourcePool, ownedCards, deadCards, candidateCount, seed, snapshot);
 
-            List<PieceDefinition> remaining = BuildEligible(sourcePool, ownedCards, deadCards, snapshot); // 현재 획득 가능한 전체 후보 생성
-            int safeCount = Math.Max(0, Math.Min(candidateCount, remaining.Count)); // 실제 생성 가능한 후보 수 계산
-            var result = new List<PieceDefinition>(safeCount); // 최종 가중 선택 결과
-            var random = new Random(seed); // 동일 Seed 재현용 독립 난수 생성기
+            List<PieceDefinition> remaining = BuildEligible(sourcePool, ownedCards, deadCards, snapshot); // 획득 가능 후보 생성
+            int safeCount = Math.Max(0, Math.Min(candidateCount, remaining.Count));
+            var result = new List<PieceDefinition>(safeCount);
+            var random = new Random(seed);
 
             while (result.Count < safeCount && remaining.Count > 0)
             {
-                int selectedIndex = SelectWeightedIndex(remaining, profile, random); // Stage·Source 품질 기준 후보 위치 선택
-                result.Add(remaining[selectedIndex]); // 선택 후보 결과 추가
-                remaining.RemoveAt(selectedIndex); // 동일 PieceId 후보 재선택 방지
+                int selectedIndex = SelectWeightedIndex(remaining, profile, random);
+                result.Add(remaining[selectedIndex]);
+                remaining.RemoveAt(selectedIndex);
             }
 
-            return result; // 품질 가중 후보 반환
+            return result;
         }
 
         private static List<PieceDefinition> BuildEligible(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, RunContentUnlockSnapshot snapshot)
         {
-            return BuildEligible(sourcePool, ownedCards, null, snapshot); // 기존 호출의 사망 카드 없는 후보 생성
+            return BuildEligible(sourcePool, ownedCards, null, snapshot);
         }
 
-        private static List<PieceDefinition> BuildEligible(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, IReadOnlyList<PieceDefinition> deadCards, RunContentUnlockSnapshot snapshot) // 전체 소유 카드 기반 후보 생성
+        private static List<PieceDefinition> BuildEligible(IReadOnlyList<PieceDefinition> sourcePool, IReadOnlyList<PieceDefinition> ownedCards, IReadOnlyList<PieceDefinition> deadCards, RunContentUnlockSnapshot snapshot)
         {
-            var eligible = new List<PieceDefinition>(); // 획득 가능 후보 임시 목록
-            var uniqueIds = new HashSet<string>(StringComparer.Ordinal); // 동일 PieceId 후보 중복 차단 집합
+            var eligible = new List<PieceDefinition>(); // 최종 후보 목록
+            var uniqueIds = new HashSet<string>(StringComparer.Ordinal); // PieceId 중복 차단
 
-            if (sourcePool == null) return eligible; // 빈 원본 풀 즉시 반환
+            if (sourcePool == null) return eligible; // 기존 null 입력 동작 유지
+
+            AddEligibleFromPool(sourcePool, ownedCards, deadCards, snapshot, uniqueIds, eligible); // 기존 26종 소스 검사
+
+            PlayerStartingDeckCatalog unlockableCatalog = GetUnlockablePieceCatalog(); // 86일차 신규 6종 로드
+            if (unlockableCatalog != null)
+            {
+                AddEligibleFromPool(unlockableCatalog.Cards, ownedCards, deadCards, snapshot, uniqueIds, eligible); // 해금된 신규 1성만 병합
+            }
+
+            return eligible;
+        }
+
+        private static void AddEligibleFromPool(
+            IReadOnlyList<PieceDefinition> sourcePool,
+            IReadOnlyList<PieceDefinition> ownedCards,
+            IReadOnlyList<PieceDefinition> deadCards,
+            RunContentUnlockSnapshot snapshot,
+            HashSet<string> uniqueIds,
+            List<PieceDefinition> eligible)
+        {
+            if (sourcePool == null) return;
 
             for (int i = 0; i < sourcePool.Count; i++)
             {
-                PieceDefinition definition = sourcePool[i]; // 현재 카드 정의 조회
-                if (!MetaContentAvailabilityService.IsPieceAvailable(definition, snapshot)) continue; // 잠긴 영구 해금 기물 제외
-                if (!CardRewardRules.CanOffer(definition, ownedCards, deadCards)) continue; // 일반 Reward 획득 불가 카드 제외
-                if (!uniqueIds.Add(definition.PieceId)) continue; // 동일 카드 중복 후보 제외
+                PieceDefinition definition = sourcePool[i]; // 현재 카드 정의
+                if (!MetaContentAvailabilityService.IsPieceAvailable(definition, snapshot)) continue; // 미해금 신규 기물 제외
+                if (!CardRewardRules.CanOffer(definition, ownedCards, deadCards)) continue; // 1성·보유 제한 검사
+                if (!uniqueIds.Add(definition.PieceId)) continue; // 같은 PieceId 중복 제외
                 eligible.Add(definition); // 정상 후보 등록
             }
+        }
 
-            return eligible; // 최종 획득 가능 후보 반환
+        private static PlayerStartingDeckCatalog GetUnlockablePieceCatalog()
+        {
+            if (_unlockablePieceCatalog != null) return _unlockablePieceCatalog; // 기존 캐시 재사용
+            _unlockablePieceCatalog = Resources.Load<PlayerStartingDeckCatalog>(UnlockablePieceCatalogResourceName); // 신규 6종 리소스 로드
+            return _unlockablePieceCatalog;
         }
 
         private static int SelectWeightedIndex(IReadOnlyList<PieceDefinition> candidates, CardRewardProfile profile, Random random)
         {
-            int totalWeight = 0; // 전체 후보 가중치 초기화
+            int totalWeight = 0;
 
             for (int i = 0; i < candidates.Count; i++)
             {
-                PieceDefinition definition = candidates[i]; // 현재 후보 조회
-                if (definition == null) continue; // 빈 후보 제외
-                totalWeight += profile.GetGradeWeight(definition.Grade); // 현재 등급 가중치 누적
+                PieceDefinition definition = candidates[i];
+                if (definition == null) continue;
+                totalWeight += profile.GetGradeWeight(definition.Grade);
             }
 
-            if (totalWeight <= 0) return random.Next(candidates.Count); // 품질 대상이 부족하면 전체 유효 풀에서 안전 fallback
+            if (totalWeight <= 0) return random.Next(candidates.Count);
 
-            int roll = random.Next(totalWeight); // 전체 가중치 범위 난수 생성
-            int cumulative = 0; // 누적 가중치 초기화
+            int roll = random.Next(totalWeight);
+            int cumulative = 0;
 
             for (int i = 0; i < candidates.Count; i++)
             {
-                PieceDefinition definition = candidates[i]; // 현재 후보 조회
-                if (definition == null) continue; // 빈 후보 제외
-                cumulative += profile.GetGradeWeight(definition.Grade); // 현재 후보 누적 가중치 반영
-                if (roll < cumulative) return i; // 난수 구간에 해당하는 후보 반환
+                PieceDefinition definition = candidates[i];
+                if (definition == null) continue;
+                cumulative += profile.GetGradeWeight(definition.Grade);
+                if (roll < cumulative) return i;
             }
 
-            return candidates.Count - 1; // 부동 조건 예외 시 마지막 후보 안전 반환
+            return candidates.Count - 1;
         }
     }
 }
