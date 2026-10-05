@@ -1,18 +1,33 @@
-using ProjectEta.Pieces; // PieceRuntimeState를 사용하기 위한 네임스페이스
+using ProjectEta.Pieces; // PieceRuntimeState 사용
 
-namespace ProjectEta.Battle // 전투 관련 타입을 모아두는 네임스페이스
+namespace ProjectEta.Battle
 {
-    public class DamageContext // 29일차: BeforeDamage 구독자가 최종 피해량을 조정할 수 있도록 담는 가변 컨텍스트
+    public class DamageContext
     {
-        public PieceRuntimeState Target { get; } // 피해를 받는 기물
-        public PieceRuntimeState Source { get; } // 피해를 준 기물(없으면 null, 예: 상태 이상 틱 피해)
-        public int Amount { get; set; } // 최종 적용될 피해량(구독자가 줄이거나 늘릴 수 있음)
+        public PieceRuntimeState OriginalTarget { get; } // 피해 이벤트가 처음 향했던 대상
+        public PieceRuntimeState Target { get; private set; } // RedirectDamage 적용 후 실제 피해 대상
+        public PieceRuntimeState Source { get; } // 피해 발생원
+        public int OriginalAmount { get; } // Ability·훅 적용 전 최초 피해량
+        public int Amount { get; set; } // 최종 적용 예정 피해량
+        public int RedirectCount { get; private set; } // 한 피해 이벤트의 Redirect 적용 횟수
 
-        public DamageContext(PieceRuntimeState target, PieceRuntimeState source, int amount) // 최초 피해량으로 컨텍스트를 구성하는 생성자
+        public DamageContext(PieceRuntimeState target, PieceRuntimeState source, int amount)
         {
-            Target = target; // 대상 저장
-            Source = source; // 발생원 저장(없을 수 있음)
-            Amount = amount; // 초기 피해량 저장
+            OriginalTarget = target;
+            Target = target;
+            Source = source;
+            OriginalAmount = amount;
+            Amount = amount;
+            RedirectCount = 0;
+        }
+
+        public bool TryRedirect(PieceRuntimeState newTarget)
+        {
+            if (newTarget == null || RedirectCount > 0 || object.ReferenceEquals(newTarget, Target)) return false;
+
+            Target = newTarget;
+            RedirectCount = 1; // 90일차: 한 피해 이벤트에서 Redirect는 최대 한 번
+            return true;
         }
     }
 }

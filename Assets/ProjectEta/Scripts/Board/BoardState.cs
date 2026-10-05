@@ -1,5 +1,6 @@
 using System.Collections.Generic; // HashSet<T>를 사용하기 위한 네임스페이스
 using UnityEngine; // Vector2Int를 사용하기 위한 네임스페이스
+using ProjectEta.Abilities; // 90일차 RedirectDamage 보드 탐색 등록
 using ProjectEta.Pieces; // PieceRuntimeState를 사용하기 위한 네임스페이스
 
 namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페이스
@@ -25,109 +26,111 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                     };
                 }
             }
+
+            AbilityBoardRegistry.Register(this); // 90일차: 피해 대상이 속한 실제 보드를 RedirectDamage가 찾을 수 있도록 등록
         }
 
-        public bool IsInsideBoard(Vector2Int position) // 좌표가 보드 범위 안인지 검사하는 메서드
+        public bool IsInsideBoard(Vector2Int position)
         {
-            return position.x >= 0 && position.x < Width && position.y >= 0 && position.y < Height; // 가로/세로 범위를 모두 만족하는지 반환
+            return position.x >= 0 && position.x < Width && position.y >= 0 && position.y < Height;
         }
 
-        public TileState GetTile(Vector2Int position) // 좌표에 해당하는 타일 상태를 가져오는 메서드
+        public TileState GetTile(Vector2Int position)
         {
-            return IsInsideBoard(position) ? _tiles[position.x, position.y] : null; // 범위 안이면 타일 반환, 아니면 null 반환
+            return IsInsideBoard(position) ? _tiles[position.x, position.y] : null;
         }
 
-        public bool CanOccupyArea(Vector2Int anchor, Vector2Int size, PieceRuntimeState ignorePiece = null) // 대형 기물의 사각 점유 영역 전체가 사용 가능한지 실제 점유 전에 검사하는 메서드
+        public bool CanOccupyArea(Vector2Int anchor, Vector2Int size, PieceRuntimeState ignorePiece = null)
         {
-            if (size.x <= 0 || size.y <= 0) return false; // 0 이하 크기는 잘못된 점유 데이터이므로 실패
+            if (size.x <= 0 || size.y <= 0) return false;
 
-            for (int x = 0; x < size.x; x++) // 영역 가로 방향으로 순회
+            for (int x = 0; x < size.x; x++)
             {
-                for (int y = 0; y < size.y; y++) // 영역 세로 방향으로 순회
+                for (int y = 0; y < size.y; y++)
                 {
-                    var position = anchor + new Vector2Int(x, y); // 검사할 실제 보드 좌표 계산
-                    if (!IsInsideBoard(position)) return false; // 한 칸이라도 보드 밖이면 전체 영역 사용 불가
+                    var position = anchor + new Vector2Int(x, y);
+                    if (!IsInsideBoard(position)) return false;
 
-                    var tile = GetTile(position); // 현재 검사 칸 조회
-                    if (tile == null || tile.IsBlockedByObstacle) return false; // 타일이 없거나 장애물이 있으면 사용 불가
+                    var tile = GetTile(position);
+                    if (tile == null || tile.IsBlockedByObstacle) return false;
 
-                    if (tile.OccupyingPiece != null && tile.OccupyingPiece != ignorePiece) return false; // 다른 기물이 점유 중이면 전체 영역 사용 불가
+                    if (tile.OccupyingPiece != null && tile.OccupyingPiece != ignorePiece) return false;
                 }
             }
 
-            return true; // 모든 칸이 유효하면 영역 전체를 사용할 수 있음
+            return true;
         }
 
-        public bool TryOccupyArea(Vector2Int anchor, Vector2Int size, PieceRuntimeState piece) // 1x1부터 2x2 이상까지 사각 영역 점유를 원자적으로 시도하는 메서드
+        public bool TryOccupyArea(Vector2Int anchor, Vector2Int size, PieceRuntimeState piece)
         {
-            if (piece == null) return false; // 점유시킬 런타임 기물이 없으면 실패
-            if (!CanOccupyArea(anchor, size, piece)) return false; // 모든 칸을 먼저 검사해 부분 점유가 생기지 않게 함
+            if (piece == null) return false;
+            if (!CanOccupyArea(anchor, size, piece)) return false;
 
-            for (int x = 0; x < size.x; x++) // 영역 가로 방향으로 순회하며 실제 점유 처리
+            for (int x = 0; x < size.x; x++)
             {
-                for (int y = 0; y < size.y; y++) // 영역 세로 방향으로 순회하며 실제 점유 처리
+                for (int y = 0; y < size.y; y++)
                 {
-                    var position = anchor + new Vector2Int(x, y); // 점유할 칸 좌표 계산
-                    GetTile(position).OccupyingPiece = piece; // 모든 칸에 같은 PieceRuntimeState 하나를 등록
+                    var position = anchor + new Vector2Int(x, y);
+                    GetTile(position).OccupyingPiece = piece;
                 }
             }
 
-            return true; // 전체 영역 점유 성공
+            return true;
         }
 
-        public void ClearArea(Vector2Int anchor, Vector2Int size) // 지정한 사각 영역의 점유를 비우는 기존 호환 메서드
+        public void ClearArea(Vector2Int anchor, Vector2Int size)
         {
-            if (size.x <= 0 || size.y <= 0) return; // 잘못된 크기면 처리하지 않음
+            if (size.x <= 0 || size.y <= 0) return;
 
-            for (int x = 0; x < size.x; x++) // 영역 가로 방향으로 순회
+            for (int x = 0; x < size.x; x++)
             {
-                for (int y = 0; y < size.y; y++) // 영역 세로 방향으로 순회
+                for (int y = 0; y < size.y; y++)
                 {
-                    var tile = GetTile(anchor + new Vector2Int(x, y)); // 비울 칸의 타일 조회
-                    if (tile != null) tile.OccupyingPiece = null; // 보드 범위 안이면 점유 기물 해제
+                    var tile = GetTile(anchor + new Vector2Int(x, y));
+                    if (tile != null) tile.OccupyingPiece = null;
                 }
             }
         }
 
-        public int ClearPiece(PieceRuntimeState piece) // 보드 전체에서 같은 런타임 기물을 참조하는 모든 칸을 안전하게 해제하는 37일차 메서드
+        public int ClearPiece(PieceRuntimeState piece)
         {
-            if (piece == null) return 0; // 제거할 기물이 없으면 해제 칸도 0개
+            if (piece == null) return 0;
 
-            int clearedCount = 0; // 실제로 해제한 칸 수
+            int clearedCount = 0;
 
-            for (int x = 0; x < Width; x++) // 보드 가로 전체 순회
+            for (int x = 0; x < Width; x++)
             {
-                for (int y = 0; y < Height; y++) // 보드 세로 전체 순회
+                for (int y = 0; y < Height; y++)
                 {
-                    if (_tiles[x, y].OccupyingPiece != piece) continue; // 다른 기물 또는 빈 칸이면 건너뜀
-                    _tiles[x, y].OccupyingPiece = null; // 같은 런타임 기물 참조를 해제
-                    clearedCount++; // 해제한 칸 수 증가
+                    if (_tiles[x, y].OccupyingPiece != piece) continue;
+                    _tiles[x, y].OccupyingPiece = null;
+                    clearedCount++;
                 }
             }
 
-            return clearedCount; // 실제 해제한 전체 칸 수 반환
+            return clearedCount;
         }
 
-        public int CountPieces(bool isPlayerPiece) // 보드 위 점유 기물 수를 런타임 기물 기준으로 세는 메서드
+        public int CountPieces(bool isPlayerPiece)
         {
-            var uniquePieces = new HashSet<PieceRuntimeState>(); // 2x2 보스처럼 여러 칸이 같은 기물을 가리켜도 한 번만 세기 위한 집합
+            var uniquePieces = new HashSet<PieceRuntimeState>();
 
-            for (int x = 0; x < Width; x++) // 보드 가로 방향으로 순회
+            for (int x = 0; x < Width; x++)
             {
-                for (int y = 0; y < Height; y++) // 보드 세로 방향으로 순회
+                for (int y = 0; y < Height; y++)
                 {
-                    var piece = _tiles[x, y].OccupyingPiece; // 이 칸의 점유 기물 조회
-                    if (piece == null) continue; // 빈 칸은 제외
+                    var piece = _tiles[x, y].OccupyingPiece;
+                    if (piece == null) continue;
 
-                    bool hasConfiguredHp = piece.Definition != null && piece.Definition.BaseHp > 0; // 실제 게임 데이터처럼 양수 HP가 설정된 기물인지 확인
-                    if (piece.IsDead && hasConfiguredHp) continue; // 양수 HP로 생성된 실제 기물이 0 HP가 된 경우에만 사망 기물로 제외
+                    bool hasConfiguredHp = piece.Definition != null && piece.Definition.BaseHp > 0;
+                    if (piece.IsDead && hasConfiguredHp) continue;
 
-                    if (piece.IsPlayerPiece != isPlayerPiece) continue; // 요청한 진영이 아니면 제외
-                    uniquePieces.Add(piece); // BaseHp가 0인 레거시/테스트 정의도 점유 기물로 세며 2x2 동일 런타임은 한 번만 등록
+                    if (piece.IsPlayerPiece != isPlayerPiece) continue;
+                    uniquePieces.Add(piece);
                 }
             }
 
-            return uniquePieces.Count; // 1x1 일반 기물과 2x2 대형 기물을 모두 실제 기물 수로 반환
+            return uniquePieces.Count;
         }
     }
 }

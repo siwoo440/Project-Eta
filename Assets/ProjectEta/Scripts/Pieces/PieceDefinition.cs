@@ -1,5 +1,6 @@
 using System; // Array.Empty<T>를 사용하기 위한 네임스페이스
 using UnityEngine; // ScriptableObject, SerializeField, Sprite 등을 사용하기 위한 네임스페이스
+using ProjectEta.Abilities; // 90일차 공통 Ability 정의 사용
 
 namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페이스
 {
@@ -20,10 +21,13 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
         [SerializeField] private PieceRoleTag _roleTags; // 기물 역할 태그
 
         [Header("상태 면역")] // 27일차 상태 효과 면역 구분선
-        [SerializeField] private StatusEffectType _immuneStatusTags; // 이 기물이 걸리지 않는 상태 이상 태그(일반 기물은 None, 보스 등은 필요한 만큼 체크)
+        [SerializeField] private StatusEffectType _immuneStatusTags; // 이 기물이 걸리지 않는 상태 이상 태그
 
         [Header("이동 규칙")] // 23일차 데이터 기반 이동 규칙 구분선
         [SerializeField] private MovementRuleData[] _movementRules = Array.Empty<MovementRuleData>(); // 새 기물이 코드 수정 없이 조합할 이동 규칙 목록
+
+        [Header("공통 능력")] // 90일차 공통 Ability 구분선
+        [SerializeField] private PieceAbilityDefinition[] _abilities = Array.Empty<PieceAbilityDefinition>(); // 기물이 보유한 데이터 기반 공통 능력 목록
 
         [Header("기본 스탯")] // 인스펙터 기본 스탯 구분선
         [SerializeField] private int _baseHp; // 카드 우하단과 실제 런타임에 사용할 기본 체력
@@ -48,6 +52,7 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
         public PieceRoleTag RoleTags => _roleTags; // 외부에서 읽는 역할 태그
         public StatusEffectType ImmuneStatusTags => _immuneStatusTags; // 27일차: 외부에서 읽는 상태 이상 면역 태그
         public MovementRuleData[] MovementRules => _movementRules ?? Array.Empty<MovementRuleData>(); // 데이터 기반 이동 규칙을 null 없이 반환
+        public PieceAbilityDefinition[] Abilities => _abilities ?? Array.Empty<PieceAbilityDefinition>(); // 90일차: 공통 Ability 목록을 null 없이 반환
         public int BaseHp => _baseHp; // 외부에서 읽는 기본 체력
         public int BaseAtk => _baseAtk; // 외부에서 읽는 기본 공격력
         public Vector2Int OccupancySize => _occupancySize; // 외부에서 읽는 점유 크기
