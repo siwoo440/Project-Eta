@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Summoner
   m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
   _pieceId: summoner
-  _displayName: 소환사
-  _requiredMetaUnlockId:
+  _displayName: "\uC18C\uD658\uC0AC"
+  _requiredMetaUnlockId: 
   _category: 1
   _grade: 3
   _movementType: 9
@@ -29,8 +29,12 @@ MonoBehaviour:
     - {x: -1, y: -1}
     _maxSteps: 1
     _condition: 0
+  _abilities:
+  - {fileID: 11400000, guid: da61d70726e88674d97de4872a57456e, type: 2}
   _baseHp: 4
   _baseAtk: 3
   _occupancySize: {x: 1, y: 1}
   _cardArtwork: {fileID: 0}
-  _description: 대각선으로 1칸 이동한다. 임시 소환물 능력은 Summon 프레임워크 구현 후 연결한다.
+  _description: "\uB300\uAC01\uC120\uC73C\uB85C 1\uCE78 \uC774\uB3D9\uD55C\uB2E4.
+    \uC784\uC2DC \uC18C\uD658\uBB3C \uB2A5\uB825\uC740 Summon \uD504\uB808\uC784\uC6CC\uD06C
+    \uAD6C\uD604 \uD6C4 \uC5F0\uACB0\uD55C\uB2E4."

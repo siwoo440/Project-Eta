@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Medic
   m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
   _pieceId: medic
-  _displayName: 의무병
-  _requiredMetaUnlockId:
+  _displayName: "\uC758\uBB34\uBCD1"
+  _requiredMetaUnlockId: 
   _category: 1
   _grade: 3
   _movementType: 9
@@ -33,8 +33,12 @@ MonoBehaviour:
     - {x: -1, y: -1}
     _maxSteps: 1
     _condition: 0
+  _abilities:
+  - {fileID: 11400000, guid: 5b0af2f9f7072434bbee3ceb625d017d, type: 2}
   _baseHp: 5
   _baseAtk: 2
   _occupancySize: {x: 1, y: 1}
   _cardArtwork: {fileID: 0}
-  _description: 인접 8칸으로 1칸 이동한다. 아군 회복 능력은 Heal 프레임워크 구현 후 연결한다.
+  _description: "\uC778\uC811 8\uCE78\uC73C\uB85C 1\uCE78 \uC774\uB3D9\uD55C\uB2E4.
+    \uC544\uAD70 \uD68C\uBCF5 \uB2A5\uB825\uC740 Heal \uD504\uB808\uC784\uC6CC\uD06C
+    \uAD6C\uD604 \uD6C4 \uC5F0\uACB0\uD55C\uB2E4."

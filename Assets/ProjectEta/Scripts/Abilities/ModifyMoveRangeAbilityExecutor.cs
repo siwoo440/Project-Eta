@@ -19,7 +19,9 @@ namespace ProjectEta.Abilities
                 return false;
             }
 
-            if (context.Owner.IsDead)
+            var target = context.TargetPiece ?? context.Owner;
+
+            if (target == null || target.IsDead)
             {
                 failureReason = "사망한 기물의 이동 범위를 변경할 수 없습니다.";
                 return false;
@@ -31,16 +33,22 @@ namespace ProjectEta.Abilities
                 return false;
             }
 
-            BoardState board = context.Board ?? AbilityBoardRegistry.FindBoardContaining(context.Owner);
+            BoardState board = context.Board ?? AbilityBoardRegistry.FindBoardContaining(target);
             if (board == null)
             {
                 failureReason = "이동 범위를 계산할 BoardState가 없습니다.";
                 return false;
             }
 
-            if (!context.Owner.CanMove && !context.Owner.CanAttack)
+            if (!target.CanMove && !target.CanAttack)
             {
                 failureReason = "현재 기물은 이동과 공격이 모두 제한되어 있습니다.";
+                return false;
+            }
+
+            if (MovementRangeModifierService.HasEquivalentEffect(target, effect))
+            {
+                failureReason = "같은 이동 보정이 이미 적용되어 있습니다.";
                 return false;
             }
 
@@ -56,14 +64,15 @@ namespace ProjectEta.Abilities
                 return AbilityExecutionResult.Failed(reason);
             }
 
-            BoardState board = context.Board ?? AbilityBoardRegistry.FindBoardContaining(context.Owner);
-            MovementResult candidates = MovementModifierResolver.PreviewEffect(context.Owner, board, effect);
+            var target = context.TargetPiece ?? context.Owner;
+            BoardState board = context.Board ?? AbilityBoardRegistry.FindBoardContaining(target);
+            MovementResult candidates = MovementModifierResolver.PreviewEffect(target, board, effect);
 
             return AbilityExecutionResult.Succeeded(
                 candidates.MoveTiles.Count + candidates.AttackTiles.Count,
-                context.Owner,
+                target,
                 false,
-                new[] { context.Owner },
+                new[] { target },
                 candidates.MoveTiles);
         }
 
@@ -74,8 +83,9 @@ namespace ProjectEta.Abilities
             AbilityExecutionResult preview = Preview(effect, context);
             if (!preview.Success) return preview;
 
+            var target = context.TargetPiece ?? context.Owner;
             MovementRangeModifierService.Register(
-                context.Owner,
+                target,
                 effect,
                 context.TurnManager,
                 effect.DurationTurns > 0 ? effect.DurationTurns : 1);

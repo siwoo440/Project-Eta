@@ -30,6 +30,35 @@ namespace ProjectEta.Abilities
             EnsureTurnSubscription(turnManager);
         }
 
+
+        public static bool HasEquivalentEffect(PieceRuntimeState piece, AbilityEffectData effect)
+        {
+            if (piece == null || effect == null) return false;
+
+            for (int i = 0; i < States.Count; i++)
+            {
+                MovementRangeModifierState state = States[i];
+
+                if (state == null ||
+                    !object.ReferenceEquals(state.Piece, piece) ||
+                    state.Effect == null)
+                {
+                    continue;
+                }
+
+                AbilityEffectData existing = state.Effect;
+
+                if (existing.EffectType == effect.EffectType &&
+                    existing.Amount == effect.Amount &&
+                    existing.Vector == effect.Vector)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public static IReadOnlyList<AbilityEffectData> GetRuntimeEffects(PieceRuntimeState piece)
         {
             var result = new List<AbilityEffectData>();

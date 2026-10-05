@@ -12,6 +12,7 @@ namespace ProjectEta.Abilities
         private sealed class Entry
         {
             public PieceRuntimeState Piece;
+            public PieceRuntimeState Source;
             public BoardState Board;
             public TurnManager TurnManager;
         }
@@ -24,11 +25,17 @@ namespace ProjectEta.Abilities
 
         public static void Register(PieceRuntimeState piece, BoardState board, TurnManager turnManager)
         {
+            Register(piece, null, board, turnManager);
+        }
+
+        public static void Register(PieceRuntimeState piece, PieceRuntimeState source, BoardState board, TurnManager turnManager)
+        {
             if (piece == null || board == null) return;
 
             Entries.Add(new Entry
             {
                 Piece = piece,
+                Source = source,
                 Board = board,
                 TurnManager = turnManager
             });
@@ -47,6 +54,23 @@ namespace ProjectEta.Abilities
 
             TurnHandlers.Add(turnManager, handler);
             turnManager.TurnChanged += handler;
+        }
+
+
+        public static int CountForSource(PieceRuntimeState source)
+        {
+            if (source == null) return 0;
+
+            int count = 0;
+
+            for (int i = 0; i < Entries.Count; i++)
+            {
+                Entry entry = Entries[i];
+                if (entry == null || entry.Piece == null || entry.Piece.IsDead) continue;
+                if (object.ReferenceEquals(entry.Source, source)) count++;
+            }
+
+            return count;
         }
 
         public static int ClearForTurn(TurnManager turnManager)

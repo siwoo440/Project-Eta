@@ -67,10 +67,16 @@ namespace ProjectEta.Abilities
             if (context == null) return AbilityExecutionResult.Failed("Ability 실행 Context가 없습니다.");
 
             if (ability.ActionCost == AbilityActionCost.PlayerAction &&
-                context.TurnManager != null &&
-                !context.TurnManager.CanPlayerAct)
+                context.TurnManager != null)
             {
-                return AbilityExecutionResult.Failed("현재 턴에는 일반 행동을 사용할 수 없습니다.");
+                bool allowed = context.Owner != null && context.Owner.IsPlayerPiece
+                    ? context.TurnManager.CanPlayerAct
+                    : context.TurnManager.CurrentState == TurnState.EnemyTurn;
+
+                if (!allowed)
+                {
+                    return AbilityExecutionResult.Failed("현재 턴에는 일반 행동을 사용할 수 없습니다.");
+                }
             }
 
             AbilityEffectData[] effects = ability.Effects;
@@ -132,7 +138,10 @@ namespace ProjectEta.Abilities
 
             bool consumedAction = false;
 
-            if (ability.ActionCost == AbilityActionCost.PlayerAction && context.TurnManager != null)
+            if (ability.ActionCost == AbilityActionCost.PlayerAction &&
+                context.TurnManager != null &&
+                context.Owner != null &&
+                context.Owner.IsPlayerPiece)
             {
                 consumedAction = context.TurnManager.TryCompletePlayerAction();
             }

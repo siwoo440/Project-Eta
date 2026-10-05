@@ -9,6 +9,8 @@ namespace ProjectEta.Pieces
         private Vector2Int _boardPosition;
         private int _movementCycleIndex;
         private readonly List<RuntimeStatusEffect> _statusEffects = new List<RuntimeStatusEffect>();
+        private readonly HashSet<string> _usedBattleAbilityIds = new HashSet<string>();
+        private int _lastMoveDistance;
 
         public PieceDefinition Definition { get; }
 
@@ -18,6 +20,7 @@ namespace ProjectEta.Pieces
             set
             {
                 if (_boardPosition == value) return;
+                _lastMoveDistance = Mathf.Abs(value.x - _boardPosition.x) + Mathf.Abs(value.y - _boardPosition.y);
                 _boardPosition = value;
                 AdvanceMovementCycle();
             }
@@ -30,6 +33,7 @@ namespace ProjectEta.Pieces
         public bool IsDead => _currentHp <= 0;
         public bool IsTemporarySummon { get; private set; } // 91일차: 전투 한정 임시 소환물 여부
         public int MovementCycleIndex => _movementCycleIndex;
+        public int LastMoveDistance => _lastMoveDistance;
         public IReadOnlyList<RuntimeStatusEffect> StatusEffects => _statusEffects;
 
         public int CurrentHp
@@ -51,6 +55,23 @@ namespace ProjectEta.Pieces
         public void MarkAsTemporarySummon()
         {
             IsTemporarySummon = true;
+        }
+
+
+        public bool HasUsedBattleAbility(string abilityId)
+        {
+            return !string.IsNullOrWhiteSpace(abilityId) && _usedBattleAbilityIds.Contains(abilityId);
+        }
+
+        public bool TryMarkBattleAbilityUsed(string abilityId)
+        {
+            if (string.IsNullOrWhiteSpace(abilityId)) return false;
+            return _usedBattleAbilityIds.Add(abilityId);
+        }
+
+        public void ClearLastMoveDistance()
+        {
+            _lastMoveDistance = 0;
         }
 
         public void AdvanceMovementCycle()

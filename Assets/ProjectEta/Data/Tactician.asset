@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Tactician
   m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
   _pieceId: tactician
-  _displayName: 전술가
-  _requiredMetaUnlockId:
+  _displayName: "\uC804\uC220\uAC00"
+  _requiredMetaUnlockId: 
   _category: 1
   _grade: 3
   _movementType: 9
@@ -33,8 +33,12 @@ MonoBehaviour:
     - {x: -1, y: -1}
     _maxSteps: 1
     _condition: 0
+  _abilities:
+  - {fileID: 11400000, guid: 9b0ea40d0ff316a4ea727e576cfc7ab6, type: 2}
   _baseHp: 4
   _baseAtk: 3
   _occupancySize: {x: 1, y: 1}
   _cardArtwork: {fileID: 0}
-  _description: 인접 8칸으로 1칸 이동한다. 전술 지원 능력은 후속 공통 능력 프레임워크에서 연결한다.
+  _description: "\uC778\uC811 8\uCE78\uC73C\uB85C 1\uCE78 \uC774\uB3D9\uD55C\uB2E4.
+    \uC804\uC220 \uC9C0\uC6D0 \uB2A5\uB825\uC740 \uD6C4\uC18D \uACF5\uD1B5 \uB2A5\uB825
+    \uD504\uB808\uC784\uC6CC\uD06C\uC5D0\uC11C \uC5F0\uACB0\uD55C\uB2E4."

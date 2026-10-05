@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: WarChariot
   m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
   _pieceId: war_chariot
-  _displayName: 전차
-  _requiredMetaUnlockId:
+  _displayName: "\uC804\uCC28"
+  _requiredMetaUnlockId: 
   _category: 1
   _grade: 3
   _movementType: 9
@@ -29,8 +29,11 @@ MonoBehaviour:
     - {x: 0, y: -1}
     _maxSteps: 10
     _condition: 0
+  _abilities:
+  - {fileID: 11400000, guid: 029431895f44fd543aa77316f11cb7c1, type: 2}
   _baseHp: 5
   _baseAtk: 4
   _occupancySize: {x: 1, y: 1}
   _cardArtwork: {fileID: 0}
-  _description: 상하좌우로 장애물 전까지 이동하는 직선 장거리 기물.
+  _description: "\uC0C1\uD558\uC88C\uC6B0\uB85C \uC7A5\uC560\uBB3C \uC804\uAE4C\uC9C0
+    \uC774\uB3D9\uD558\uB294 \uC9C1\uC120 \uC7A5\uAC70\uB9AC \uAE30\uBB3C."

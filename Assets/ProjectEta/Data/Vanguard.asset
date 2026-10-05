@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Vanguard
   m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
   _pieceId: vanguard
-  _displayName: 돌격대장
-  _requiredMetaUnlockId:
+  _displayName: "\uB3CC\uACA9\uB300\uC7A5"
+  _requiredMetaUnlockId: 
   _category: 1
   _grade: 3
   _movementType: 9
@@ -25,8 +25,13 @@ MonoBehaviour:
     _vectors: []
     _maxSteps: 1
     _condition: 14
+  _abilities:
+  - {fileID: 11400000, guid: 119074e35e8026d4aacd5d1f6835ae3b, type: 2}
   _baseHp: 5
   _baseAtk: 5
   _occupancySize: {x: 1, y: 1}
   _cardArtwork: {fileID: 0}
-  _description: 진영 기준 전방으로 최대 3칸, 좌우로 1칸 이동·공격한다. 선봉 추가 피해는 후속 능력 프레임워크에서 연결한다.
+  _description: "\uC9C4\uC601 \uAE30\uC900 \uC804\uBC29\uC73C\uB85C \uCD5C\uB300
+    3\uCE78, \uC88C\uC6B0\uB85C 1\uCE78 \uC774\uB3D9\xB7\uACF5\uACA9\uD55C\uB2E4.
+    \uC120\uBD09 \uCD94\uAC00 \uD53C\uD574\uB294 \uD6C4\uC18D \uB2A5\uB825 \uD504\uB808\uC784\uC6CC\uD06C\uC5D0\uC11C
+    \uC5F0\uACB0\uD55C\uB2E4."

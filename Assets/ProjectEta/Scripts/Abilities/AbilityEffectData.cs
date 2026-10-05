@@ -16,6 +16,7 @@ namespace ProjectEta.Abilities
         [SerializeField] private Vector2Int _vector;
         [SerializeField] private string _auraGroupId;
         [SerializeField] private bool _includeSelf;
+        [SerializeField] private int _maxActiveSummons; // 93일차: 소환자별 동시 유지 가능한 임시 소환물 수(0이면 제한 없음)
 
         public AbilityEffectType EffectType => _effectType;
         public int Amount => _amount;
@@ -27,6 +28,7 @@ namespace ProjectEta.Abilities
         public string AuraGroupId =>
             string.IsNullOrWhiteSpace(_auraGroupId) ? "default_aura" : _auraGroupId;
         public bool IncludeSelf => _includeSelf;
+        public int MaxActiveSummons => _maxActiveSummons < 0 ? 0 : _maxActiveSummons;
 
         public AbilityEffectData() { }
 
@@ -39,7 +41,8 @@ namespace ProjectEta.Abilities
             PieceDefinition summonPiece = null,
             string auraGroupId = "",
             bool includeSelf = false,
-            Vector2Int? vector = null)
+            Vector2Int? vector = null,
+            int maxActiveSummons = 0)
         {
             _effectType = effectType;
             _amount = amount;
@@ -50,6 +53,7 @@ namespace ProjectEta.Abilities
             _auraGroupId = auraGroupId;
             _includeSelf = includeSelf;
             _vector = vector ?? Vector2Int.zero;
+            _maxActiveSummons = maxActiveSummons;
         }
     }
 }

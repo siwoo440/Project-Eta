@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Paladin
   m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
   _pieceId: paladin
-  _displayName: 성기사
-  _requiredMetaUnlockId:
+  _displayName: "\uC131\uAE30\uC0AC"
+  _requiredMetaUnlockId: 
   _category: 1
   _grade: 3
   _movementType: 9
@@ -41,8 +41,13 @@ MonoBehaviour:
     - {x: -2, y: -1}
     _maxSteps: 1
     _condition: 0
+  _abilities:
+  - {fileID: 11400000, guid: fdd7312c97b5ef94393559eb46707fdc, type: 2}
   _baseHp: 5
   _baseAtk: 4
   _occupancySize: {x: 1, y: 1}
   _cardArtwork: {fileID: 0}
-  _description: 대각선 장거리 이동과 기병 도약을 함께 사용한다. 보호 계열 고유 능력은 후속 공통 능력 프레임워크에서 연결한다.
+  _description: "\uB300\uAC01\uC120 \uC7A5\uAC70\uB9AC \uC774\uB3D9\uACFC \uAE30\uBCD1
+    \uB3C4\uC57D\uC744 \uD568\uAED8 \uC0AC\uC6A9\uD55C\uB2E4. \uBCF4\uD638 \uACC4\uC5F4
+    \uACE0\uC720 \uB2A5\uB825\uC740 \uD6C4\uC18D \uACF5\uD1B5 \uB2A5\uB825 \uD504\uB808\uC784\uC6CC\uD06C\uC5D0\uC11C
+    \uC5F0\uACB0\uD55C\uB2E4."

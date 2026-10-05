@@ -25,6 +25,13 @@ namespace ProjectEta.Abilities
                 return false;
             }
 
+            if (effect.MaxActiveSummons > 0 &&
+                TemporarySummonService.CountForSource(context.Owner) >= effect.MaxActiveSummons)
+            {
+                failureReason = "현재 소환자가 유지할 수 있는 임시 소환물 상한에 도달했습니다.";
+                return false;
+            }
+
             BoardState board = context.Board ?? AbilityBoardRegistry.FindBoardContaining(context.Owner);
             if (board == null)
             {
@@ -77,7 +84,7 @@ namespace ProjectEta.Abilities
                 return AbilityExecutionResult.Failed("소환 직전 Board 상태가 변경되어 배치에 실패했습니다.");
             }
 
-            TemporarySummonService.Register(summoned, board, context.TurnManager);
+            TemporarySummonService.Register(summoned, context.Owner, board, context.TurnManager);
 
             return AbilityExecutionResult.Succeeded(
                 1,
