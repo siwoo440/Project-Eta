@@ -169,7 +169,8 @@ namespace ProjectEta.AI
 
             int attackPower = Mathf.Max(
                 0,
-                AuraResolver.GetAttack(actor, board));
+                AuraResolver.GetAttack(actor, board) +
+                FourStarCombatAbilityResolver.PreviewDamageBonus(actor, targetPiece));
 
             int expectedDamage = Mathf.Min(
                 attackPower,

@@ -85,6 +85,31 @@ namespace ProjectEta.Abilities
             return cleared;
         }
 
+
+        public static int ClearForSource(PieceRuntimeState source)
+        {
+            if (source == null) return 0;
+
+            int cleared = 0;
+
+            for (int i = Blocks.Count - 1; i >= 0; i--)
+            {
+                TileBlockState block = Blocks[i];
+
+                if (block == null ||
+                    !object.ReferenceEquals(block.Source, source))
+                {
+                    continue;
+                }
+
+                ClearBlock(block);
+                Blocks.RemoveAt(i);
+                cleared++;
+            }
+
+            return cleared;
+        }
+
         public static void ClearAll()
         {
             foreach (KeyValuePair<TurnManager, Action<TurnState, int>> pair in TurnHandlers)

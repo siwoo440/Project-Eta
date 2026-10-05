@@ -60,6 +60,10 @@ namespace ProjectEta.AI
                         AddAllyTargetCandidates(board, actor, ability, result, requireMissingHp: false);
                         break;
 
+                    case AbilityEffectType.ModifyDamage:
+                        AddAllyTargetCandidates(board, actor, ability, result, requireMissingHp: false);
+                        break;
+
                     case AbilityEffectType.Summon:
                         AddSummonCandidates(board, actor, ability, result);
                         break;

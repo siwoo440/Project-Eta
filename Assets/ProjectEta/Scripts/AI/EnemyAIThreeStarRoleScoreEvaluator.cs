@@ -33,6 +33,13 @@ namespace ProjectEta.AI
                 score += (afterAllies - beforeAllies) * 45;
             }
 
+            if ((tags & PieceRoleTag.Tanker) != 0)
+            {
+                int beforeAllies = CountNearbyAllies(actor, actor.BoardPosition, board);
+                int afterAllies = CountNearbyAllies(actor, target, board);
+                score += (afterAllies - beforeAllies) * 35;
+            }
+
             return score;
         }
 

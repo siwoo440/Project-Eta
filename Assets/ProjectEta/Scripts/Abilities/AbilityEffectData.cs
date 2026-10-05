@@ -16,7 +16,7 @@ namespace ProjectEta.Abilities
         [SerializeField] private Vector2Int _vector;
         [SerializeField] private string _auraGroupId;
         [SerializeField] private bool _includeSelf;
-        [SerializeField] private int _maxActiveSummons; // 93일차: 소환자별 동시 유지 가능한 임시 소환물 수(0이면 제한 없음)
+        [SerializeField] private int _maxActiveSummons; // 소환자별 동시 유지 가능한 임시 소환물 수(0이면 제한 없음)
 
         public AbilityEffectType EffectType => _effectType;
         public int Amount => _amount;

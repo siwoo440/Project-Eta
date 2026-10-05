@@ -59,6 +59,15 @@ namespace ProjectEta.AI
                         }
                         break;
 
+                    case AbilityEffectType.ModifyDamage:
+                        score += 210 + Mathf.Abs(effect.Amount) * 120;
+                        if (targetPiece != null &&
+                            (targetPiece.Definition.RoleTags & PieceRoleTag.Attacker) != 0)
+                        {
+                            score += 120;
+                        }
+                        break;
+
                     case AbilityEffectType.Summon:
                         score += 260;
                         if (effect.SummonPiece != null)

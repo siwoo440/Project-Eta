@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5aaee6fd666940d9826c67212ca24a69, type: 3}
+  m_Name: Archmage_SpellChoice
+  m_EditorClassIdentifier: ProjectEta.Runtime::ProjectEta.Abilities.PieceAbilityDefinition
+  _abilityId: four_archmage_spell_choice
+  _displayName: "\uC8FC\uBB38 \uC120\uD0DD"
+  _trigger: 4
+  _actionCost: 0
+  _effects:
+  - _effectType: 2
+    _amount: 0
+    _durationTurns: 1
+    _radius: 1
+    _statusEffect: {fileID: 11400000, guid: a3db31b0931628f47b07a510da2ab810, type: 2}
+    _summonPiece: {fileID: 0}
+    _vector: {x: 0, y: 0}
+    _auraGroupId: 
+    _includeSelf: 0
+    _maxActiveSummons: 0
+  - _effectType: 2
+    _amount: 0
+    _durationTurns: 1
+    _radius: 1
+    _statusEffect: {fileID: 11400000, guid: 9a49ee98d7dec024a89c5bb398fefb62, type: 2}
+    _summonPiece: {fileID: 0}
+    _vector: {x: 0, y: 0}
+    _auraGroupId: 
+    _includeSelf: 0
+    _maxActiveSummons: 0
+  - _effectType: 2
+    _amount: 0
+    _durationTurns: 1
+    _radius: 1
+    _statusEffect: {fileID: 11400000, guid: 7c0e086d833f7284998a4caa9066b8b8, type: 2}
+    _summonPiece: {fileID: 0}
+    _vector: {x: 0, y: 0}
+    _auraGroupId: 
+    _includeSelf: 0
+    _maxActiveSummons: 0
+  _description: "\uACF5\uACA9 \uC801\uC911 \uC2DC \uB3C5\xB7\uD654\uC0C1\xB7\uC18D\uBC15
+    \uC911 \uD558\uB098\uB97C \uBD80\uC5EC\uD55C\uB2E4. \uAE30\uBCF8 \uC790\uB3D9
+    \uC120\uD0DD\uC740 \uC18D\uBC15\u2192\uD654\uC0C1\u2192\uB3C5 \uC21C\uC11C\uB2E4."

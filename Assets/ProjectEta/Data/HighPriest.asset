@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: HighPriest
   m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
   _pieceId: high_priest
-  _displayName: 대성직자
-  _requiredMetaUnlockId:
+  _displayName: "\uB300\uC131\uC9C1\uC790"
+  _requiredMetaUnlockId: 
   _category: 1
   _grade: 4
   _movementType: 9
@@ -37,8 +37,13 @@ MonoBehaviour:
     - {x: 0, y: -1}
     _maxSteps: 1
     _condition: 0
+  _abilities:
+  - {fileID: 11400000, guid: 4129f2f97f84cdb47b2da6e599a549ea, type: 2}
   _baseHp: 6
   _baseAtk: 5
   _occupancySize: {x: 1, y: 1}
   _cardArtwork: {fileID: 0}
-  _description: 대각선 장거리 이동과 직선 인접 1칸 이동을 사용한다. 축복 회복은 후속 Heal 프레임워크에서 연결한다.
+  _description: "\uB300\uAC01\uC120 \uC7A5\uAC70\uB9AC \uC774\uB3D9\uACFC \uC9C1\uC120
+    \uC778\uC811 1\uCE78 \uC774\uB3D9\uC744 \uC0AC\uC6A9\uD55C\uB2E4. \uCD95\uBCF5
+    \uD68C\uBCF5\uC740 \uD6C4\uC18D Heal \uD504\uB808\uC784\uC6CC\uD06C\uC5D0\uC11C
+    \uC5F0\uACB0\uD55C\uB2E4."

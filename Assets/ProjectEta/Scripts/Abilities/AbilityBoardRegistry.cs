@@ -76,6 +76,25 @@ namespace ProjectEta.Abilities
             return result;
         }
 
+
+        public static IReadOnlyList<BoardState> SnapshotBoards()
+        {
+            var result = new List<BoardState>();
+
+            for (int i = Boards.Count - 1; i >= 0; i--)
+            {
+                if (!Boards[i].TryGetTarget(out BoardState board) || board == null)
+                {
+                    Boards.RemoveAt(i);
+                    continue;
+                }
+
+                result.Add(board);
+            }
+
+            return result;
+        }
+
         public static void Clear()
         {
             Boards.Clear(); // EditMode 회귀 테스트용 명시적 정리 API

@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5aaee6fd666940d9826c67212ca24a69, type: 3}
+  m_Name: StormKnight_Reposition
+  m_EditorClassIdentifier: ProjectEta.Runtime::ProjectEta.Abilities.PieceAbilityDefinition
+  _abilityId: four_storm_knight_reposition
+  _displayName: "\uD3ED\uD48D \uC774\uD0C8"
+  _trigger: 4
+  _actionCost: 0
+  _effects:
+  - _effectType: 5
+    _amount: 1
+    _durationTurns: 1
+    _radius: 1
+    _statusEffect: {fileID: 0}
+    _summonPiece: {fileID: 0}
+    _vector: {x: 0, y: 0}
+    _auraGroupId: 
+    _includeSelf: 0
+    _maxActiveSummons: 0
+  _description: "\uACF5\uACA9 \uD6C4 \uB300\uC0C1\uC774 \uC0DD\uC874\uD558\uBA74
+    \uC778\uC811\uD55C \uC548\uC804\uD55C \uBE48 \uCE78 1\uAC1C\uB85C \uC774\uB3D9\uD55C\uB2E4."

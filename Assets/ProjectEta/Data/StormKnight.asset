@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: StormKnight
   m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
   _pieceId: storm_knight
-  _displayName: 폭풍기사
-  _requiredMetaUnlockId:
+  _displayName: "\uD3ED\uD48D\uAE30\uC0AC"
+  _requiredMetaUnlockId: 
   _category: 1
   _grade: 4
   _movementType: 9
@@ -41,8 +41,12 @@ MonoBehaviour:
     - {x: -3, y: -1}
     _maxSteps: 1
     _condition: 0
+  _abilities:
+  - {fileID: 11400000, guid: 01d46727da54c2e4da2cba8f1c73ad6d, type: 2}
   _baseHp: 6
   _baseAtk: 6
   _occupancySize: {x: 1, y: 1}
   _cardArtwork: {fileID: 0}
-  _description: 기병과 카멜 도약을 함께 사용한다. 공격 후 추가 이동은 후속 능력 프레임워크에서 연결한다.
+  _description: "\uAE30\uBCD1\uACFC \uCE74\uBA5C \uB3C4\uC57D\uC744 \uD568\uAED8
+    \uC0AC\uC6A9\uD55C\uB2E4. \uACF5\uACA9 \uD6C4 \uCD94\uAC00 \uC774\uB3D9\uC740
+    \uD6C4\uC18D \uB2A5\uB825 \uD504\uB808\uC784\uC6CC\uD06C\uC5D0\uC11C \uC5F0\uACB0\uD55C\uB2E4."

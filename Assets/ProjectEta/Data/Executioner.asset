@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Executioner
   m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
   _pieceId: executioner
-  _displayName: 처형자
-  _requiredMetaUnlockId:
+  _displayName: "\uCC98\uD615\uC790"
+  _requiredMetaUnlockId: 
   _category: 1
   _grade: 4
   _movementType: 9
@@ -41,8 +41,13 @@ MonoBehaviour:
     - {x: -2, y: -1}
     _maxSteps: 1
     _condition: 0
+  _abilities:
+  - {fileID: 11400000, guid: 8b590ecea7fb17249bfc2ce1fee1a7e7, type: 2}
   _baseHp: 6
   _baseAtk: 7
   _occupancySize: {x: 1, y: 1}
   _cardArtwork: {fileID: 0}
-  _description: 직선 장거리 이동과 기병 도약을 사용한다. 저체력 대상 추가 피해는 후속 ModifyDamage 프레임워크에서 연결한다.
+  _description: "\uC9C1\uC120 \uC7A5\uAC70\uB9AC \uC774\uB3D9\uACFC \uAE30\uBCD1
+    \uB3C4\uC57D\uC744 \uC0AC\uC6A9\uD55C\uB2E4. \uC800\uCCB4\uB825 \uB300\uC0C1
+    \uCD94\uAC00 \uD53C\uD574\uB294 \uD6C4\uC18D ModifyDamage \uD504\uB808\uC784\uC6CC\uD06C\uC5D0\uC11C
+    \uC5F0\uACB0\uD55C\uB2E4."

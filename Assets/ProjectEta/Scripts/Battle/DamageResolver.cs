@@ -16,6 +16,7 @@ namespace ProjectEta.Battle
 
             var context = new DamageContext(target, source, amount);
 
+            FourStarCombatAbilityResolver.ProcessBeforeDamage(context); // 94일차: 4성 조건부 피해·분담·철벽 처리
             ThreeStarPassiveAbilityResolver.ProcessBeforeDamage(context); // 93일차: 3성 조건부 공격·인접 보호 패시브 처리
             PieceAbilityService.ProcessBeforeDamage(context); // Redirect → 공격자/피격자 ModifyDamage 순서로 공통 Ability 처리
             hooks?.RaiseBeforeDamage(context); // 기존 훅은 Ability 처리 뒤에도 최종 피해를 추가 보정할 수 있음

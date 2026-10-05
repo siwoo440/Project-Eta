@@ -27,6 +27,7 @@ namespace ProjectEta.Abilities
             {
                 ApplyPassiveEffects(piece, board, result);
                 ApplyRuntimeEffects(piece, board, result);
+                FourStarMovementAbilityResolver.ApplyMovementCandidates(piece, board, result);
             }
 
             RemoveBlockedCandidates(board, result);

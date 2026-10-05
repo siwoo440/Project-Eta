@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5aaee6fd666940d9826c67212ca24a69, type: 3}
+  m_Name: Executioner_Execute
+  m_EditorClassIdentifier: ProjectEta.Runtime::ProjectEta.Abilities.PieceAbilityDefinition
+  _abilityId: four_executioner_execute
+  _displayName: "\uCC98\uD615"
+  _trigger: 9
+  _actionCost: 0
+  _effects:
+  - _effectType: 1
+    _amount: 2
+    _durationTurns: 1
+    _radius: 1
+    _statusEffect: {fileID: 0}
+    _summonPiece: {fileID: 0}
+    _vector: {x: 0, y: 0}
+    _auraGroupId: 
+    _includeSelf: 0
+    _maxActiveSummons: 0
+  _description: "\uD604\uC7AC HP\uAC00 \uCD5C\uB300 HP\uC758 1/3 \uC774\uD558\uC778
+    \uC801\uC5D0\uAC8C \uACF5\uACA9\uD560 \uB54C \uD53C\uD574\uAC00 2 \uC99D\uAC00\uD55C\uB2E4."

@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Archmage
   m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
   _pieceId: archmage
-  _displayName: 대마도사
-  _requiredMetaUnlockId:
+  _displayName: "\uB300\uB9C8\uB3C4\uC0AC"
+  _requiredMetaUnlockId: 
   _category: 1
   _grade: 4
   _movementType: 9
@@ -41,8 +41,13 @@ MonoBehaviour:
     - {x: -2, y: -1}
     _maxSteps: 1
     _condition: 0
+  _abilities:
+  - {fileID: 11400000, guid: d68cd282cd93f74449a299dcbdb9f39d, type: 2}
   _baseHp: 5
   _baseAtk: 6
   _occupancySize: {x: 1, y: 1}
   _cardArtwork: {fileID: 0}
-  _description: 대각선 장거리 이동과 기병 도약을 사용한다. 주문 선택 상태 이상은 후속 ApplyStatus 프레임워크에서 연결한다.
+  _description: "\uB300\uAC01\uC120 \uC7A5\uAC70\uB9AC \uC774\uB3D9\uACFC \uAE30\uBCD1
+    \uB3C4\uC57D\uC744 \uC0AC\uC6A9\uD55C\uB2E4. \uC8FC\uBB38 \uC120\uD0DD \uC0C1\uD0DC
+    \uC774\uC0C1\uC740 \uD6C4\uC18D ApplyStatus \uD504\uB808\uC784\uC6CC\uD06C\uC5D0\uC11C
+    \uC5F0\uACB0\uD55C\uB2E4."

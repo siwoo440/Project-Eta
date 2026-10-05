@@ -24,7 +24,7 @@ namespace ProjectEta.Abilities
             if (piece == null || effect == null) return;
 
             int currentTurn = turnManager != null ? turnManager.TurnNumber : 0;
-            int expires = currentTurn + Math.Max(1, durationPlayerTurns);
+            int expires = currentTurn + Math.Max(1, durationPlayerTurns) + 1; // 다음 자신의 행동까지 유지되도록 한 PlayerTurn 여유를 둔다
 
             States.Add(new MovementRangeModifierState(piece, effect, turnManager, expires));
             EnsureTurnSubscription(turnManager);

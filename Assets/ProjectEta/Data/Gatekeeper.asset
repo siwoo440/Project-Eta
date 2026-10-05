@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Gatekeeper
   m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
   _pieceId: gatekeeper
-  _displayName: 문지기
-  _requiredMetaUnlockId:
+  _displayName: "\uBB38\uC9C0\uAE30"
+  _requiredMetaUnlockId: 
   _category: 1
   _grade: 4
   _movementType: 9
@@ -29,8 +29,12 @@ MonoBehaviour:
     - {x: 0, y: -1}
     _maxSteps: 3
     _condition: 0
+  _abilities:
+  - {fileID: 11400000, guid: a0ab32e5dc5f55542bbddffc47a4cc24, type: 2}
   _baseHp: 8
   _baseAtk: 4
   _occupancySize: {x: 1, y: 1}
   _cardArtwork: {fileID: 0}
-  _description: 상하좌우 최대 3칸 이동을 사용한다. 봉쇄 칸 생성은 후속 BlockTile 프레임워크에서 연결한다.
+  _description: "\uC0C1\uD558\uC88C\uC6B0 \uCD5C\uB300 3\uCE78 \uC774\uB3D9\uC744
+    \uC0AC\uC6A9\uD55C\uB2E4. \uBD09\uC1C4 \uCE78 \uC0DD\uC131\uC740 \uD6C4\uC18D
+    BlockTile \uD504\uB808\uC784\uC6CC\uD06C\uC5D0\uC11C \uC5F0\uACB0\uD55C\uB2E4."

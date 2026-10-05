@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: GrandCannon
   m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
   _pieceId: grand_cannon
-  _displayName: 대포병
-  _requiredMetaUnlockId:
+  _displayName: "\uB300\uD3EC\uBCD1"
+  _requiredMetaUnlockId: 
   _category: 1
   _grade: 4
   _movementType: 9
@@ -25,8 +25,12 @@ MonoBehaviour:
     _vectors: []
     _maxSteps: 1
     _condition: 13
+  _abilities:
+  - {fileID: 11400000, guid: ca3729c681fdd9643a703d1ae9111db5, type: 2}
   _baseHp: 6
   _baseAtk: 6
   _occupancySize: {x: 1, y: 1}
   _cardArtwork: {fileID: 0}
-  _description: 성채형 이동과 스크린 포격을 사용한다. 포격 후 보조 피해는 후속 능력 프레임워크에서 연결한다.
+  _description: "\uC131\uCC44\uD615 \uC774\uB3D9\uACFC \uC2A4\uD06C\uB9B0 \uD3EC\uACA9\uC744
+    \uC0AC\uC6A9\uD55C\uB2E4. \uD3EC\uACA9 \uD6C4 \uBCF4\uC870 \uD53C\uD574\uB294
+    \uD6C4\uC18D \uB2A5\uB825 \uD504\uB808\uC784\uC6CC\uD06C\uC5D0\uC11C \uC5F0\uACB0\uD55C\uB2E4."

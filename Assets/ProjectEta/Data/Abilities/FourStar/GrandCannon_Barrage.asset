@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5aaee6fd666940d9826c67212ca24a69, type: 3}
+  m_Name: GrandCannon_Barrage
+  m_EditorClassIdentifier: ProjectEta.Runtime::ProjectEta.Abilities.PieceAbilityDefinition
+  _abilityId: four_grand_cannon_barrage
+  _displayName: "\uC5F0\uC1C4 \uD3EC\uACA9"
+  _trigger: 4
+  _actionCost: 0
+  _effects:
+  - _effectType: 1
+    _amount: 1
+    _durationTurns: 1
+    _radius: 1
+    _statusEffect: {fileID: 0}
+    _summonPiece: {fileID: 0}
+    _vector: {x: 0, y: 0}
+    _auraGroupId: 
+    _includeSelf: 0
+    _maxActiveSummons: 0
+  _description: "\uACF5\uACA9 \uD6C4 \uB300\uC0C1\uC758 \uC2ED\uC790 \uC778\uC811
+    \uC801 \uCD5C\uB300 2\uAC1C\uC5D0 1\uC758 \uBCF4\uC870 \uD53C\uD574\uB97C \uC900\uB2E4."

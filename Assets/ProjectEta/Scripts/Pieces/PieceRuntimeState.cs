@@ -11,6 +11,9 @@ namespace ProjectEta.Pieces
         private readonly List<RuntimeStatusEffect> _statusEffects = new List<RuntimeStatusEffect>();
         private readonly HashSet<string> _usedBattleAbilityIds = new HashSet<string>();
         private int _lastMoveDistance;
+        private bool _movedSinceOwnTurnStart;
+        private bool _bastionFortifyReady;
+        private bool _bastionFortifySpent;
 
         public PieceDefinition Definition { get; }
 
@@ -21,6 +24,7 @@ namespace ProjectEta.Pieces
             {
                 if (_boardPosition == value) return;
                 _lastMoveDistance = Mathf.Abs(value.x - _boardPosition.x) + Mathf.Abs(value.y - _boardPosition.y);
+                _movedSinceOwnTurnStart = true;
                 _boardPosition = value;
                 AdvanceMovementCycle();
             }
@@ -34,6 +38,9 @@ namespace ProjectEta.Pieces
         public bool IsTemporarySummon { get; private set; } // 91일차: 전투 한정 임시 소환물 여부
         public int MovementCycleIndex => _movementCycleIndex;
         public int LastMoveDistance => _lastMoveDistance;
+        public bool MovedSinceOwnTurnStart => _movedSinceOwnTurnStart;
+        public bool BastionFortifyReady => _bastionFortifyReady;
+        public bool BastionFortifySpent => _bastionFortifySpent;
         public IReadOnlyList<RuntimeStatusEffect> StatusEffects => _statusEffects;
 
         public int CurrentHp
@@ -49,6 +56,9 @@ namespace ProjectEta.Pieces
             IsPlayerPiece = isPlayerPiece;
             _currentHp = definition != null ? definition.BaseHp : 0;
             _movementCycleIndex = 0;
+            _movedSinceOwnTurnStart = false;
+            _bastionFortifyReady = false;
+            _bastionFortifySpent = false;
             IsTemporarySummon = definition != null && definition.IsRuntimeTemporarySummonDefinition;
         }
 
@@ -72,6 +82,45 @@ namespace ProjectEta.Pieces
         public void ClearLastMoveDistance()
         {
             _lastMoveDistance = 0;
+        }
+
+
+        public void ResetOwnTurnMovement()
+        {
+            _movedSinceOwnTurnStart = false;
+            _lastMoveDistance = 0;
+        }
+
+        public void SetBastionFortifyReady(bool ready)
+        {
+            _bastionFortifyReady = ready;
+        }
+
+        public void ResetBastionFortifyCycle()
+        {
+            _bastionFortifyReady = false;
+            _bastionFortifySpent = false;
+        }
+
+        public bool TryConsumeBastionFortify()
+        {
+            if (!_bastionFortifyReady || _bastionFortifySpent) return false;
+            _bastionFortifyReady = false;
+            _bastionFortifySpent = true;
+            return true;
+        }
+
+        public bool TryUseLazyBastionFortify()
+        {
+            if (_bastionFortifySpent || _movedSinceOwnTurnStart) return false;
+            _bastionFortifySpent = true;
+            return true;
+        }
+
+        public void ResetBattleAbilityUsage(string abilityId)
+        {
+            if (string.IsNullOrWhiteSpace(abilityId)) return;
+            _usedBattleAbilityIds.Remove(abilityId);
         }
 
         public void AdvanceMovementCycle()
