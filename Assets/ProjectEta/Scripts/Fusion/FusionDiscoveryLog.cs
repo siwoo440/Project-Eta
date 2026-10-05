@@ -1,36 +1,99 @@
-using System.Collections.Generic; // HashSet<T>, IEnumerable<T>를 사용하기 위한 네임스페이스
+using System.Collections.Generic; // HashSet<T>·IEnumerable<T> 사용
+using UnityEngine; // Application.isPlaying 사용
+using ProjectEta.Meta; // 영구 Fusion Atlas 진행 사용
 
-namespace ProjectEta.Fusion // 합성 관련 타입을 모아두는 네임스페이스
+namespace ProjectEta.Fusion
 {
-    public class FusionDiscoveryLog // 22일차: 숨김 레시피를 실제로 성공시킨 기록을 런 단위로 보관하는 클래스
+    public class FusionDiscoveryLog
     {
-        private readonly HashSet<string> _discoveredRecipeIds = new HashSet<string>(); // 이미 발견한 레시피 식별자 집합
+        private readonly HashSet<string> _discoveredRecipeIds = new HashSet<string>(); // 현재 런 발견 ID
 
-        public IEnumerable<string> DiscoveredRecipeIds => _discoveredRecipeIds; // 저장 직렬화 등에서 읽는 발견 목록
-        public int DiscoveredCount => _discoveredRecipeIds.Count; // 지금까지 발견한 숨김 레시피 수
+        public IEnumerable<string> DiscoveredRecipeIds => _discoveredRecipeIds;
+        public int DiscoveredCount => _discoveredRecipeIds.Count;
 
-        public bool IsDiscovered(FusionRecipe recipe) // 해당 레시피를 이미 발견했는지 확인하는 메서드
+        public bool IsDiscovered(FusionRecipe recipe)
         {
-            if (recipe == null) return false; // 레시피가 없으면 발견하지 않은 것으로 처리
-            if (!recipe.IsHiddenRecipe) return true; // 숨김 레시피가 아니면 항상 공개 상태로 취급
-            return _discoveredRecipeIds.Contains(recipe.RecipeId); // 숨김 레시피는 발견 기록이 있어야 공개
+            if (recipe == null) return false;
+            if (!recipe.IsHiddenRecipe) return true;
+            if (_discoveredRecipeIds.Contains(recipe.RecipeId)) return true;
+
+            MetaProgressState permanent = GetRuntimeMetaProgress();
+            return permanent != null && permanent.IsFusionRecipeDiscovered(recipe.RecipeId);
         }
 
-        public bool TryMarkDiscovered(FusionRecipe recipe) // 합성 성공 시 숨김 레시피를 새로 발견 처리하는 메서드
+        public bool IsDiscovered(string recipeId)
         {
-            if (recipe == null || !recipe.IsHiddenRecipe) return false; // 숨김 레시피가 아니면 기록하지 않음
-            return _discoveredRecipeIds.Add(recipe.RecipeId); // 처음 추가된 경우에만 true(= 이번에 새로 발견)
+            if (string.IsNullOrWhiteSpace(recipeId)) return false;
+            if (_discoveredRecipeIds.Contains(recipeId)) return true;
+
+            MetaProgressState permanent = GetRuntimeMetaProgress();
+            return permanent != null && permanent.IsFusionRecipeDiscovered(recipeId);
         }
 
-        public void Restore(IEnumerable<string> recipeIds) // 저장 파일에서 발견 목록을 복원하는 메서드
+        public bool TryMarkDiscovered(FusionRecipe recipe)
         {
-            _discoveredRecipeIds.Clear(); // 이전 기록을 모두 비움
-            if (recipeIds == null) return; // 복원할 목록이 없으면 빈 상태로 종료
+            if (recipe == null || !recipe.IsHiddenRecipe) return false;
 
-            foreach (var recipeId in recipeIds) // 저장된 식별자를 순회하며
+            string recipeId = recipe.RecipeId;
+            MetaProgressState permanent = GetRuntimeMetaProgress();
+
+            if (permanent != null && permanent.IsFusionRecipeDiscovered(recipeId))
             {
-                if (!string.IsNullOrEmpty(recipeId)) _discoveredRecipeIds.Add(recipeId); // 유효한 식별자만 복원
+                _discoveredRecipeIds.Add(recipeId); // 새 런에도 현재 발견 상태 동기화
+                return false; // 영구 도감에서 이미 발견했으므로 새 발견 알림은 발생시키지 않음
             }
+
+            bool runAdded = _discoveredRecipeIds.Add(recipeId);
+
+            if (permanent == null)
+            {
+                return runAdded; // EditMode 테스트·비플레이 상태는 기존 런 단위 동작 유지
+            }
+
+            bool permanentAdded = permanent.TryDiscoverFusionRecipe(recipeId);
+
+            if (permanentAdded)
+            {
+                MetaProgressService.Save(); // 실제 플레이 중 최초 발견은 즉시 영구 저장
+            }
+
+            return permanentAdded; // 플레이 중 발견 이벤트는 영구 최초 발견일 때만 true
+        }
+
+        public int Merge(IEnumerable<string> recipeIds)
+        {
+            if (recipeIds == null) return 0;
+            int added = 0;
+
+            foreach (string recipeId in recipeIds)
+            {
+                if (string.IsNullOrWhiteSpace(recipeId)) continue;
+                if (_discoveredRecipeIds.Add(recipeId)) added++;
+            }
+
+            return added;
+        }
+
+        public void Restore(IEnumerable<string> recipeIds)
+        {
+            _discoveredRecipeIds.Clear();
+            Merge(recipeIds);
+
+            MetaProgressState permanent = GetRuntimeMetaProgress();
+            if (permanent == null) return;
+
+            int migrated = permanent.MergeDiscoveredFusionRecipes(_discoveredRecipeIds);
+
+            if (migrated > 0)
+            {
+                MetaProgressService.Save(); // 구버전 RunSave의 발견 기록을 영구 Fusion Atlas로 승격
+            }
+        }
+
+        private static MetaProgressState GetRuntimeMetaProgress()
+        {
+            if (!Application.isPlaying) return null; // EditMode 테스트가 실제 사용자 메타 저장을 오염시키지 않도록 차단
+            return MetaProgressService.Current;
         }
     }
 }
