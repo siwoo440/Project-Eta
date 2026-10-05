@@ -8,12 +8,14 @@ namespace ProjectEta.Abilities
     public sealed class AbilityEffectData
     {
         [SerializeField] private AbilityEffectType _effectType; // 실행할 공통 효과 종류
-        [SerializeField] private int _amount; // 회복량·피해 증감량 등 공통 정수 값
+        [SerializeField] private int _amount; // 회복량·피해·오라 스탯 보정량
         [SerializeField] private int _durationTurns = 1; // 상태·봉쇄 등 지속 턴
-        [SerializeField] private int _radius = 1; // 오라·Redirect 등 탐색 반경
-        [SerializeField] private StatusEffectDefinition _statusEffect; // ApplyStatus가 사용할 상태 정의
-        [SerializeField] private PieceDefinition _summonPiece; // Summon이 생성할 기물 정의
-        [SerializeField] private Vector2Int _vector; // 이동 범위 보정·위치 효과용 보조 벡터
+        [SerializeField] private int _radius = 1; // 오라·Redirect 등 범위
+        [SerializeField] private StatusEffectDefinition _statusEffect; // ApplyStatus 상태 정의
+        [SerializeField] private PieceDefinition _summonPiece; // Summon 기물 원본 정의
+        [SerializeField] private Vector2Int _vector; // 이동 범위·위치 효과용 보조 벡터
+        [SerializeField] private string _auraGroupId; // 같은 계열 Aura 비중첩 판정 키
+        [SerializeField] private bool _includeSelf; // Aura 소유자 자신도 효과를 받을지 여부
 
         public AbilityEffectType EffectType => _effectType;
         public int Amount => _amount;
@@ -22,6 +24,8 @@ namespace ProjectEta.Abilities
         public StatusEffectDefinition StatusEffect => _statusEffect;
         public PieceDefinition SummonPiece => _summonPiece;
         public Vector2Int Vector => _vector;
+        public string AuraGroupId => string.IsNullOrWhiteSpace(_auraGroupId) ? "default_aura" : _auraGroupId;
+        public bool IncludeSelf => _includeSelf;
 
         public AbilityEffectData() { }
 
@@ -29,12 +33,20 @@ namespace ProjectEta.Abilities
             AbilityEffectType effectType,
             int amount = 0,
             int durationTurns = 1,
-            int radius = 1)
+            int radius = 1,
+            StatusEffectDefinition statusEffect = null,
+            PieceDefinition summonPiece = null,
+            string auraGroupId = "",
+            bool includeSelf = false)
         {
             _effectType = effectType;
             _amount = amount;
             _durationTurns = durationTurns;
             _radius = radius;
+            _statusEffect = statusEffect;
+            _summonPiece = summonPiece;
+            _auraGroupId = auraGroupId;
+            _includeSelf = includeSelf;
         }
     }
 }

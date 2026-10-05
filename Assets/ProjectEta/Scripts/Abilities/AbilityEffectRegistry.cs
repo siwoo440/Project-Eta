@@ -37,6 +37,9 @@ namespace ProjectEta.Abilities
             Register(new HealAbilityExecutor());
             Register(new ModifyDamageAbilityExecutor());
             Register(new RedirectDamageAbilityExecutor());
+            Register(new ApplyStatusAbilityExecutor());
+            Register(new AuraAbilityExecutor());
+            Register(new SummonAbilityExecutor());
         }
     }
 }

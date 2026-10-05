@@ -19,7 +19,7 @@ namespace ProjectEta.Pieces
             {
                 if (_boardPosition == value) return;
                 _boardPosition = value;
-                AdvanceMovementCycle(); // 실제 위치 이동 시 순환 이동 기물의 단계 진행
+                AdvanceMovementCycle();
             }
         }
 
@@ -28,6 +28,7 @@ namespace ProjectEta.Pieces
         public bool CanMove { get; set; } = true;
         public bool CanAttack { get; set; } = true;
         public bool IsDead => _currentHp <= 0;
+        public bool IsTemporarySummon { get; private set; } // 91일차: 전투 한정 임시 소환물 여부
         public int MovementCycleIndex => _movementCycleIndex;
         public IReadOnlyList<RuntimeStatusEffect> StatusEffects => _statusEffects;
 
@@ -44,6 +45,12 @@ namespace ProjectEta.Pieces
             IsPlayerPiece = isPlayerPiece;
             _currentHp = definition != null ? definition.BaseHp : 0;
             _movementCycleIndex = 0;
+            IsTemporarySummon = definition != null && definition.IsRuntimeTemporarySummonDefinition;
+        }
+
+        public void MarkAsTemporarySummon()
+        {
+            IsTemporarySummon = true;
         }
 
         public void AdvanceMovementCycle()
@@ -72,11 +79,11 @@ namespace ProjectEta.Pieces
             switch (Definition.PieceId)
             {
                 case "chameleon":
-                    return 4; // Knight → Bishop → Rook → Queen
+                    return 4;
                 case "illusionist":
-                    return 3; // Knight → Bishop → Rook
+                    return 3;
                 case "phantom_general":
-                    return 5; // Knight → Bishop → Rook → Queen → Grenadier
+                    return 5;
                 default:
                     return 1;
             }
@@ -91,7 +98,7 @@ namespace ProjectEta.Pieces
                 return false;
             }
 
-            var existing = FindStatus(statusDefinition.StatusType);
+            RuntimeStatusEffect existing = FindStatus(statusDefinition.StatusType);
             if (existing != null)
             {
                 existing.Reapply();

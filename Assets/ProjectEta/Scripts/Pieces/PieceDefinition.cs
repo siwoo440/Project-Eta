@@ -28,6 +28,7 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
 
         [Header("공통 능력")] // 90일차 공통 Ability 구분선
         [SerializeField] private PieceAbilityDefinition[] _abilities = Array.Empty<PieceAbilityDefinition>(); // 기물이 보유한 데이터 기반 공통 능력 목록
+        [NonSerialized] private bool _isRuntimeTemporarySummonDefinition; // 91일차: 카드 풀에 들어가지 않는 임시 소환용 런타임 복제 정의
 
         [Header("기본 스탯")] // 인스펙터 기본 스탯 구분선
         [SerializeField] private int _baseHp; // 카드 우하단과 실제 런타임에 사용할 기본 체력
@@ -43,6 +44,16 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
         [TextArea] // 여러 줄 설명을 편집할 수 있게 표시
         [SerializeField] private string _description; // 카드 하단 설명 영역에 표시할 기물 설명
 
+
+        public PieceDefinition CreateTemporarySummonRuntimeDefinition()
+        {
+            PieceDefinition clone = Instantiate(this); // 원본 에셋을 변형하지 않는 런타임 복제 생성
+            clone._pieceId = string.Empty; // RunSave 복원 대상에서 제외하도록 영구 PieceId 제거
+            clone._isRuntimeTemporarySummonDefinition = true;
+            clone.name = $"{name}_TemporarySummon";
+            return clone;
+        }
+
         public string PieceId => _pieceId; // 외부에서 읽는 기물 식별자
         public string DisplayName => _displayName; // 외부에서 읽는 표시 이름
         public string RequiredMetaUnlockId => _requiredMetaUnlockId; // 59일차: 런 Snapshot에서 요구하는 영구 해금 ID
@@ -53,6 +64,7 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
         public StatusEffectType ImmuneStatusTags => _immuneStatusTags; // 27일차: 외부에서 읽는 상태 이상 면역 태그
         public MovementRuleData[] MovementRules => _movementRules ?? Array.Empty<MovementRuleData>(); // 데이터 기반 이동 규칙을 null 없이 반환
         public PieceAbilityDefinition[] Abilities => _abilities ?? Array.Empty<PieceAbilityDefinition>(); // 90일차: 공통 Ability 목록을 null 없이 반환
+        public bool IsRuntimeTemporarySummonDefinition => _isRuntimeTemporarySummonDefinition; // 91일차: 임시 소환 정의 여부
         public int BaseHp => _baseHp; // 외부에서 읽는 기본 체력
         public int BaseAtk => _baseAtk; // 외부에서 읽는 기본 공격력
         public Vector2Int OccupancySize => _occupancySize; // 외부에서 읽는 점유 크기
