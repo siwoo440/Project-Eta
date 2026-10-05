@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75cc2415635c30648838849e5fc25c27, type: 3}
+  m_Name: Recipe_SiegeChariotFromWarChariotArtillery
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Fusion.FusionRecipe
+  _recipeId: siege_chariot_from_war_chariot_artillery
+  _materialA: {fileID: 11400000, guid: 5653218b96ac4e5094dc5b3bc2619537, type: 2}
+  _materialB: {fileID: 11400000, guid: f66b836988b64525b3f2a9287d11d99d, type: 2}
+  _result: {fileID: 11400000, guid: 423dded314b4474faae56fb5586b32c7, type: 2}
+  _isHiddenRecipe: 0
+  _ignoresGradeStepRule: 0
+  _usesOrderedMaterials: 0

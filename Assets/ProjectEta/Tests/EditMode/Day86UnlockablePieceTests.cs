@@ -29,14 +29,14 @@ namespace ProjectEta.Tests.EditMode
         };
 
         [Test]
-        public void PieceDatabase_신규1성6종이55종DB안에유지된다()
+        public void PieceDatabase_신규1성6종이81종DB안에유지된다()
         {
             PieceDatabase database = LoadDatabase();
             PieceRosterValidationReport report = PieceRosterValidator.Validate(database);
 
-            Assert.That(database.Definitions.Count, Is.EqualTo(55));
-            Assert.That(report.RegisteredCount, Is.EqualTo(55));
-            Assert.That(report.MissingCount, Is.EqualTo(26));
+            Assert.That(database.Definitions.Count, Is.EqualTo(81));
+            Assert.That(report.RegisteredCount, Is.EqualTo(81));
+            Assert.That(report.MissingCount, Is.EqualTo(0));
             Assert.That(report.GetRegisteredCount(PieceGrade.OneStar), Is.EqualTo(18));
 
             for (int index = 0; index < NewPieceIds.Length; index++)

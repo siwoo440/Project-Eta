@@ -119,7 +119,7 @@ namespace ProjectEta.Tests.EditMode
         }
 
         [Test]
-        public void ProjectData_현재4성이첫누락성장단계다()
+        public void ProjectData_1대5성기물과전체70개레시피가연결된다()
         {
             PieceDatabase pieceDatabase = AssetDatabase.LoadAssetAtPath<PieceDatabase>("Assets/ProjectEta/Data/PieceDatabase.asset");
             FusionRecipeDatabase recipeDatabase = AssetDatabase.LoadAssetAtPath<FusionRecipeDatabase>("Assets/ProjectEta/Data/FusionRecipeDatabase.asset");
@@ -129,12 +129,17 @@ namespace ProjectEta.Tests.EditMode
             Assert.That(report.GetPieceCount(PieceGrade.OneStar), Is.EqualTo(18));
             Assert.That(report.GetPieceCount(PieceGrade.TwoStar), Is.EqualTo(19));
             Assert.That(report.GetPieceCount(PieceGrade.ThreeStar), Is.EqualTo(18));
+            Assert.That(report.GetPieceCount(PieceGrade.FourStar), Is.EqualTo(18));
+            Assert.That(report.GetPieceCount(PieceGrade.FiveStar), Is.EqualTo(8));
             Assert.That(report.GetRecipeCount(PieceGrade.TwoStar), Is.EqualTo(21));
             Assert.That(report.GetRecipeCount(PieceGrade.ThreeStar), Is.EqualTo(20));
-            Assert.That(report.FirstMissingPieceGrade, Is.EqualTo(PieceGrade.FourStar));
-            Assert.That(report.FirstMissingRecipeGrade, Is.EqualTo(PieceGrade.FourStar));
-            Assert.That(report.FirstUnreachableGrade, Is.EqualTo(PieceGrade.FourStar));
+            Assert.That(report.GetRecipeCount(PieceGrade.FourStar), Is.EqualTo(20));
+            Assert.That(report.GetRecipeCount(PieceGrade.FiveStar), Is.EqualTo(9));
+            Assert.That(report.FirstMissingPieceGrade, Is.Null);
+            Assert.That(report.FirstMissingRecipeGrade, Is.Null);
+            Assert.That(report.FirstUnreachableGrade, Is.Null);
             Assert.That(report.ContentIssueCount, Is.EqualTo(0));
+            Assert.That(report.HasCompleteGradeCoverage, Is.True);
         }
 
         [Test]

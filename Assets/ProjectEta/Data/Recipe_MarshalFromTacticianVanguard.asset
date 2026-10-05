@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75cc2415635c30648838849e5fc25c27, type: 3}
+  m_Name: Recipe_MarshalFromTacticianVanguard
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Fusion.FusionRecipe
+  _recipeId: marshal_from_tactician_vanguard
+  _materialA: {fileID: 11400000, guid: 384e5d56ff7f44edb88dffb919873c25, type: 2}
+  _materialB: {fileID: 11400000, guid: 089198af1b0247b0b2fee48b07928b4b, type: 2}
+  _result: {fileID: 11400000, guid: 2b5d73da74764b348e9985ec0c76e816, type: 2}
+  _isHiddenRecipe: 0
+  _ignoresGradeStepRule: 0
+  _usesOrderedMaterials: 0

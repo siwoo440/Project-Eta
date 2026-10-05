@@ -17,6 +17,10 @@ namespace ProjectEta.Pieces
         Gryphon = 12, // 그리폰 대각 진입 후 바깥 직선 이동
         Artillery = 13, // 포병대 성채 이동·스크린 포격
         Vanguard = 14, // 돌격대장 전방 최대 3칸·좌우 1칸
-        Sniper = 15 // 저격수 제한 이동·8방향 장거리 공격
+        Sniper = 15, // 저격수 제한 이동·8방향 장거리 공격
+        GrandGryphon = 16, // 그랜드 그리폰 정·역그리폰 복합 이동
+        IllusionistCycle = 17, // 환술사 기병→사제→성채 순환
+        Deadeye = 18, // 대저격수 직교 이동·8칸 장거리 공격
+        PhantomGeneralCycle = 19 // 환영장군 5단계 순환 이동
     }
 }

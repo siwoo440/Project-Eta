@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e9f1a6ef25279a438a7a43e588c0bae, type: 3}
+  m_Name: GrandRider
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
+  _pieceId: grand_rider
+  _displayName: 기마장군
+  _requiredMetaUnlockId:
+  _category: 1
+  _grade: 5
+  _movementType: 9
+  _roleTags: 148
+  _immuneStatusTags: 0
+  _movementRules:
+  - _kind: 4
+    _vectors:
+    - {x: 1, y: 2}
+    - {x: 2, y: 1}
+    - {x: -1, y: 2}
+    - {x: -2, y: 1}
+    - {x: 1, y: -2}
+    - {x: 2, y: -1}
+    - {x: -1, y: -2}
+    - {x: -2, y: -1}
+    _maxSteps: 10
+    _condition: 0
+  - _kind: 4
+    _vectors:
+    - {x: 1, y: 3}
+    - {x: 3, y: 1}
+    - {x: -1, y: 3}
+    - {x: -3, y: 1}
+    - {x: 1, y: -3}
+    - {x: 3, y: -1}
+    - {x: -1, y: -3}
+    - {x: -3, y: -1}
+    _maxSteps: 10
+    _condition: 0
+  _baseHp: 8
+  _baseAtk: 8
+  _occupancySize: {x: 1, y: 1}
+  _cardArtwork: {fileID: 0}
+  _description: 기병과 카멜 라이더 반복 이동을 함께 사용한다. 기획서에 HP ATK 수치가 없어 88일차 구현용 8 8 테스트 임시값을 사용한다.

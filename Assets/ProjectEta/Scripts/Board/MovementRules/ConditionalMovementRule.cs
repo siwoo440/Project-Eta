@@ -74,6 +74,14 @@ namespace ProjectEta.Board
                     return ResolveVanguard(origin, isPlayerPiece, board);
                 case MovementConditionType.Sniper:
                     return ResolveSniper(origin, isPlayerPiece, board);
+                case MovementConditionType.GrandGryphon:
+                    return ResolveGrandGryphon(origin, isPlayerPiece, board);
+                case MovementConditionType.IllusionistCycle:
+                    return ResolveIllusionistCycle(origin, isPlayerPiece, board);
+                case MovementConditionType.Deadeye:
+                    return ResolveDeadeye(origin, isPlayerPiece, board);
+                case MovementConditionType.PhantomGeneralCycle:
+                    return ResolvePhantomGeneralCycle(origin, isPlayerPiece, board);
                 default:
                     return new MovementResult();
             }
@@ -436,6 +444,132 @@ namespace ProjectEta.Board
             }
 
             return result;
+        }
+
+
+        private static MovementResult ResolveGrandGryphon(Vector2Int origin, bool isPlayerPiece, BoardState board)
+        {
+            var result = ResolveGryphon(origin, isPlayerPiece, board); // 정그리폰 이동 먼저 계산
+            if (board == null) return result;
+
+            foreach (Vector2Int orthogonal in OrthogonalDirections)
+            {
+                Vector2Int entry = origin + orthogonal; // 직선 1칸 진입
+                if (!board.IsInsideBoard(entry)) continue;
+
+                TileState entryTile = board.GetTile(entry);
+                if (entryTile == null || entryTile.IsBlockedByObstacle) continue;
+
+                if (entryTile.IsOccupied)
+                {
+                    if (entryTile.OccupyingPiece.IsPlayerPiece != isPlayerPiece) result.AddAttack(entry);
+                    continue;
+                }
+
+                result.AddMove(entry);
+
+                Vector2Int[] outward;
+                if (orthogonal.x != 0)
+                {
+                    outward = new[]
+                    {
+                        new Vector2Int(orthogonal.x, 1),
+                        new Vector2Int(orthogonal.x, -1)
+                    };
+                }
+                else
+                {
+                    outward = new[]
+                    {
+                        new Vector2Int(1, orthogonal.y),
+                        new Vector2Int(-1, orthogonal.y)
+                    };
+                }
+
+                foreach (Vector2Int direction in outward)
+                {
+                    for (int step = 1; step <= BoardState.Width; step++)
+                    {
+                        Vector2Int target = entry + direction * step;
+                        if (!board.IsInsideBoard(target)) break;
+
+                        TileState tile = board.GetTile(target);
+                        if (tile == null || tile.IsBlockedByObstacle) break;
+
+                        if (!tile.IsOccupied)
+                        {
+                            result.AddMove(target);
+                            continue;
+                        }
+
+                        if (tile.OccupyingPiece.IsPlayerPiece != isPlayerPiece) result.AddAttack(target);
+                        break;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private static MovementResult ResolveIllusionistCycle(Vector2Int origin, bool isPlayerPiece, BoardState board)
+        {
+            PieceRuntimeState piece = GetRuntimePiece(origin, board);
+            int cycle = piece != null ? piece.MovementCycleIndex : 0;
+
+            switch (cycle)
+            {
+                case 1:
+                    return MovementRuleFactory.CreateLegacy(PieceMovementType.Bishop).Resolve(origin, isPlayerPiece, board);
+                case 2:
+                    return MovementRuleFactory.CreateLegacy(PieceMovementType.Rook).Resolve(origin, isPlayerPiece, board);
+                default:
+                    return MovementRuleFactory.CreateLegacy(PieceMovementType.Knight).Resolve(origin, isPlayerPiece, board);
+            }
+        }
+
+        private static MovementResult ResolveDeadeye(Vector2Int origin, bool isPlayerPiece, BoardState board)
+        {
+            var result = new MovementResult();
+            if (board == null) return result;
+
+            foreach (Vector2Int direction in OrthogonalDirections)
+            {
+                AddEmptyMove(result, origin + direction, board); // 직교 인접 1칸 이동
+            }
+
+            foreach (Vector2Int direction in AllDirections)
+            {
+                AddFirstEnemyOnRay(result, origin, direction, 8, isPlayerPiece, board); // 최대 8칸 사격
+            }
+
+            return result;
+        }
+
+        private static MovementResult ResolvePhantomGeneralCycle(Vector2Int origin, bool isPlayerPiece, BoardState board)
+        {
+            PieceRuntimeState piece = GetRuntimePiece(origin, board);
+            int cycle = piece != null ? piece.MovementCycleIndex : 0;
+
+            switch (cycle)
+            {
+                case 1:
+                    return MovementRuleFactory.CreateLegacy(PieceMovementType.Bishop).Resolve(origin, isPlayerPiece, board);
+                case 2:
+                    return MovementRuleFactory.CreateLegacy(PieceMovementType.Rook).Resolve(origin, isPlayerPiece, board);
+                case 3:
+                    return MovementRuleFactory.CreateLegacy(PieceMovementType.Queen).Resolve(origin, isPlayerPiece, board);
+                case 4:
+                    return ResolveGrenadier(origin, isPlayerPiece, board);
+                default:
+                    return MovementRuleFactory.CreateLegacy(PieceMovementType.Knight).Resolve(origin, isPlayerPiece, board);
+            }
+        }
+
+        private static PieceRuntimeState GetRuntimePiece(Vector2Int origin, BoardState board)
+        {
+            if (board == null || !board.IsInsideBoard(origin)) return null;
+            TileState tile = board.GetTile(origin);
+            return tile != null ? tile.OccupyingPiece : null;
         }
 
         private static void AddEmptyMove(MovementResult result, Vector2Int target, BoardState board)

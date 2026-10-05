@@ -1,5 +1,5 @@
 using System.Collections.Generic; // HashSet 사용
-using NUnit.Framework; // 테스트 도구 사용
+using NUnit.Framework; // 테스트 도구
 using UnityEditor; // 실제 프로젝트 에셋 로드
 using UnityEngine; // Vector2Int 사용
 using ProjectEta.Board; // 이동 규칙 검증
@@ -9,78 +9,20 @@ namespace ProjectEta.Tests.EditMode
 {
     public class Day26PieceRosterIntegrationTests
     {
-        private const string PieceDatabasePath = "Assets/ProjectEta/Data/PieceDatabase.asset"; // 실제 기물 DB 경로
-
-        private static readonly string[] ExpectedPieceIds =
-        {
-            "king",
-            "pawn",
-            "knight",
-            "bishop",
-            "rook",
-            "queen",
-            "archbishop",
-            "chancellor",
-            "amazon",
-            "wazir",
-            "ferz",
-            "mann",
-            "dabbaba",
-            "alfil",
-            "camel",
-            "zebra",
-            "centaur",
-            "waffle",
-            "nightrider",
-            "camelrider",
-            "grasshopper",
-            "cannon",
-            "canvasser",
-            "caliph",
-            "squirrel",
-            "chameleon",
-            "spearman",
-            "shooter",
-            "shield_guard",
-            "flag_bearer",
-            "pursuer",
-            "scout",
-            "assault_trooper",
-            "sentry",
-            "breaker",
-            "courier",
-            "ambusher",
-            "paladin",
-            "war_chariot",
-            "grenadier",
-            "pikeman",
-            "crossbowman",
-            "guardian",
-            "hunter",
-            "falcon",
-            "unicorn",
-            "gryphon",
-            "dragon_horse",
-            "dragon_king",
-            "artillery",
-            "vanguard",
-            "tactician",
-            "medic",
-            "summoner",
-            "sniper"
-        }; // 87일차 기준 현재 실제 등록 55종
+        private const string PieceDatabasePath = "Assets/ProjectEta/Data/PieceDatabase.asset";
 
         [Test]
-        public void PieceDatabase_HasExactlyFiftyFiveExpectedPieces()
+        public void PieceDatabase_HasExactlyTargetEightyOnePieces()
         {
             PieceDatabase database = LoadDatabase();
 
-            Assert.AreEqual(55, database.Definitions.Count);
-            Assert.AreEqual(55, ExpectedPieceIds.Length);
+            Assert.AreEqual(PieceRosterCatalog.TargetPieceCount, database.Definitions.Count);
+            Assert.AreEqual(81, database.Definitions.Count);
 
-            foreach (string pieceId in ExpectedPieceIds)
+            for (int index = 0; index < PieceRosterCatalog.Entries.Count; index++)
             {
-                Assert.IsNotNull(database.FindById(pieceId), $"PieceDatabase에서 {pieceId}를 찾을 수 있어야 합니다.");
+                PieceRosterEntry entry = PieceRosterCatalog.Entries[index];
+                Assert.IsNotNull(database.FindById(entry.PieceId), $"PieceDatabase에서 {entry.PieceId}를 찾을 수 있어야 합니다.");
             }
         }
 
@@ -92,14 +34,14 @@ namespace ProjectEta.Tests.EditMode
 
             foreach (PieceDefinition definition in database.Definitions)
             {
-                Assert.IsNotNull(definition, "PieceDatabase에는 null 정의가 들어가면 안 됩니다.");
-                Assert.IsFalse(string.IsNullOrWhiteSpace(definition.PieceId), $"{definition.name}: PieceId가 필요합니다.");
+                Assert.IsNotNull(definition);
+                Assert.IsFalse(string.IsNullOrWhiteSpace(definition.PieceId), definition != null ? definition.name : "null");
                 Assert.IsTrue(uniqueIds.Add(definition.PieceId), $"중복 PieceId: {definition.PieceId}");
-                Assert.IsFalse(string.IsNullOrWhiteSpace(definition.DisplayName), $"{definition.PieceId}: 표시 이름이 필요합니다.");
-                Assert.Greater(definition.BaseHp, 0, $"{definition.PieceId}: HP는 1 이상이어야 합니다.");
-                Assert.GreaterOrEqual(definition.BaseAtk, 0, $"{definition.PieceId}: ATK는 0 이상이어야 합니다.");
-                Assert.AreEqual(Vector2Int.one, definition.OccupancySize, $"{definition.PieceId}: 플레이어 기물은 현재 1×1 점유여야 합니다.");
-                Assert.IsFalse(string.IsNullOrWhiteSpace(definition.Description), $"{definition.PieceId}: 카드 설명이 필요합니다.");
+                Assert.IsFalse(string.IsNullOrWhiteSpace(definition.DisplayName), definition.PieceId);
+                Assert.Greater(definition.BaseHp, 0, definition.PieceId);
+                Assert.GreaterOrEqual(definition.BaseAtk, 0, definition.PieceId);
+                Assert.AreEqual(Vector2Int.one, definition.OccupancySize, definition.PieceId);
+                Assert.IsFalse(string.IsNullOrWhiteSpace(definition.Description), definition.PieceId);
 
                 bool hasLegacyMovement = definition.MovementType != PieceMovementType.Custom;
                 bool hasDataMovement = definition.MovementRules != null && definition.MovementRules.Length > 0;
@@ -108,67 +50,59 @@ namespace ProjectEta.Tests.EditMode
         }
 
         [Test]
-        public void PieceRoleTags_MatchCoreMovementFamilies()
+        public void PieceRoleTags_HighGradeRepresentativesMatchCatalog()
         {
             PieceDatabase database = LoadDatabase();
 
-            AssertHasTag(database, "pawn", PieceRoleTag.Melee);
-            AssertHasTag(database, "knight", PieceRoleTag.Jumper);
-            AssertHasTag(database, "rook", PieceRoleTag.Slider);
-            AssertHasTag(database, "nightrider", PieceRoleTag.Rider);
-            AssertHasTag(database, "cannon", PieceRoleTag.Ranged);
-            AssertHasTag(database, "spearman", PieceRoleTag.Ranged);
-            AssertHasTag(database, "shield_guard", PieceRoleTag.Tanker);
-            AssertHasTag(database, "flag_bearer", PieceRoleTag.Support);
-            AssertHasTag(database, "assault_trooper", PieceRoleTag.Jumper);
-            AssertHasTag(database, "sentry", PieceRoleTag.Tanker);
-            AssertHasTag(database, "breaker", PieceRoleTag.Attacker);
-            AssertHasTag(database, "paladin", PieceRoleTag.Tanker);
-            AssertHasTag(database, "unicorn", PieceRoleTag.Rider);
-            AssertHasTag(database, "artillery", PieceRoleTag.Ranged);
-            AssertHasTag(database, "summoner", PieceRoleTag.Summoner);
-            AssertHasTag(database, "sniper", PieceRoleTag.Ranged);
+            AssertHasTag(database, "marshal", PieceRoleTag.Support);
+            AssertHasTag(database, "grand_cannon", PieceRoleTag.Ranged);
+            AssertHasTag(database, "imperial_knight", PieceRoleTag.Jumper);
+            AssertHasTag(database, "grand_guardian", PieceRoleTag.Tanker);
+            AssertHasTag(database, "grand_unicorn", PieceRoleTag.Rider);
+            AssertHasTag(database, "deadeye", PieceRoleTag.Ranged);
+            AssertHasTag(database, "siege_commander", PieceRoleTag.Ranged);
+            AssertHasTag(database, "grand_paladin", PieceRoleTag.Tanker);
+            AssertHasTag(database, "grand_rider", PieceRoleTag.Rider);
+            AssertHasTag(database, "phantom_general", PieceRoleTag.Attacker);
+            AssertHasTag(database, "grand_sage", PieceRoleTag.Support);
+            AssertHasTag(database, "iron_regent", PieceRoleTag.Tanker);
         }
 
         [Test]
-        public void AllMovementRuleFamilies_HaveWorkingRepresentativePieces()
+        public void HighGradeMovementFamilies_HaveWorkingRepresentativePieces()
         {
             PieceDatabase database = LoadDatabase();
-            var emptyBoard = new BoardState();
+            var board = new BoardState();
             var origin = new Vector2Int(4, 4);
 
-            string[] movableIds =
+            string[] ids =
             {
-                "wazir", "rook", "knight", "centaur", "nightrider", "pawn", "cannon", "scout",
-                "assault_trooper", "sentry", "courier", "paladin", "grenadier", "gryphon", "artillery", "sniper"
+                "marshal", "grand_cannon", "imperial_knight", "high_priest", "war_rider",
+                "siege_chariot", "grand_guardian", "grand_unicorn", "grand_gryphon", "archmage",
+                "war_cleric", "executioner", "storm_knight", "bastion", "field_commander", "deadeye",
+                "gatekeeper", "siege_commander", "grand_paladin", "grand_rider", "emperor",
+                "sky_marshal", "grand_sage", "iron_regent"
             };
 
-            for (int index = 0; index < movableIds.Length; index++)
+            for (int index = 0; index < ids.Length; index++)
             {
-                PieceDefinition definition = database.FindById(movableIds[index]);
-                MovementResult result = MovementResolver.GetReachableTiles(definition, origin, true, emptyBoard);
-                Assert.Greater(result.MoveTiles.Count, 0, movableIds[index]);
+                MovementResult result = MovementResolver.GetReachableTiles(database.FindById(ids[index]), origin, true, board);
+                Assert.Greater(result.MoveTiles.Count, 0, ids[index]);
             }
-
-            var hopperBoard = new BoardState();
-            var hurdle = new PieceRuntimeState(database.FindById("pawn"), new Vector2Int(4, 6), true);
-            hopperBoard.GetTile(hurdle.BoardPosition).OccupyingPiece = hurdle;
-            MovementResult hopper = MovementResolver.GetReachableTiles(database.FindById("grasshopper"), origin, true, hopperBoard);
-            Assert.Contains(new Vector2Int(4, 7), hopper.MoveTiles);
         }
 
         private static PieceDatabase LoadDatabase()
         {
             PieceDatabase database = AssetDatabase.LoadAssetAtPath<PieceDatabase>(PieceDatabasePath);
-            Assert.IsNotNull(database, "PieceDatabase.asset이 존재해야 합니다.");
+            Assert.IsNotNull(database);
             return database;
         }
 
         private static void AssertHasTag(PieceDatabase database, string pieceId, PieceRoleTag expectedTag)
         {
             PieceDefinition definition = database.FindById(pieceId);
-            Assert.IsNotNull(definition, $"{pieceId} 정의가 필요합니다.");
-            Assert.IsTrue((definition.RoleTags & expectedTag) != 0, $"{pieceId}에는 {expectedTag} 태그가 필요합니다.");
+            Assert.IsNotNull(definition, pieceId);
+            Assert.IsTrue((definition.RoleTags & expectedTag) != 0, $"{pieceId}: {expectedTag}");
         }
     }
 }

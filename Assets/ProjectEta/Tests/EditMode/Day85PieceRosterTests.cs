@@ -32,32 +32,24 @@ namespace ProjectEta.Tests.EditMode
         }
 
         [Test]
-        public void ProjectData_현재55종등록26종미등록상태다()
+        public void ProjectData_목표81종이모두등록됐다()
         {
             PieceDatabase database = AssetDatabase.LoadAssetAtPath<PieceDatabase>("Assets/ProjectEta/Data/PieceDatabase.asset");
             PieceRosterValidationReport report = PieceRosterValidator.Validate(database);
 
-            Assert.That(report.RegisteredCount, Is.EqualTo(55));
-            Assert.That(report.MissingCount, Is.EqualTo(26));
+            Assert.That(report.RegisteredCount, Is.EqualTo(81));
+            Assert.That(report.MissingCount, Is.EqualTo(0));
             Assert.That(report.GetRegisteredCount(PieceGrade.OneStar), Is.EqualTo(18));
             Assert.That(report.GetRegisteredCount(PieceGrade.TwoStar), Is.EqualTo(19));
             Assert.That(report.GetRegisteredCount(PieceGrade.ThreeStar), Is.EqualTo(18));
-            Assert.That(report.GetRegisteredCount(PieceGrade.FourStar), Is.EqualTo(0));
-            Assert.That(report.GetRegisteredCount(PieceGrade.FiveStar), Is.EqualTo(0));
-        }
-
-        [Test]
-        public void ProjectData_현재55종은목표ID와메타데이터에충돌이없다()
-        {
-            PieceDatabase database = AssetDatabase.LoadAssetAtPath<PieceDatabase>("Assets/ProjectEta/Data/PieceDatabase.asset");
-            PieceRosterValidationReport report = PieceRosterValidator.Validate(database);
-
+            Assert.That(report.GetRegisteredCount(PieceGrade.FourStar), Is.EqualTo(18));
+            Assert.That(report.GetRegisteredCount(PieceGrade.FiveStar), Is.EqualTo(8));
             Assert.That(report.UnexpectedCount, Is.EqualTo(0));
             Assert.That(report.DuplicatePieceIdCount, Is.EqualTo(0));
             Assert.That(report.MetadataMismatchCount, Is.EqualTo(0), string.Join("\n", report.MetadataMismatches));
             Assert.That(report.InvalidDefinitionCount, Is.EqualTo(0));
             Assert.That(report.IsSchemaHealthy, Is.True);
-            Assert.That(report.HasCompleteRoster, Is.False);
+            Assert.That(report.HasCompleteRoster, Is.True);
         }
     }
 }

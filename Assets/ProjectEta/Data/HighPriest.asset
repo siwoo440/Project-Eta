@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e9f1a6ef25279a438a7a43e588c0bae, type: 3}
+  m_Name: HighPriest
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
+  _pieceId: high_priest
+  _displayName: 대성직자
+  _requiredMetaUnlockId:
+  _category: 1
+  _grade: 4
+  _movementType: 9
+  _roleTags: 40
+  _immuneStatusTags: 0
+  _movementRules:
+  - _kind: 1
+    _vectors:
+    - {x: 1, y: 1}
+    - {x: 1, y: -1}
+    - {x: -1, y: 1}
+    - {x: -1, y: -1}
+    _maxSteps: 10
+    _condition: 0
+  - _kind: 0
+    _vectors:
+    - {x: 1, y: 0}
+    - {x: -1, y: 0}
+    - {x: 0, y: 1}
+    - {x: 0, y: -1}
+    _maxSteps: 1
+    _condition: 0
+  _baseHp: 6
+  _baseAtk: 5
+  _occupancySize: {x: 1, y: 1}
+  _cardArtwork: {fileID: 0}
+  _description: 대각선 장거리 이동과 직선 인접 1칸 이동을 사용한다. 축복 회복은 후속 Heal 프레임워크에서 연결한다.
