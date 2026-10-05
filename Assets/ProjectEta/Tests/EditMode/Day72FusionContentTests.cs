@@ -24,7 +24,7 @@ namespace ProjectEta.Tests.EditMode
         }
 
         [Test]
-        public void FusionDatabase_재료순서가바뀌어도같은레시피를찾는다()
+        public void FusionDatabase_일반레시피는순서무관이고방향성레시피는AB를구분한다()
         {
             FusionRecipeDatabase database = AssetDatabase.LoadAssetAtPath<FusionRecipeDatabase>(DatabasePath); // 프로젝트 Fusion Database 로드
 
@@ -34,9 +34,27 @@ namespace ProjectEta.Tests.EditMode
             {
                 FusionRecipe recipe = database.Recipes[i]; // 현재 Recipe 조회
                 Assert.IsNotNull(recipe); // 빈 Recipe 차단 검증
-                bool found = database.TryFindRecipe(recipe.MaterialB, recipe.MaterialA, out FusionRecipe reversed); // 반대 재료 순서 조회
-                Assert.IsTrue(found, recipe.RecipeId); // 반대 순서 Recipe 검색 성공 검증
-                Assert.AreSame(recipe, reversed, recipe.RecipeId); // 동일 Recipe 반환 검증
+
+                bool inOrderFound = database.TryFindRecipe(recipe.MaterialA, recipe.MaterialB, out FusionRecipe inOrder); // 등록 순서 조회
+                Assert.IsTrue(inOrderFound, recipe.RecipeId); // 등록 순서 검색 성공 검증
+                Assert.AreSame(recipe, inOrder, recipe.RecipeId); // 등록 순서는 자신의 Recipe 반환
+
+                bool reversedFound = database.TryFindRecipe(recipe.MaterialB, recipe.MaterialA, out FusionRecipe reversed); // 반대 재료 순서 조회
+
+                if (recipe.UsesOrderedMaterials)
+                {
+                    // 87일차의 강습병/돌파병 분기처럼 A/B 순서가 결과를 구분하는 예외는
+                    // 반대 순서에서 자기 자신을 반환하면 안 된다. 반대 방향 Recipe가 있으면 그 Recipe가 반환될 수 있다.
+                    if (reversedFound)
+                    {
+                        Assert.AreNotSame(recipe, reversed, recipe.RecipeId); // 방향성 Recipe는 반대 순서에서 같은 Recipe 금지
+                    }
+
+                    continue;
+                }
+
+                Assert.IsTrue(reversedFound, recipe.RecipeId); // 일반 Recipe는 반대 순서도 검색 성공
+                Assert.AreSame(recipe, reversed, recipe.RecipeId); // 일반 Recipe는 동일 Recipe 반환
             }
         }
 

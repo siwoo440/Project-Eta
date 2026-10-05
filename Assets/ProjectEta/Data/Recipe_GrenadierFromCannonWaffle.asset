@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75cc2415635c30648838849e5fc25c27, type: 3}
+  m_Name: Recipe_GrenadierFromCannonWaffle
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Fusion.FusionRecipe
+  _recipeId: grenadier_from_cannon_waffle
+  _materialA: {fileID: 11400000, guid: 74d67b048ac84e44929be6f59088c009, type: 2}
+  _materialB: {fileID: 11400000, guid: a1f467d137384a17893bfddb1fca258f, type: 2}
+  _result: {fileID: 11400000, guid: 2a32d3dd47424268a55008d98bf5f9ef, type: 2}
+  _isHiddenRecipe: 0
+  _ignoresGradeStepRule: 0
+  _usesOrderedMaterials: 0

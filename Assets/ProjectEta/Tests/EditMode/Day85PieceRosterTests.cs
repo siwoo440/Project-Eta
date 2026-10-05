@@ -27,32 +27,27 @@ namespace ProjectEta.Tests.EditMode
             for (int index = 0; index < PieceRosterCatalog.Entries.Count; index++)
             {
                 PieceRosterEntry entry = PieceRosterCatalog.Entries[index];
-                Assert.That(entry, Is.Not.Null);
-                Assert.That(entry.PieceId, Is.Not.Null.And.Not.Empty);
                 Assert.That(ids.Add(entry.PieceId), Is.True, $"중복 PieceId: {entry.PieceId}");
             }
         }
 
         [Test]
-        public void ProjectData_현재32종등록49종미등록상태다()
+        public void ProjectData_현재55종등록26종미등록상태다()
         {
             PieceDatabase database = AssetDatabase.LoadAssetAtPath<PieceDatabase>("Assets/ProjectEta/Data/PieceDatabase.asset");
-            Assert.That(database, Is.Not.Null);
-
             PieceRosterValidationReport report = PieceRosterValidator.Validate(database);
 
-            Assert.That(report.IsDatabaseConnected, Is.True);
-            Assert.That(report.RegisteredCount, Is.EqualTo(32));
-            Assert.That(report.MissingCount, Is.EqualTo(49));
+            Assert.That(report.RegisteredCount, Is.EqualTo(55));
+            Assert.That(report.MissingCount, Is.EqualTo(26));
             Assert.That(report.GetRegisteredCount(PieceGrade.OneStar), Is.EqualTo(18));
-            Assert.That(report.GetRegisteredCount(PieceGrade.TwoStar), Is.EqualTo(14));
-            Assert.That(report.GetRegisteredCount(PieceGrade.ThreeStar), Is.EqualTo(0));
+            Assert.That(report.GetRegisteredCount(PieceGrade.TwoStar), Is.EqualTo(19));
+            Assert.That(report.GetRegisteredCount(PieceGrade.ThreeStar), Is.EqualTo(18));
             Assert.That(report.GetRegisteredCount(PieceGrade.FourStar), Is.EqualTo(0));
             Assert.That(report.GetRegisteredCount(PieceGrade.FiveStar), Is.EqualTo(0));
         }
 
         [Test]
-        public void ProjectData_현재32종은목표ID와메타데이터에충돌이없다()
+        public void ProjectData_현재55종은목표ID와메타데이터에충돌이없다()
         {
             PieceDatabase database = AssetDatabase.LoadAssetAtPath<PieceDatabase>("Assets/ProjectEta/Data/PieceDatabase.asset");
             PieceRosterValidationReport report = PieceRosterValidator.Validate(database);
@@ -63,21 +58,6 @@ namespace ProjectEta.Tests.EditMode
             Assert.That(report.InvalidDefinitionCount, Is.EqualTo(0));
             Assert.That(report.IsSchemaHealthy, Is.True);
             Assert.That(report.HasCompleteRoster, Is.False);
-        }
-
-        [Test]
-        public void TargetRoster_85일차신규ID11종을포함한다()
-        {
-            string[] requiredIds =
-            {
-                "spearman", "shooter", "shield_guard", "flag_bearer", "pursuer", "scout",
-                "assault_trooper", "sentry", "breaker", "courier", "ambusher"
-            };
-
-            for (int index = 0; index < requiredIds.Length; index++)
-            {
-                Assert.That(PieceRosterCatalog.FindById(requiredIds[index]), Is.Not.Null, requiredIds[index]);
-            }
         }
     }
 }

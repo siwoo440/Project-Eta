@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e9f1a6ef25279a438a7a43e588c0bae, type: 3}
+  m_Name: Vanguard
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectEta.Pieces.PieceDefinition
+  _pieceId: vanguard
+  _displayName: 돌격대장
+  _requiredMetaUnlockId:
+  _category: 1
+  _grade: 3
+  _movementType: 9
+  _roleTags: 129
+  _immuneStatusTags: 0
+  _movementRules:
+  - _kind: 3
+    _vectors: []
+    _maxSteps: 1
+    _condition: 14
+  _baseHp: 5
+  _baseAtk: 5
+  _occupancySize: {x: 1, y: 1}
+  _cardArtwork: {fileID: 0}
+  _description: 진영 기준 전방으로 최대 3칸, 좌우로 1칸 이동·공격한다. 선봉 추가 피해는 후속 능력 프레임워크에서 연결한다.
