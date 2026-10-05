@@ -17,11 +17,11 @@ namespace ProjectEta.EditorTools
             builder.AppendLine($"ApplyStatus: {AbilityEffectRegistry.IsImplemented(AbilityEffectType.ApplyStatus)}");
             builder.AppendLine($"Aura: {AbilityEffectRegistry.IsImplemented(AbilityEffectType.Aura)}");
             builder.AppendLine($"Summon: {AbilityEffectRegistry.IsImplemented(AbilityEffectType.Summon)}");
-            builder.AppendLine($"남은 Effect: ModifyMoveRange / BlockTile / DestroyObstacle");
+            builder.AppendLine("Day91 구현 대상: ApplyStatus / Aura / Summon");
             builder.AppendLine($"현재 임시 소환물 추적 수: {TemporarySummonService.ActiveCount}");
 
             bool valid =
-                AbilityEffectRegistry.RegisteredCount == 6 &&
+                AbilityEffectRegistry.RegisteredCount >= 6 &&
                 AbilityEffectRegistry.IsImplemented(AbilityEffectType.ApplyStatus) &&
                 AbilityEffectRegistry.IsImplemented(AbilityEffectType.Aura) &&
                 AbilityEffectRegistry.IsImplemented(AbilityEffectType.Summon);

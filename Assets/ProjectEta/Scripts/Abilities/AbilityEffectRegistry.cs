@@ -1,4 +1,4 @@
-using System.Collections.Generic; // Dictionary 사용
+using System.Collections.Generic;
 
 namespace ProjectEta.Abilities
 {
@@ -40,6 +40,9 @@ namespace ProjectEta.Abilities
             Register(new ApplyStatusAbilityExecutor());
             Register(new AuraAbilityExecutor());
             Register(new SummonAbilityExecutor());
+            Register(new ModifyMoveRangeAbilityExecutor());
+            Register(new BlockTileAbilityExecutor());
+            Register(new DestroyObstacleAbilityExecutor());
         }
     }
 }
