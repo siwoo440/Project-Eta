@@ -217,12 +217,19 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             rect.sizeDelta = new Vector2(150f, 74f); // 버튼 크기 지정
 
             var image = buttonObject.GetComponent<Image>(); // 버튼 배경 Image 확보
-            image.color = color; // 좌/우 구분 색상 적용
+            string pileResourcePath = name == "DeadPileButton" ? Day98UiSkin.ButtonDangerResourcePath : Day98UiSkin.PileButtonResourcePath; // 더미 종류별 버튼 이미지 선택
+            bool pileSkinApplied = Day98UiSkin.TryApplyResource(image, pileResourcePath, false); // 카드 더미 버튼 이미지 적용
+            if (!pileSkinApplied) // 카드 더미 이미지 누락 확인
+            { // 조건 시작
+                image.color = color; // 좌우 구분 색상 유지
+            } // 조건 종료
 
             var button = buttonObject.GetComponent<Button>(); // Button 컴포넌트 확보
             var colors = button.colors; // 기본 컬러 트랜지션 값 조회
-            colors.highlightedColor = Color.Lerp(color, Color.white, 0.25f); // 마우스 오버 시 살짝 밝아지는 색 적용
-            colors.pressedColor = Color.Lerp(color, Color.black, 0.25f); // 클릭 시 살짝 어두워지는 색 적용
+            Color transitionBase = pileSkinApplied ? Color.white : color; // 이미지 적용 여부별 전환 기준색 선택
+            colors.normalColor = transitionBase; // 기본 상태 원본 이미지 색상 적용
+            colors.highlightedColor = Color.Lerp(transitionBase, Color.white, 0.25f); // 마우스 오버 밝기 적용
+            colors.pressedColor = Color.Lerp(transitionBase, Color.black, 0.25f); // 클릭 상태 명도 적용
             button.colors = colors; // 변경한 컬러 트랜지션 적용
 
             var text = CreateText(name + "Text", buttonObject.transform, 15, FontStyle.Bold, TextAnchor.MiddleCenter, Color.white); // 버튼 문구 텍스트 생성

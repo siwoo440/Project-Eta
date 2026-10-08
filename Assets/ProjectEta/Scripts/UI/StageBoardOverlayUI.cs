@@ -35,6 +35,10 @@ namespace ProjectEta.UI
             public RectTransform RootRect; // 카드 루트 RectTransform
             public Image FrameImage; // 카드 외곽 프레임
             public Image PaperImage; // 카드 내부 종이
+            public Image SelectionImage; // 선택지 마우스 강조
+            public Image SoldOutImage; // 구매 완료 표시
+            public Image PriceImage; // 가격표 배경
+            public Text PriceText; // 가격표 문구
             public Text TitleText; // 카드 제목
             public Text DescriptionText; // 카드 설명
             public StageOverlayHoverRelay HoverRelay; // 마우스 오버 설명 연결기
@@ -220,7 +224,11 @@ namespace ProjectEta.UI
             RectTransform rootRect = rootObject.GetComponent<RectTransform>(); // 카드 루트 RectTransform 확보
             SetRect(rootRect, Vector2.zero, new Vector2(NormalCardWidth, NormalCardHeight)); // 기본 카드 크기 적용
             Image frameImage = rootObject.GetComponent<Image>(); // 카드 프레임 확보
-            frameImage.color = new Color(0.18f, 0.11f, 0.05f, 0.98f); // 진한 프레임 색상 적용
+            bool frameApplied = Day98UiSkin.TryApplyResource(frameImage, Day98UiSkin.ChoiceCardFrameResourcePath); // 선택지 프레임 적용
+            if (!frameApplied) // 프레임 이미지 누락 확인
+            { // 조건 시작
+                frameImage.color = new Color(0.18f, 0.11f, 0.05f, 0.98f); // 기존 프레임 유지
+            } // 조건 종료
             Button button = rootObject.GetComponent<Button>(); // 버튼 컴포넌트 확보
             StageOverlayHoverRelay hoverRelay = rootObject.AddComponent<StageOverlayHoverRelay>(); // 카드 마우스 오버 연결기 추가
             button.targetGraphic = frameImage; // 버튼 대상 그래픽 지정
@@ -233,7 +241,7 @@ namespace ProjectEta.UI
             RectTransform paperRect = paperObject.GetComponent<RectTransform>(); // 카드 내부 종이 RectTransform 확보
             Stretch(paperRect, 9f); // 프레임 안쪽 여백 적용
             Image paperImage = paperObject.GetComponent<Image>(); // 카드 내부 종이 이미지 확보
-            paperImage.color = new Color(0.83f, 0.75f, 0.58f, 0.90f); // 낡은 종이 색상 적용
+            paperImage.color = frameApplied ? Color.clear : new Color(0.83f, 0.75f, 0.58f, 0.90f); // 프레임 내부 이미지 노출
             paperImage.raycastTarget = false; // 클릭 입력은 루트 버튼에만 전달
 
             var bandObject = new GameObject("TitleBand", typeof(RectTransform), typeof(Image)); // 카드 제목 띠 생성
@@ -252,6 +260,13 @@ namespace ProjectEta.UI
             descriptionText.text = string.Empty; // 카드 내부 작은 설명 제거
             descriptionText.gameObject.SetActive(false); // 카드 내부 설명 오브젝트 비활성화
 
+            Image selectionImage = Day98UiSkin.CreateDecoration("ChoiceSelection", rootObject.transform, Day98UiSkin.ChoiceCardSelectedResourcePath); // 마우스 강조 생성
+            selectionImage.gameObject.SetActive(false); // 기본 강조 숨김
+            Image priceImage = Day98UiSkin.CreateDecoration("ShopPrice", rootObject.transform, Day98UiSkin.ShopPriceTagResourcePath); // 가격표 생성
+            Text priceText = CreateText("PriceText", priceImage.transform, 23, FontStyle.Bold); // 가격 문구 생성
+            Stretch(priceText.rectTransform, 5f); // 가격표 내부 배치
+            Image soldOutImage = Day98UiSkin.CreateDecoration("ShopPurchased", rootObject.transform, Day98UiSkin.ShopSoldOutOverlayResourcePath, false); // 완료 표시 생성
+            soldOutImage.preserveAspect = true; // 완료 표시 비율 유지
             rootObject.SetActive(false); // 기본 미사용 상태
 
             return new OptionView
@@ -260,6 +275,10 @@ namespace ProjectEta.UI
                 RootRect = rootRect, // 카드 RectTransform 저장
                 FrameImage = frameImage, // 프레임 이미지 저장
                 PaperImage = paperImage, // 종이 이미지 저장
+                SelectionImage = selectionImage, // 강조 이미지 저장
+                PriceImage = priceImage, // 가격표 이미지 저장
+                PriceText = priceText, // 가격표 문구 저장
+                SoldOutImage = soldOutImage, // 완료 이미지 저장
                 TitleText = titleText, // 제목 텍스트 저장
                 DescriptionText = descriptionText, // 설명 텍스트 저장
                 HoverRelay = hoverRelay, // 마우스 오버 연결기 저장
@@ -311,7 +330,19 @@ namespace ProjectEta.UI
             view.DescriptionText.text = string.Empty; // 카드 내부 작은 설명은 사용하지 않고 Hover 하단 설명만 사용
             view.Button.interactable = option.Interactable; // 카드 선택 가능 여부 적용
             view.Button.onClick.AddListener(() => option.Callback?.Invoke()); // 카드 선택 콜백 연결
-            if (view.HoverRelay != null) view.HoverRelay.Configure(() => ShowHoverDescription(option), HideHoverDescription); // 마우스 오버 설명 연결
+            view.SelectionImage.gameObject.SetActive(false); // 페이지 변경 시 강조 초기화
+            if (view.HoverRelay != null) // 마우스 입력 연결기 확인
+            { // 조건 시작
+                view.HoverRelay.Configure(() => // 마우스 진입 처리 연결
+                { // 콜백 시작
+                    ShowHoverDescription(option); // 상세 설명 표시
+                    view.SelectionImage.gameObject.SetActive(option.Interactable); // 활성 선택지 강조 표시
+                }, () => // 마우스 이탈 처리 연결
+                { // 콜백 시작
+                    HideHoverDescription(); // 상세 설명 숨김
+                    view.SelectionImage.gameObject.SetActive(false); // 강조 표시 해제
+                }); // 입력 연결 종료
+            } // 조건 종료
             view.Button.gameObject.SetActive(true); // 카드 표시
 
             Color frameColor = isBottomCard ? new Color(0.23f, 0.14f, 0.06f, 0.98f) : new Color(0.18f, 0.11f, 0.05f, 0.98f); // 카드 종류별 프레임 색상
@@ -323,8 +354,19 @@ namespace ProjectEta.UI
                 paperColor = new Color(0.52f, 0.50f, 0.46f, 0.82f); // 비활성 카드 종이 색상
             }
 
-            view.FrameImage.color = frameColor; // 프레임 색상 적용
-            view.PaperImage.color = paperColor; // 종이 색상 적용
+            view.FrameImage.color = view.FrameImage.sprite != null ? Color.white : frameColor; // 이미지 원색 또는 기존 프레임 유지
+            view.PaperImage.color = view.FrameImage.sprite != null ? Color.clear : paperColor; // 프레임 내부 이미지 노출
+            bool hasPrice = option.Price.HasValue; // 상품 가격 존재 확인
+            view.PriceImage.gameObject.SetActive(hasPrice); // 상품에만 가격표 표시
+            view.PriceText.text = option.IsPurchased ? "구매 완료" : $"{option.Price.GetValueOrDefault()} Gold"; // 구매 상태별 가격 문구
+            view.SoldOutImage.gameObject.SetActive(hasPrice && option.IsPurchased); // 실제 구매 완료만 표시
+            SetRect(view.PriceImage.rectTransform, new Vector2(0f, -size.y * 0.28f), new Vector2(190f, 68f)); // 가격표 하단 배치
+            SetRect(view.SoldOutImage.rectTransform, new Vector2(size.x * 0.5f - 38f, 0f), new Vector2(50f, 76f)); // 완료 표시 우측 배치
+            if (hasPrice) // 상품 카드 확인
+            { // 조건 시작
+                SetRect(view.TitleText.rectTransform, new Vector2(0f, 24f), new Vector2(size.x - 104f, size.y - 92f)); // 가격표 위에 상품명 배치
+            } // 조건 종료
+            view.TitleText.color = option.Interactable ? Color.white : new Color(0.65f, 0.65f, 0.65f, 1f); // 선택 불가 문구 구분
             view.TitleText.fontSize = isBottomCard ? 38 : 34; // 모든 카드 제목을 카드 전체에서 크게 표시
             view.TitleText.alignment = TextAnchor.MiddleCenter; // 카드 중앙에 제목 정렬
             view.DescriptionText.gameObject.SetActive(false); // 모든 카드 내부 작은 설명 숨김 유지

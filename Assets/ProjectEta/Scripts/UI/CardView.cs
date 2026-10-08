@@ -168,9 +168,13 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
 
             var outer = CreatePanel("OuterFrame", transform, new Color(0.075f, 0.09f, 0.12f, 1f)); // 어두운 금속 외곽 프레임 생성
             Stretch(outer.rect, 4f, 4f, 4f, 4f); // 카드 안쪽에 프레임 배치
-            outer.image.sprite = GetRoundedSprite(); // 둥근 프레임 적용
-            outer.image.type = Image.Type.Sliced; // 크기 변화 대응
-            AddOutline(outer.gameObject, new Color(0.52f, 0.43f, 0.28f, 0.95f), new Vector2(2f, -2f)); // 청동 외곽선 적용
+            bool cardFrameApplied = Day98UiSkin.TryApplyResource(outer.image, Day98UiSkin.CardFrameResourcePath, false); // 카드 전용 외곽선 이미지 적용
+            if (!cardFrameApplied) // 카드 외곽선 이미지 누락 확인
+            { // 조건 시작
+                outer.image.sprite = GetRoundedSprite(); // 둥근 프레임 적용
+                outer.image.type = Image.Type.Sliced; // 크기 변화 대응
+                AddOutline(outer.gameObject, new Color(0.52f, 0.43f, 0.28f, 0.95f), new Vector2(2f, -2f)); // 청동 외곽선 적용
+            } // 조건 종료
 
             var inner = CreatePanel("InnerFrame", outer.transform, new Color(0.13f, 0.17f, 0.20f, 1f)); // 청회색 내부 프레임 생성
             Stretch(inner.rect, 7f, 7f, 7f, 7f); // 외곽 프레임 안쪽에 배치
@@ -225,15 +229,23 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             var lockPanel = CreatePanel("LockOverlay", transform, new Color(0f, 0f, 0f, 0.56f)); // 사용할 수 없는 카드 잠금 오버레이 생성
             _lockOverlay = lockPanel.gameObject; // 오버레이 참조 저장
             Stretch(lockPanel.rect, 0f, 0f, 0f, 0f); // 카드 전체를 덮게 설정
-            lockPanel.image.sprite = GetRoundedSprite(); // 카드 외형과 같은 둥근 Sprite 적용
-            lockPanel.image.type = Image.Type.Sliced; // 모서리 형태 유지
+            bool lockedOverlayApplied = Day98UiSkin.TryApplyResource(lockPanel.image, Day98UiSkin.LockedOverlayResourcePath, false); // 잠금 오버레이 이미지 적용
+            if (!lockedOverlayApplied) // 잠금 오버레이 이미지 누락 확인
+            { // 조건 시작
+                lockPanel.image.sprite = GetRoundedSprite(); // 둥근 Sprite 적용
+                lockPanel.image.type = Image.Type.Sliced; // 모서리 형태 유지
+            } // 조건 종료
 
             var fusionPanel = CreatePanel("FusionSelectedOverlay", transform, new Color(1f, 0.82f, 0.2f, 0f)); // 합성 재료 선택 강조용 금색 테두리 오버레이 생성
             _fusionSelectedOverlay = fusionPanel.gameObject; // 오버레이 참조 저장
             Stretch(fusionPanel.rect, 0f, 0f, 0f, 0f); // 카드 전체를 덮게 설정
-            fusionPanel.image.sprite = GetRoundedSprite(); // 카드 외형과 같은 둥근 Sprite 적용
-            fusionPanel.image.type = Image.Type.Sliced; // 모서리 형태 유지
-            AddOutline(fusionPanel.gameObject, new Color(1f, 0.85f, 0.25f, 1f), new Vector2(4f, -4f)); // 금색 테두리 표현
+            bool selectionGlowApplied = Day98UiSkin.TryApplyResource(fusionPanel.image, Day98UiSkin.SelectionGlowResourcePath, false); // 합성 선택 발광 이미지 적용
+            if (!selectionGlowApplied) // 합성 선택 이미지 누락 확인
+            { // 조건 시작
+                fusionPanel.image.sprite = GetRoundedSprite(); // 둥근 Sprite 적용
+                fusionPanel.image.type = Image.Type.Sliced; // 모서리 형태 유지
+                AddOutline(fusionPanel.gameObject, new Color(1f, 0.85f, 0.25f, 1f), new Vector2(4f, -4f)); // 금색 외곽선 적용
+            } // 조건 종료
             _fusionSelectedOverlay.SetActive(false); // 평소에는 숨김 상태로 시작
         }
 

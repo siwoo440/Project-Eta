@@ -189,7 +189,11 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             panelRect.anchoredPosition = new Vector2(24f, -130f); // 상단 BattleHUD 아래쪽에 기능적 임시 위치 적용
             panelRect.sizeDelta = new Vector2(620f, 78f); // 안내 두 줄을 담을 패널 크기 적용
             var panelImage = panelObject.GetComponent<Image>(); // 패널 배경 Image 확보
-            panelImage.color = new Color(0.035f, 0.045f, 0.06f, 0.88f); // 보드를 크게 가리지 않는 반투명 어두운 배경 적용
+            bool sidePanelApplied = Day98UiSkin.TryApplyResource(panelImage, Day98UiSkin.BattleSidePanelResourcePath); // 전투 보조 패널 이미지 적용
+            if (!sidePanelApplied) // 전투 보조 패널 누락 확인
+            { // 조건 시작
+                panelImage.color = new Color(0.035f, 0.045f, 0.06f, 0.88f); // 기존 배경 유지
+            } // 조건 종료
             panelImage.raycastTarget = false; // 안내 패널이 보드 클릭을 막지 않도록 설정
 
             _instructionText = CreateText("InstructionText", panelObject.transform, 21, FontStyle.Bold, TextAnchor.MiddleLeft, Color.white); // 현재 행동 안내 Text 생성

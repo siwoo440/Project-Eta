@@ -3,6 +3,8 @@ using System.Collections.Generic; // List<T>·Dictionary<T> 사용
 using UnityEngine; // MonoBehaviour·Screen·Color·Vector2 사용
 using UnityEngine.UI; // Button·Image·Slider·Text 사용
 
+using ProjectEta.UI; // 공통 UI 이미지 스킨 사용
+
 namespace ProjectEta.Settings
 {
     public sealed class SettingsPanelController : MonoBehaviour
@@ -133,9 +135,9 @@ namespace ProjectEta.Settings
             BuildDisplayContent(contentPanel.transform); // 디스플레이 설정 내용 생성
             BuildSoundContent(contentPanel.transform); // 사운드 설정 내용 생성
 
-            _statusText = CreateText("Status", panel.transform, 18, FontStyle.Normal, TextAnchor.MiddleLeft); // 전체 변경 상태 문구 생성
+            _statusText = CreateText("Status", contentPanel.transform, 18, FontStyle.Normal, TextAnchor.MiddleLeft); // 전체 변경 상태 문구 생성
             _statusText.color = SoftTextColor; // 상태 문구 보조 색상 적용
-            SetRect(_statusText.rectTransform, new Vector2(150f, -382f), new Vector2(720f, 36f)); // 상태 문구 배치
+            SetRect(_statusText.rectTransform, new Vector2(0f, -290f), new Vector2(720f, 36f)); // 내용 패널 하단 상태 문구 배치
 
             _resetButton = CreateButton("Reset", panel.transform, "현재 영역 초기화", new Vector2(-265f, -390f), new Vector2(250f, 68f)); // 현재 카테고리 초기화 버튼 생성
             _resetButton.onClick.AddListener(HandleResetCurrentCategory); // 현재 카테고리 기본값 편집 연결
@@ -207,13 +209,13 @@ namespace ProjectEta.Settings
             label.text = "해상도"; // 해상도 제목 적용
             SetRect(label.rectTransform, new Vector2(-235f, 0f), new Vector2(200f, 50f)); // 해상도 제목 배치
 
-            Button previous = CreateButton("Previous", row.transform, "‹", new Vector2(55f, 0f), new Vector2(60f, 54f)); // 이전 해상도 버튼 생성
+            Button previous = CreateButton("Previous", row.transform, "‹", new Vector2(0f, 0f), new Vector2(46f, 46f)); // 이전 해상도 버튼 생성
             previous.onClick.AddListener(() => CycleResolution(-1)); // 이전 해상도 순환 연결
 
             _resolutionValueText = CreateText("Value", row.transform, 20, FontStyle.Bold, TextAnchor.MiddleCenter); // 해상도 값 문구 생성
-            SetRect(_resolutionValueText.rectTransform, new Vector2(205f, 0f), new Vector2(220f, 54f)); // 해상도 값 배치
+            SetRect(_resolutionValueText.rectTransform, new Vector2(155f, 0f), new Vector2(220f, 54f)); // 해상도 값 배치
 
-            Button next = CreateButton("Next", row.transform, "›", new Vector2(355f, 0f), new Vector2(60f, 54f)); // 다음 해상도 버튼 생성
+            Button next = CreateButton("Next", row.transform, "›", new Vector2(310f, 0f), new Vector2(46f, 46f)); // 다음 해상도 버튼 생성
             next.onClick.AddListener(() => CycleResolution(1)); // 다음 해상도 순환 연결
         }
 
@@ -224,13 +226,13 @@ namespace ProjectEta.Settings
             label.text = "화면 모드"; // 화면 모드 제목 적용
             SetRect(label.rectTransform, new Vector2(-235f, 0f), new Vector2(200f, 50f)); // 화면 모드 제목 배치
 
-            Button previous = CreateButton("Previous", row.transform, "‹", new Vector2(55f, 0f), new Vector2(60f, 54f)); // 이전 화면 모드 버튼 생성
+            Button previous = CreateButton("Previous", row.transform, "‹", new Vector2(0f, 0f), new Vector2(46f, 46f)); // 이전 화면 모드 버튼 생성
             previous.onClick.AddListener(() => CycleScreenMode(-1)); // 이전 화면 모드 순환 연결
 
             _screenModeValueText = CreateText("Value", row.transform, 19, FontStyle.Bold, TextAnchor.MiddleCenter); // 화면 모드 값 문구 생성
-            SetRect(_screenModeValueText.rectTransform, new Vector2(205f, 0f), new Vector2(220f, 54f)); // 화면 모드 값 배치
+            SetRect(_screenModeValueText.rectTransform, new Vector2(155f, 0f), new Vector2(220f, 54f)); // 화면 모드 값 배치
 
-            Button next = CreateButton("Next", row.transform, "›", new Vector2(355f, 0f), new Vector2(60f, 54f)); // 다음 화면 모드 버튼 생성
+            Button next = CreateButton("Next", row.transform, "›", new Vector2(310f, 0f), new Vector2(46f, 46f)); // 다음 화면 모드 버튼 생성
             next.onClick.AddListener(() => CycleScreenMode(1)); // 다음 화면 모드 순환 연결
         }
 
@@ -241,13 +243,13 @@ namespace ProjectEta.Settings
             label.text = "UI Scale"; // UI Scale 제목 적용
             SetRect(label.rectTransform, new Vector2(-235f, 0f), new Vector2(200f, 50f)); // UI Scale 제목 배치
 
-            _uiScaleSlider = CreateSlider("UiScaleSlider", row.transform, new Vector2(160f, 0f), new Vector2(300f, 40f)); // UI Scale Slider 생성
+            _uiScaleSlider = CreateSlider("UiScaleSlider", row.transform, new Vector2(80f, 0f), new Vector2(280f, 40f)); // UI Scale Slider 생성
             _uiScaleSlider.minValue = GameSettingsData.MinimumUiScale; // UI Scale 최소값 적용
             _uiScaleSlider.maxValue = GameSettingsData.MaximumUiScale; // UI Scale 최대값 적용
             _uiScaleSlider.onValueChanged.AddListener(HandleUiScaleChanged); // UI Scale 미리보기 연결
 
             _uiScaleValueText = CreateText("Value", row.transform, 19, FontStyle.Bold, TextAnchor.MiddleRight); // UI Scale 퍼센트 문구 생성
-            SetRect(_uiScaleValueText.rectTransform, new Vector2(340f, 0f), new Vector2(90f, 50f)); // UI Scale 값 배치
+            SetRect(_uiScaleValueText.rectTransform, new Vector2(290f, 0f), new Vector2(90f, 50f)); // UI Scale 값 배치
         }
 
         private void BuildAudioRow(Transform parent, string objectName, string labelText, Vector2 position, out Slider slider, out Text valueText, UnityEngine.Events.UnityAction<float> callback)
@@ -257,13 +259,13 @@ namespace ProjectEta.Settings
             label.text = labelText; // 오디오 항목 제목 적용
             SetRect(label.rectTransform, new Vector2(-235f, 0f), new Vector2(200f, 50f)); // 오디오 항목 제목 배치
 
-            slider = CreateSlider("Slider", row.transform, new Vector2(160f, 0f), new Vector2(300f, 40f)); // 오디오 Slider 생성
+            slider = CreateSlider("Slider", row.transform, new Vector2(80f, 0f), new Vector2(280f, 40f)); // 오디오 Slider 생성
             slider.minValue = 0f; // 오디오 최소 볼륨 적용
             slider.maxValue = 1f; // 오디오 최대 볼륨 적용
             slider.onValueChanged.AddListener(callback); // 오디오 실시간 미리보기 연결
 
             valueText = CreateText("Value", row.transform, 19, FontStyle.Bold, TextAnchor.MiddleRight); // 오디오 퍼센트 문구 생성
-            SetRect(valueText.rectTransform, new Vector2(340f, 0f), new Vector2(90f, 50f)); // 오디오 값 배치
+            SetRect(valueText.rectTransform, new Vector2(290f, 0f), new Vector2(90f, 50f)); // 오디오 값 배치
         }
 
         private void ShowCategory(SettingsCategory category)
@@ -306,11 +308,12 @@ namespace ProjectEta.Settings
 
                 if (!button.interactable)
                 {
-                    image.color = new Color(0.07f, 0.08f, 0.1f, 0.75f); // 준비 중 카테고리 비활성 색상 적용
+                    image.color = image.sprite != null ? Color.white : new Color(0.07f, 0.08f, 0.1f, 0.75f); // 비활성 버튼 상태 색상 중복 방지
                     continue; // 다음 버튼 처리
                 }
 
-                image.color = pair.Key == _currentCategory ? AccentColor : new Color(0.13f, 0.17f, 0.23f, 1f); // 현재 카테고리 강조 적용
+                Color stateColor = pair.Key == _currentCategory ? AccentColor : new Color(0.13f, 0.17f, 0.23f, 1f); // 카테고리 선택 색상 계산
+                image.color = image.sprite != null ? Day98UiSkin.GetStateTint(stateColor) : stateColor; // 탭 테두리 밝기와 선택 강조 보존
             }
         }
 
@@ -478,6 +481,10 @@ namespace ProjectEta.Settings
             result.transform.SetParent(parent, false); // UI 부모 연결
             SetRect(result.GetComponent<RectTransform>(), position, size); // 위치·크기 적용
             result.GetComponent<Image>().color = color; // 이미지 색상 적용
+            if (name != "SettingsBackdrop_Day57" && name != "Background" && name != "Fill" && name != "Handle") // 차단 배경과 슬라이더 부품 제외
+            { // 조건 시작
+                Day98UiSkin.TryApplyDarkPanel(result.GetComponent<Image>()); // 설정 패널과 행 프레임 적용
+            } // 조건 종료
             return result; // 완성 UI 반환
         }
 
@@ -506,6 +513,17 @@ namespace ProjectEta.Settings
             Text text = CreateText("Label", result.transform, 21, FontStyle.Bold, TextAnchor.MiddleCenter); // 버튼 문구 생성
             text.text = label; // 버튼 문구 적용
             Stretch(text.rectTransform, 6f); // 버튼 문구 전체 배치
+            string path = name.StartsWith("Category_") ? Day98UiSkin.UiCategoryTabResourcePath : (name == "Cancel" ? Day98UiSkin.ButtonDangerResourcePath : Day98UiSkin.ButtonBaseResourcePath); // 설정 버튼 역할별 자산 선택
+            Day98UiSkin.TryApplyButton(button, path); // 설정 버튼 상태 이미지 적용
+            if (name == "Previous" || name == "Next") // 값 이동 화살표 확인
+            { // 조건 시작
+                string arrowPath = name == "Previous" ? Day98UiSkin.UiArrowLeftResourcePath : Day98UiSkin.UiArrowRightResourcePath; // 이동 방향 자산 선택
+                if (Day98UiSkin.TryApplyResource(image, arrowPath, false)) // 이동 이미지 로드 확인
+                { // 조건 시작
+                    image.preserveAspect = true; // 이동 이미지 비율 보존
+                    text.enabled = false; // 중복 문자 숨김
+                } // 조건 종료
+            } // 조건 종료
             return button; // 완성 Button 반환
         }
 
@@ -517,6 +535,7 @@ namespace ProjectEta.Settings
 
             GameObject background = CreateImage("Background", sliderObject.transform, Vector2.zero, size, new Color(0.08f, 0.1f, 0.13f, 1f)); // Slider 배경 생성
             Stretch(background.GetComponent<RectTransform>(), 0f); // Slider 배경 전체 배치
+            Day98UiSkin.TryApplyResource(background.GetComponent<Image>(), Day98UiSkin.UiSliderTrackResourcePath); // 슬라이더 트랙 이미지 적용
 
             GameObject fillArea = new GameObject("Fill Area", typeof(RectTransform)); // Fill Area 생성
             fillArea.transform.SetParent(sliderObject.transform, false); // Slider 자식 연결
@@ -524,12 +543,15 @@ namespace ProjectEta.Settings
 
             GameObject fill = CreateImage("Fill", fillArea.transform, Vector2.zero, size, AccentColor); // Slider Fill 생성
             Stretch(fill.GetComponent<RectTransform>(), 0f); // Fill 전체 배치
+            fill.GetComponent<Image>().color = new Color(0.68f, 0.5f, 0.18f, 0.8f); // 금색 슬라이더 채움 적용
 
             GameObject handleArea = new GameObject("Handle Slide Area", typeof(RectTransform)); // Handle Area 생성
             handleArea.transform.SetParent(sliderObject.transform, false); // Slider 자식 연결
             Stretch(handleArea.GetComponent<RectTransform>(), 10f); // Handle Area 여백 배치
 
-            GameObject handle = CreateImage("Handle", handleArea.transform, Vector2.zero, new Vector2(28f, 46f), Color.white); // Slider Handle 생성
+            GameObject handle = CreateImage("Handle", handleArea.transform, Vector2.zero, new Vector2(36f, 36f), Color.white); // Slider Handle 생성
+            Day98UiSkin.TryApplyResource(handle.GetComponent<Image>(), Day98UiSkin.UiSliderHandleResourcePath, false); // 슬라이더 손잡이 이미지 적용
+            handle.GetComponent<Image>().preserveAspect = true; // 손잡이 비율 유지
 
             Slider slider = sliderObject.GetComponent<Slider>(); // Slider 컴포넌트 조회
             slider.fillRect = fill.GetComponent<RectTransform>(); // Slider Fill 연결

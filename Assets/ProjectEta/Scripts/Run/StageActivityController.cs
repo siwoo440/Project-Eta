@@ -196,7 +196,9 @@ namespace ProjectEta.Run
                     title,
                     description,
                     canBuy,
-                    () => PurchaseCard(captured))); // 카드 구매 콜백
+                    () => PurchaseCard(captured), // 카드 구매 콜백
+                    offer.Price, // 실제 상품 가격 전달
+                    offer.IsPurchased)); // 실제 구매 완료 상태 전달
             }
 
             options.Add(new StageOverlayOption("뒤로", "상점 메인으로 돌아갑니다.", true, ShowShopMain)); // 메인 복귀 버튼

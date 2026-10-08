@@ -63,6 +63,7 @@ namespace ProjectEta.UI
             panel.transform.SetParent(_root.transform, false); // 결과 루트 자식 연결
             SetRect(panel.GetComponent<RectTransform>(), new Vector2(0f, -405f), new Vector2(620f, 155f)); // 하단 위치·크기 적용
             panel.GetComponent<Image>().color = new Color(0.045f, 0.05f, 0.065f, 0.97f); // 복귀 패널 배경 적용
+            Day98UiSkin.TryApplyDarkPanel(panel.GetComponent<Image>()); // 결과 복귀 패널 이미지 적용
 
             _resultText = CreateText("Result", panel.transform, 24, FontStyle.Bold); // 종료 결과 문구 생성
             SetRect(_resultText.rectTransform, new Vector2(0f, 38f), new Vector2(520f, 45f)); // 결과 문구 위치 적용
@@ -91,6 +92,7 @@ namespace ProjectEta.UI
             image.color = new Color(0.18f, 0.22f, 0.30f, 1f); // 버튼 배경 적용
             Button button = buttonObject.GetComponent<Button>(); // Button 컴포넌트 조회
             button.targetGraphic = image; // 대상 그래픽 지정
+            Day98UiSkin.TryApplyButton(button, Day98UiSkin.ButtonBaseResourcePath); // 메뉴 복귀 버튼 이미지 적용
 
             Text label = CreateText("Label", buttonObject.transform, 22, FontStyle.Bold); // 버튼 문구 생성
             label.text = "메인 메뉴"; // 버튼 문구 적용

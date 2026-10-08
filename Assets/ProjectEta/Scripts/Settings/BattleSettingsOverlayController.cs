@@ -218,11 +218,11 @@ namespace ProjectEta.Settings
             Text section = CreateText("Section", panel.transform, 18, FontStyle.Bold, TextAnchor.MiddleLeft); // 조작법 상단 분류 문구 생성
             section.text = "CONTROLS"; // 조작법 분류 문구 적용
             section.color = AccentColor; // 강조 색상 적용
-            SetRect(section.rectTransform, new Vector2(-365f, 350f), new Vector2(740f, 40f)); // 분류 문구 위치 적용
+            SetRect(section.rectTransform, new Vector2(0f, 350f), new Vector2(740f, 40f)); // 분류 문구 위치 적용
 
             Text title = CreateText("Title", panel.transform, 42, FontStyle.Bold, TextAnchor.MiddleLeft); // 조작법 제목 생성
             title.text = "조작법"; // 조작법 제목 적용
-            SetRect(title.rectTransform, new Vector2(-305f, 295f), new Vector2(860f, 60f)); // 조작법 제목 위치 적용
+            SetRect(title.rectTransform, new Vector2(0f, 295f), new Vector2(740f, 60f)); // 조작법 제목 위치 적용
 
             CreateControlSection(panel.transform, "[전투]", 145f); // 전투 조작법 구역 제목 생성
             CreateControlRow(panel.transform, "좌클릭", "카드 / 기물 선택", 95f); // 고정 전투 선택 조작 생성
@@ -314,6 +314,10 @@ namespace ProjectEta.Settings
             imageObject.transform.SetParent(parent, false); // 요청 UI 부모 연결
             SetRect(imageObject.GetComponent<RectTransform>(), position, size); // 위치·크기 적용
             imageObject.GetComponent<Image>().color = color; // 배경 색상 적용
+            if (name == "PausePanel" || name == "ControlsPanel") // 일시정지와 조작법 패널 확인
+            { // 조건 시작
+                Day98UiSkin.TryApplyDarkPanel(imageObject.GetComponent<Image>()); // 일시정지 패널 이미지 적용
+            } // 조건 종료
             return imageObject; // 완성 Image 오브젝트 반환
         }
 
@@ -336,6 +340,7 @@ namespace ProjectEta.Settings
             Text text = CreateText("Label", buttonObject.transform, 23, FontStyle.Bold, TextAnchor.MiddleCenter); // 버튼 문구 생성
             text.text = label; // 버튼 문구 적용
             Stretch(text.rectTransform, 8f); // 버튼 내부 여백 적용
+            Day98UiSkin.TryApplyButton(button, name == "MainMenu" ? Day98UiSkin.ButtonDangerResourcePath : Day98UiSkin.ButtonBaseResourcePath); // 일시정지 버튼 이미지 적용
             return button; // 완성 Button 반환
         }
 

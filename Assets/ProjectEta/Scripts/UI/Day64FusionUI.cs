@@ -601,18 +601,19 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 네임스페이스
             RectTransform panelRect = panel.GetComponent<RectTransform>(); // 패널 RectTransform 조회
             SetRect(panelRect, new Vector2(0.5f, 0f), new Vector2(0f, 430f), new Vector2(980f, 310f)); // 손패 바로 위 중앙 배치
             Image panelImage = panel.GetComponent<Image>(); // 패널 배경 Image 조회
-            panelImage.color = new Color(0.035f, 0.045f, 0.06f, 0.97f); // 전투 HUD와 통일된 어두운 배경 적용
+            panelImage.color = new Color(0.035f, 0.045f, 0.06f, 0.97f); // 기존 합성 배경 설정
+            Day98UiSkin.TryApplyDarkPanel(panelImage); // 공통 합성 패널 이미지 적용
             panelImage.raycastTarget = true; // 패널 아래 보드 클릭 차단
             Outline panelOutline = panel.AddComponent<Outline>(); // 패널 경계 Outline 추가
             panelOutline.effectColor = new Color(0.55f, 0.43f, 0.24f, 0.95f); // 청동색 패널 경계 적용
             panelOutline.effectDistance = new Vector2(2f, -2f); // 패널 외곽선 두께 적용
 
             Text title = CreateText("Day64FusionTitle", panel.transform, 20, FontStyle.Bold, TextAnchor.MiddleLeft, Color.white); // 패널 제목 생성
-            SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(24f, -16f), new Vector2(260f, 34f)); // 좌상단 제목 배치
+            SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(154f, -28f), new Vector2(260f, 34f)); // 패널 안쪽 제목 배치
             title.text = "FUSION"; // 패널 제목 문구 적용
 
             _discoveryNoticeText = CreateText("Day64RecipeNotice", panel.transform, 17, FontStyle.Bold, TextAnchor.MiddleRight, new Color(1f, 0.84f, 0.3f, 1f)); // Recipe 발견 알림 생성
-            SetRect(_discoveryNoticeText.rectTransform, new Vector2(1f, 1f), new Vector2(-24f, -16f), new Vector2(440f, 34f)); // 우상단 알림 배치
+            SetRect(_discoveryNoticeText.rectTransform, new Vector2(1f, 1f), new Vector2(-244f, -28f), new Vector2(440f, 34f)); // 패널 안쪽 발견 알림 배치
             _discoveryNoticeText.gameObject.SetActive(false); // 기본 발견 알림 숨김
 
             _expressionText = CreateText("Day64FusionExpression", panel.transform, 25, FontStyle.Bold, TextAnchor.MiddleCenter, Color.white); // A+B=C 문구 생성
@@ -642,9 +643,9 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 네임스페이스
             BuildResultArea(panel.transform); // 결과 카드 미리보기 영역 생성
 
             _statusText = CreateText("Day64FusionStatus", panel.transform, 16, FontStyle.Normal, TextAnchor.MiddleLeft, new Color(0.86f, 0.88f, 0.92f, 1f)); // 합성 상태 안내 Text 생성
-            SetRect(_statusText.rectTransform, new Vector2(0f, 0f), new Vector2(24f, 24f), new Vector2(700f, 46f)); // 패널 좌하단 상태 문구 배치
+            SetRect(_statusText.rectTransform, new Vector2(0f, 0f), new Vector2(374f, 40f), new Vector2(700f, 46f)); // 패널 안쪽 상태 문구 배치
 
-            GameObject confirmObject = CreateButtonObject("Day64FusionConfirm", panel.transform, new Vector2(1f, 0f), new Vector2(-92f, 24f), new Vector2(150f, 48f)); // 우하단 합성 확정 버튼 생성
+            GameObject confirmObject = CreateButtonObject("Day64FusionConfirm", panel.transform, new Vector2(1f, 0f), new Vector2(-92f, 40f), new Vector2(150f, 48f)); // 패널 안쪽 합성 확정 버튼 배치
             _confirmButton = confirmObject.GetComponent<Button>(); // 확정 Button 저장
             _confirmButton.onClick.AddListener(OnConfirmButtonClicked); // 실제 합성 처리 연결
             confirmObject.GetComponent<Image>().color = new Color(0.18f, 0.48f, 0.24f, 1f); // 확정 버튼 배경 적용
@@ -662,7 +663,8 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 네임스페이스
             RectTransform resultRect = resultObject.GetComponent<RectTransform>(); // 결과 패널 RectTransform 조회
             SetRect(resultRect, new Vector2(0f, 0.5f), new Vector2(690f, 18f), new Vector2(330f, 126f)); // 우측 결과 영역 배치
             Image background = resultObject.GetComponent<Image>(); // 결과 패널 배경 Image 조회
-            background.color = new Color(0.08f, 0.09f, 0.12f, 0.96f); // 결과 영역 어두운 배경 적용
+            background.color = new Color(0.08f, 0.09f, 0.12f, 0.96f); // 기존 결과 배경 설정
+            Day98UiSkin.TryApplyResource(background, Day98UiSkin.FusionResultSlotResourcePath); // 합성 결과 프레임 적용
             background.raycastTarget = false; // 카드 선택 입력 간섭 제거
 
             GameObject artworkObject = new GameObject("Day64ResultArtwork", typeof(RectTransform), typeof(Image)); // 결과 Artwork Image 생성
@@ -673,11 +675,11 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 네임스페이스
             _resultArtwork.raycastTarget = false; // UI 입력 간섭 제거
 
             _resultNameText = CreateText("Day64ResultName", resultObject.transform, 18, FontStyle.Bold, TextAnchor.MiddleLeft, Color.white); // 결과 이름 Text 생성
-            SetRect(_resultNameText.rectTransform, new Vector2(0f, 1f), new Vector2(112f, -14f), new Vector2(200f, 28f)); // 결과 우측 상단 이름 배치
+            SetRect(_resultNameText.rectTransform, new Vector2(0f, 1f), new Vector2(214f, -28f), new Vector2(200f, 28f)); // 아트 오른쪽 안쪽 이름 배치
             _resultStatsText = CreateText("Day64ResultStats", resultObject.transform, 14, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.9f, 0.82f, 0.55f, 1f)); // 결과 스탯 Text 생성
-            SetRect(_resultStatsText.rectTransform, new Vector2(0f, 1f), new Vector2(112f, -46f), new Vector2(200f, 24f)); // 이름 아래 스탯 배치
+            SetRect(_resultStatsText.rectTransform, new Vector2(0f, 1f), new Vector2(214f, -54f), new Vector2(200f, 24f)); // 아트 오른쪽 능력치 배치
             _resultDescriptionText = CreateText("Day64ResultDescription", resultObject.transform, 12, FontStyle.Normal, TextAnchor.UpperLeft, new Color(0.82f, 0.84f, 0.88f, 1f)); // 결과 설명 Text 생성
-            SetRect(_resultDescriptionText.rectTransform, new Vector2(0f, 1f), new Vector2(112f, -72f), new Vector2(200f, 44f)); // 스탯 아래 설명 배치
+            SetRect(_resultDescriptionText.rectTransform, new Vector2(0f, 1f), new Vector2(214f, -88f), new Vector2(200f, 44f)); // 결과 프레임 안쪽 설명 배치
             _resultDescriptionText.horizontalOverflow = HorizontalWrapMode.Wrap; // 긴 설명 줄바꿈 적용
         }
 
@@ -687,7 +689,10 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 네임스페이스
             buttonObject.transform.SetParent(parent, false); // 요청 부모 연결
             SetRect(buttonObject.GetComponent<RectTransform>(), anchor, position, size); // 버튼 위치·크기 적용
             Image image = buttonObject.GetComponent<Image>(); // 버튼 배경 Image 조회
-            image.color = new Color(0.16f, 0.18f, 0.22f, 0.98f); // 기본 버튼 배경 적용
+            image.color = new Color(0.16f, 0.18f, 0.22f, 0.98f); // 기존 버튼 배경 설정
+            bool isMaterial = name == "Day64MaterialA" || name == "Day64MaterialB"; // 재료 슬롯 여부 확인
+            string path = isMaterial ? Day98UiSkin.FusionMaterialSlotResourcePath : Day98UiSkin.ButtonBaseResourcePath; // 재료 또는 일반 버튼 경로 선택
+            Day98UiSkin.TryApplyResource(image, path); // 합성 조작 이미지 적용
             return buttonObject; // 완성 Button GameObject 반환
         }
 

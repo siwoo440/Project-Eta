@@ -67,7 +67,12 @@ namespace ProjectEta.UI
             Color accent = ResolveAccent(announcement.Kind); // 알림 종류 강조색 계산
             _accentImage.color = accent; // 하단 강조선 색 적용
             _titleText.color = accent; // 큰 문구 강조색 적용
-            _panelImage.color = ResolvePanelColor(announcement.Kind); // 종류별 어두운 배경 적용
+            bool outcome = announcement.Kind == Day67AnnouncementKind.Victory || announcement.Kind == Day67AnnouncementKind.Defeat || announcement.Kind == Day67AnnouncementKind.RunCompleted || announcement.Kind == Day67AnnouncementKind.RunFailed; // 전투 또는 런 결과 여부
+            string path = outcome ? Day98UiSkin.VictoryDefeatPlaqueResourcePath : Day98UiSkin.BattleAnnouncementFrameResourcePath; // 종류별 배너 경로 선택
+            if (!Day98UiSkin.TryApplyResource(_panelImage, path)) // 배너 이미지 누락 확인
+            { // 조건 시작
+                _panelImage.color = ResolvePanelColor(announcement.Kind); // 기존 종류별 배경 유지
+            } // 조건 종료
         }
 
         private IEnumerator Fade(float fromAlpha, float toAlpha, float duration, float fromScale, float toScale)

@@ -85,6 +85,7 @@ namespace ProjectEta.UI
             backdrop.transform.SetParent(parent, false); // Canvas 자식 연결
             Stretch(backdrop.GetComponent<RectTransform>(), 0f); // 전체 화면 Stretch 적용
             backdrop.GetComponent<Image>().color = BackdropColor; // 정식 어두운 배경 색상 적용
+            Day98UiSkin.TryApplyResource(backdrop.GetComponent<Image>(), Day98UiSkin.MainMenuBackdropResourcePath, false); // 메인 메뉴 배경 적용
 
             var glow = new GameObject("BackdropGlow", typeof(RectTransform), typeof(Image)); // 좌측 브랜드 영역 광원 띠 생성
             glow.transform.SetParent(parent, false); // Canvas 자식 연결
@@ -125,6 +126,8 @@ namespace ProjectEta.UI
             _continueStatusText.lineSpacing = 1.2f; // 상태 카드 줄 간격 적용
             SetRect(_continueStatusText.rectTransform, new Vector2(0f, -170f), new Vector2(610f, 190f)); // 상태 카드 문구 위치 적용
 
+            Day98UiSkin.CreateIcon("MainMenuEmblem", brandPanel.transform, Day98UiSkin.MainMenuEmblemResourcePath, new Vector2(245f, -320f), new Vector2(130f, 130f)); // 메뉴 상징 문양 배치
+
             Text footer = CreateText("Footer", brandPanel.transform, 17, FontStyle.Normal, TextAnchor.LowerLeft); // 하단 안내 문구 생성
             footer.text = "ESC  뒤로가기"; // 공통 뒤로가기 안내 적용
             footer.color = new Color(1f, 1f, 1f, 0.42f); // 낮은 대비 안내 색상 적용
@@ -151,7 +154,7 @@ namespace ProjectEta.UI
             quitButton.onClick.AddListener(HandleQuit); // 종료 확인 팝업 연결
 
             Text version = CreateText("Version", menuPanel.transform, 16, FontStyle.Normal, TextAnchor.MiddleRight); // 개발 버전 문구 생성
-            version.text = "MAIN MENU · DAY 55"; // 현재 UI 개발 일차 표시
+            version.text = "MAIN MENU · DAY 98"; // 현재 UI 디자인 일차 표시
             version.color = new Color(1f, 1f, 1f, 0.34f); // 낮은 대비 버전 표시 적용
             SetRect(version.rectTransform, new Vector2(0f, -345f), new Vector2(480f, 36f)); // 버전 문구 위치 적용
         }
@@ -434,6 +437,14 @@ namespace ProjectEta.UI
             panel.transform.SetParent(parent, false); // UI 부모 연결
             SetRect(panel.GetComponent<RectTransform>(), position, size); // 패널 위치·크기 적용
             panel.GetComponent<Image>().color = color; // 패널 배경 색상 적용
+            if (name == "ModalPanel") // 확인 팝업 배경 확인
+            { // 조건 시작
+                Day98UiSkin.CreateDecoration("ModalFrame", panel.transform, Day98UiSkin.UiModalFrameResourcePath); // 불투명 배경 위 투명 프레임 적용
+            } // 조건 종료
+            else // 일반 메뉴 패널 처리
+            { // 조건 시작
+                Day98UiSkin.TryApplyDarkPanel(panel.GetComponent<Image>()); // 메뉴 패널 이미지 적용
+            } // 조건 종료
             return panel; // 완성 패널 반환
         }
 
@@ -463,6 +474,8 @@ namespace ProjectEta.UI
             Text text = CreateText("Label", buttonObject.transform, 24, FontStyle.Bold, TextAnchor.MiddleCenter); // 버튼 문구 생성
             text.text = label; // 버튼 문구 적용
             Stretch(text.rectTransform, 8f); // 버튼 내부 여백 적용
+            string path = name.StartsWith("MetaUnlock_") ? Day98UiSkin.MetaUnlockTileResourcePath : (danger ? Day98UiSkin.ButtonDangerResourcePath : Day98UiSkin.ButtonBaseResourcePath); // 버튼 역할별 자산 선택
+            Day98UiSkin.TryApplyButton(button, path); // 메뉴 버튼 이미지와 상태 적용
             return button; // 완성 Button 반환
         }
 

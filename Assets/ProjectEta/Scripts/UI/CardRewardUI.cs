@@ -21,6 +21,7 @@ namespace ProjectEta.UI // 카드 보상 UI 네임스페이스
             public GameObject Root; // 카드 루트 오브젝트
             public Image Frame; // 선택 강조 프레임
             public Outline Outline; // 선택 외곽선
+            public Image Selection; // 선택 카드 강조 이미지
         }
 
         private readonly List<RewardCardView> _cardViews = new List<RewardCardView>(); // 현재 생성된 후보 카드 UI 목록
@@ -136,7 +137,11 @@ namespace ProjectEta.UI // 카드 보상 UI 네임스페이스
             RectTransform headerRect = headerObject.GetComponent<RectTransform>(); // 상단 패널 RectTransform 확보
             SetRect(headerRect, new Vector2(0f, 445f), new Vector2(1280f, 116f)); // 상단 중앙 배치
             Image headerBackground = headerObject.GetComponent<Image>(); // 상단 패널 배경 확보
-            headerBackground.color = new Color(0.045f, 0.052f, 0.072f, 0.98f); // 정식 HUD 패널 색상 적용
+            bool headerApplied = Day98UiSkin.TryApplyResource(headerBackground, Day98UiSkin.HeaderPlaqueResourcePath); // 보상 제목 명패 이미지 적용
+            if (!headerApplied) // 제목 명패 누락 확인
+            { // 조건 시작
+                headerBackground.color = new Color(0.045f, 0.052f, 0.072f, 0.98f); // 기존 배경 유지
+            } // 조건 종료
             headerBackground.raycastTarget = false; // 카드 선택 클릭 간섭 제거
 
             _titleText = CreateText("RewardTitle", headerObject.transform, 32, FontStyle.Bold); // 보상 제목 생성
@@ -165,7 +170,8 @@ namespace ProjectEta.UI // 카드 보상 UI 네임스페이스
             RectTransform panelRect = panelObject.GetComponent<RectTransform>(); // 상세 패널 RectTransform 확보
             SetRect(panelRect, new Vector2(-115f, -342f), new Vector2(980f, 142f)); // 카드 아래 상세 패널 배치
             Image background = panelObject.GetComponent<Image>(); // 상세 패널 배경 확보
-            background.color = new Color(0.035f, 0.040f, 0.055f, 0.98f); // 상세 패널 배경색 적용
+            bool goldSkinApplied = Day98UiSkin.TryApplyGoldPanel(background); // 98일차 중요 선택용 금색 패널 이미지 적용
+            if (!goldSkinApplied) background.color = new Color(0.035f, 0.040f, 0.055f, 0.98f); // 이미지 누락 시 기존 상세 패널 배경 유지
             background.raycastTarget = false; // 카드 클릭 간섭 제거
 
             _detailTitleText = CreateText("DetailTitle", panelObject.transform, 23, FontStyle.Bold); // 상세 카드 제목 생성
@@ -186,7 +192,11 @@ namespace ProjectEta.UI // 카드 보상 UI 네임스페이스
             RectTransform rect = buttonObject.GetComponent<RectTransform>(); // 확정 버튼 RectTransform 확보
             SetRect(rect, new Vector2(535f, -342f), new Vector2(280f, 92f)); // 상세 패널 우측 배치
             Image background = buttonObject.GetComponent<Image>(); // 확정 버튼 배경 확보
-            background.color = new Color(0.62f, 0.44f, 0.12f, 0.98f); // 금색 계열 확정 버튼 적용
+            bool buttonApplied = Day98UiSkin.TryApplyResource(background, Day98UiSkin.ButtonBaseResourcePath); // 기본 확정 버튼 이미지 적용
+            if (!buttonApplied) // 기본 버튼 이미지 누락 확인
+            { // 조건 시작
+                background.color = new Color(0.62f, 0.44f, 0.12f, 0.98f); // 기존 금색 배경 유지
+            } // 조건 종료
             _confirmButton = buttonObject.GetComponent<Button>(); // 확정 Button 확보
             _confirmButton.targetGraphic = background; // 버튼 대상 그래픽 지정
             _confirmButton.onClick.AddListener(HandleConfirmClicked); // 선택 확정 콜백 연결
@@ -203,7 +213,11 @@ namespace ProjectEta.UI // 카드 보상 UI 네임스페이스
             SetRect(rect, new Vector2(centerX, 42f), new Vector2(CardWidth, CardHeight)); // 카드 위치·크기 적용
 
             Image frame = cardObject.GetComponent<Image>(); // 카드 프레임 이미지 확보
-            frame.color = GetGradeColor(definition); // 등급별 카드 프레임 적용
+            bool frameApplied = Day98UiSkin.TryApplyResource(frame, Day98UiSkin.ChoiceCardFrameResourcePath); // 선택 카드 이미지 적용
+            if (!frameApplied) // 이미지 누락 확인
+            { // 조건 시작
+                frame.color = GetGradeColor(definition); // 기존 등급 색상 유지
+            } // 조건 종료
             Outline outline = cardObject.GetComponent<Outline>(); // 선택 외곽선 확보
             outline.effectColor = new Color(0.91f, 0.72f, 0.24f, 1f); // 선택 시 금색 외곽선 설정
             outline.effectDistance = new Vector2(4f, -4f); // 선택 외곽선 두께 설정
@@ -219,7 +233,7 @@ namespace ProjectEta.UI // 카드 보상 UI 네임스페이스
             RectTransform paperRect = paperObject.GetComponent<RectTransform>(); // 카드 본체 RectTransform 확보
             Stretch(paperRect, 8f); // 프레임 안쪽 여백 적용
             Image paper = paperObject.GetComponent<Image>(); // 카드 본체 이미지 확보
-            paper.color = new Color(0.055f, 0.060f, 0.078f, 0.98f); // 어두운 카드 본체 적용
+            paper.color = frameApplied ? Color.clear : new Color(0.055f, 0.060f, 0.078f, 0.98f); // 프레임 내부 이미지 노출
             paper.raycastTarget = false; // 루트 Button 입력 방해 차단
 
             Text nameText = CreateText("Name", paperObject.transform, 24, FontStyle.Bold); // 기물 이름 텍스트 생성
@@ -257,12 +271,16 @@ namespace ProjectEta.UI // 카드 보상 UI 네임스페이스
             descriptionText.verticalOverflow = VerticalWrapMode.Truncate; // 카드 높이 초과 문구 잘라내기
             SetRect(descriptionText.rectTransform, new Vector2(0f, -135f), new Vector2(252f, 74f)); // 설명 위치 적용
 
+            Image selection = Day98UiSkin.CreateDecoration("ChoiceSelection", cardObject.transform, Day98UiSkin.ChoiceCardSelectedResourcePath); // 선택 고리 생성
+            selection.gameObject.SetActive(false); // 기본 선택 강조 숨김
+
             _cardViews.Add(new RewardCardView // 카드 뷰 참조 등록
             {
                 Definition = definition, // 후보 정의 저장
                 Root = cardObject, // 카드 루트 저장
                 Frame = frame, // 프레임 저장
                 Outline = outline, // 외곽선 저장
+                Selection = selection, // 선택 이미지 저장
             });
         }
 
@@ -297,9 +315,10 @@ namespace ProjectEta.UI // 카드 보상 UI 네임스페이스
             {
                 RewardCardView view = _cardViews[i]; // 현재 카드 뷰 조회
                 bool selected = view.Definition == _selectedDefinition; // 현재 선택 카드 여부 확인
-                view.Outline.enabled = selected; // 선택 카드만 금색 외곽선 표시
+                view.Selection.gameObject.SetActive(selected); // 선택 카드만 강조 이미지 표시
+                view.Outline.enabled = selected && !view.Selection.enabled; // 이미지 누락 시 외곽선 표시
                 view.Root.transform.localScale = selected ? Vector3.one * 1.035f : Vector3.one; // 선택 카드만 약간 확대
-                view.Frame.color = selected ? new Color(0.70f, 0.50f, 0.16f, 1f) : GetGradeColor(view.Definition); // 선택 프레임 강조 적용
+                view.Frame.color = view.Frame.sprite != null ? Color.white : (selected ? new Color(0.70f, 0.50f, 0.16f, 1f) : GetGradeColor(view.Definition)); // 이미지 원색 또는 기존 등급 색상 유지
             }
         }
 

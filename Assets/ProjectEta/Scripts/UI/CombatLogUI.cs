@@ -173,7 +173,11 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             rect.sizeDelta = new Vector2(220f, 36f); // 채팅창처럼 얇고 긴 한 줄 크기
 
             var image = barObject.GetComponent<Image>(); // 배경 Image 확보
-            image.color = new Color(0.14f, 0.14f, 0.17f, 0.92f); // 어두운 채팅창 톤 배경
+            bool logTabApplied = Day98UiSkin.TryApplyResource(image, Day98UiSkin.BattleLogTabResourcePath); // 전투 로그 탭 이미지 적용
+            if (!logTabApplied) // 전투 로그 탭 누락 확인
+            { // 조건 시작
+                image.color = new Color(0.14f, 0.14f, 0.17f, 0.92f); // 기존 배경 유지
+            } // 조건 종료
 
             var button = barObject.GetComponent<Button>(); // Button 컴포넌트 확보
             button.onClick.AddListener(ToggleExpanded); // 클릭 시 로그 패널 펼치기/접기 토글

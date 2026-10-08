@@ -224,6 +224,10 @@ namespace ProjectEta.UI
             imageObject.transform.SetParent(parent, false); // 요청 UI 부모 연결
             SetRect(imageObject.GetComponent<RectTransform>(), position, size); // 위치·크기 적용
             imageObject.GetComponent<Image>().color = color; // 배경 색상 적용
+            if (name == "TutorialPanel") // 튜토리얼 페이지 확인
+            { // 조건 시작
+                Day98UiSkin.TryApplyResource(imageObject.GetComponent<Image>(), Day98UiSkin.TutorialPageFrameResourcePath); // 페이지 프레임 적용
+            } // 조건 종료
             return imageObject; // 완성 Image 반환
         }
 
@@ -236,6 +240,11 @@ namespace ProjectEta.UI
             Text text = CreateText("Label", buttonObject.transform, 22, FontStyle.Bold, TextAnchor.MiddleCenter); // 버튼 문구 생성
             text.text = label; // 버튼 문구 적용
             Stretch(text.rectTransform, 8f); // 버튼 내부 여백 적용
+            Day98UiSkin.TryApplyButton(button, name == "Skip" ? Day98UiSkin.ButtonDangerResourcePath : Day98UiSkin.ButtonBaseResourcePath); // 튜토리얼 버튼 이미지 적용
+            if (name == "Previous" || name == "Next") // 페이지 이동 버튼 확인
+            { // 조건 시작
+                Day98UiSkin.CreateIcon("PageArrow", button.transform, name == "Previous" ? Day98UiSkin.UiArrowLeftResourcePath : Day98UiSkin.UiArrowRightResourcePath, new Vector2(name == "Previous" ? -78f : 78f, 0f), new Vector2(26f, 26f)); // 이동 방향 장식 배치
+            } // 조건 종료
             return button; // 완성 Button 반환
         }
 

@@ -27,6 +27,7 @@ namespace ProjectEta.Board // 보드 경로 지도 시각화 네임스페이스
             _selectionHighlight = GetComponent<RouteNodeSelectionHighlight>(); // 기존 금빛 고리 컴포넌트 조회
             if (_selectionHighlight == null) _selectionHighlight = gameObject.AddComponent<RouteNodeSelectionHighlight>(); // 금빛 고리 컴포넌트 생성
             _selectionHighlight.Initialize(); // 선택 가능 상태 반짝임 시작
+            _selectionHighlight.SetLocked(false); // 초기 이동 가능 이미지 고리 적용
             ApplyColor(); // 초기 색상 반영
         }
 
@@ -41,7 +42,11 @@ namespace ProjectEta.Board // 보드 경로 지도 시각화 네임스페이스
             _selected = selected; // 선택 여부 기록
             _dimmed = dimmed; // 흐림 여부 기록
             _hovered = false; // 선택 후 오버 표시 해제
-            if (_selectionHighlight != null) _selectionHighlight.SetVisible(!selected && !dimmed); // 선택 확정 뒤 후보 고리 제거
+            if (_selectionHighlight != null) // 노드 고리 컴포넌트 확인
+            { // 조건 범위 시작
+                _selectionHighlight.SetLocked(dimmed); // 비선택 후보 잠금 고리 전환
+                _selectionHighlight.SetVisible(!selected); // 선택 완료 노드 고리 숨김
+            } // 조건 범위 종료
             ApplyColor(); // 표시 색상 갱신
         }
 

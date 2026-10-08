@@ -258,9 +258,17 @@ namespace ProjectEta.UI // 프로젝트 UI 네임스페이스
             rootRect.anchoredPosition = PanelPosition; // 화면 여백 적용
             rootRect.sizeDelta = PanelSize; // 패널 크기 적용
             Image border = _sidePanelRoot.GetComponent<Image>(); // 패널 테두리 이미지 조회
-            border.color = PanelBorderColor; // 황동 테두리 색상 적용
+            bool routePanelApplied = Day98UiSkin.TryApplyResource(border, Day98UiSkin.RouteSidePanelResourcePath, false); // 지도 우측 패널 이미지 적용
+            if (!routePanelApplied) // 지도 패널 이미지 누락 확인
+            { // 조건 범위 시작
+                border.color = PanelBorderColor; // 기존 황동 테두리 유지
+            } // 조건 범위 종료
             border.raycastTarget = true; // 패널 뒤 지도 클릭 차단
             Image body = CreateImage("RouteMapPanelBody", _sidePanelRoot.transform, PanelBodyColor); // 내부 배경 생성
+            if (routePanelApplied) // 지도 패널 이미지 적용 확인
+            { // 조건 범위 시작
+                body.color = Color.clear; // 기존 내부 배경 숨김
+            } // 조건 범위 종료
             StretchRect(body.rectTransform, new Vector2(3f, 3f), new Vector2(-3f, -3f)); // 얇은 테두리 여백 적용
             _titleText = CreateText("MapTitle", _sidePanelRoot.transform, 30, FontStyle.Bold, PrimaryTextColor); // 제목 생성
             _titleText.alignment = TextAnchor.MiddleLeft; // 제목 좌측 정렬
@@ -316,7 +324,11 @@ namespace ProjectEta.UI // 프로젝트 UI 네임스페이스
             RectTransform rootRect = _hoverRoot.GetComponent<RectTransform>(); // 상세 영역 RectTransform 조회
             SetCenteredRect(rootRect, new Vector2(0f, -284f), new Vector2(286f, 228f)); // 패널 하단 배치
             Image background = _hoverRoot.GetComponent<Image>(); // 상세 배경 조회
-            background.color = new Color(0.035f, 0.050f, 0.060f, 0.96f); // 상세 배경색 적용
+            bool tooltipApplied = Day98UiSkin.TryApplyResource(background, Day98UiSkin.RouteNodeTooltipResourcePath); // 노드 설명 툴팁 이미지 적용
+            if (!tooltipApplied) // 노드 설명 이미지 누락 확인
+            { // 조건 범위 시작
+                background.color = new Color(0.035f, 0.050f, 0.060f, 0.96f); // 기존 상세 배경 유지
+            } // 조건 범위 종료
             background.raycastTarget = false; // 지도 입력 간섭 제거
             _hoverTitleText = CreateText("HoverTitle", _hoverRoot.transform, 19, FontStyle.Bold, PrimaryTextColor); // 상세 제목 생성
             _hoverTitleText.alignment = TextAnchor.MiddleLeft; // 상세 제목 좌측 정렬
@@ -332,7 +344,12 @@ namespace ProjectEta.UI // 프로젝트 UI 네임스페이스
         private static void CreateDivider(string name, Transform parent, float y) // 패널 구분선 생성
         { // 메서드 범위 시작
             Image divider = CreateImage(name, parent, new Color(0.62f, 0.45f, 0.20f, 0.72f)); // 황동 구분선 생성
-            SetCenteredRect(divider.rectTransform, new Vector2(0f, y), new Vector2(286f, 2f)); // 구분선 위치 적용
+            bool dividerApplied = Day98UiSkin.TryApplyResource(divider, Day98UiSkin.DividerResourcePath, false); // 공통 구분선 이미지 적용
+            if (!dividerApplied) // 공통 구분선 이미지 누락 확인
+            { // 조건 범위 시작
+                divider.color = new Color(0.62f, 0.45f, 0.20f, 0.72f); // 기존 황동 색상 유지
+            } // 조건 범위 종료
+            SetCenteredRect(divider.rectTransform, new Vector2(0f, y), new Vector2(286f, 12f)); // 이미지 장식 포함 구분선 위치 적용
         } // 메서드 범위 종료
 
         private static Sprite LoadIconSprite(string resourcePath) // Resources 아이콘 Sprite 생성

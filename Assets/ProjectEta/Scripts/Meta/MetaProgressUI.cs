@@ -159,6 +159,7 @@ namespace ProjectEta.Meta
             SetRect(panel.GetComponent<RectTransform>(), position, size); // 패널 위치·크기 적용
             Image image = panel.GetComponent<Image>(); // 패널 이미지 조회
             image.color = color; // 패널 배경 색상 적용
+            Day98UiSkin.TryApplyResource(image, name == "RunResultPanel" ? Day98UiSkin.RunResultFrameResourcePath : Day98UiSkin.PanelDarkResourcePath); // 결과와 보상 패널 이미지 적용
             image.raycastTarget = false; // 패널 자체 뒤 입력 처리 불필요
             return panel; // 완성 패널 반환
         }
@@ -189,6 +190,11 @@ namespace ProjectEta.Meta
             Text text = CreateText("Label", buttonObject.transform, 21, FontStyle.Bold, TextAnchor.MiddleCenter); // 버튼 문구 생성
             text.text = label; // 요청 버튼 문구 적용
             Stretch(text.rectTransform, 8f); // 버튼 내부 여백 적용
+            Day98UiSkin.TryApplyButton(button, Day98UiSkin.ButtonBaseResourcePath); // 결과 화면 버튼 이미지 적용
+            if (name == "Close") // 닫기 버튼 확인
+            { // 조건 시작
+                Day98UiSkin.CreateIcon("CloseIcon", button.transform, Day98UiSkin.UiCloseIconResourcePath, new Vector2(-90f, 0f), new Vector2(26f, 26f)); // 닫기 아이콘 배치
+            } // 조건 종료
             return button; // 완성 버튼 반환
         }
 

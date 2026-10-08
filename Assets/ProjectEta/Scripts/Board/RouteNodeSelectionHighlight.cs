@@ -9,6 +9,8 @@ namespace ProjectEta.Board // 경로 지도 시각화 네임스페이스
         private const float RingRadiusRatio = 0.62f; // 원판 지름 기준 고리 반지름 비율
         private const float RingHeight = 0.045f; // 원판 위 고리 높이
         private const float RingWidth = 0.045f; // 금빛 선 굵기
+        private const float TextureRingHeight = 0.012f; // 이미지 고리 추가 높이
+        private const float TextureRingSizeRatio = 1.52f; // 원판 기준 이미지 고리 크기
         private const float PulseDuration = 1.2f; // 한 번 반짝이는 시간
         private const float MinimumPulseScale = 1f; // 최소 고리 크기
         private const float MaximumPulseScale = 1.10f; // 최대 고리 크기
@@ -18,8 +20,12 @@ namespace ProjectEta.Board // 경로 지도 시각화 네임스페이스
         private Transform _highlightTransform; // 금빛 고리 변환 참조
         private LineRenderer _ringRenderer; // 원형 선 렌더러
         private Material _ringMaterial; // 고리 전용 머티리얼
+        private GameObject _textureRingObject; // 투명 PNG 고리 표면
+        private Renderer _textureRingRenderer; // PNG 고리 렌더러
+        private Material _textureRingMaterial; // PNG 고리 머티리얼
         private Vector3 _scaleCompensation = Vector3.one; // 원판 비균일 스케일 보정값
         private bool _initialized; // 중복 초기화 차단 상태
+        private bool _locked; // 잠금 고리 표시 상태
 
         public void Initialize() // 금빛 고리 생성과 반짝임 시작
         { // 초기화 시작
@@ -57,6 +63,7 @@ namespace ProjectEta.Board // 경로 지도 시각화 네임스페이스
 
             _ringMaterial = CreateGlowMaterial(); // 금빛 발광 머티리얼 생성
             _ringRenderer.sharedMaterial = _ringMaterial; // 고리 렌더러에 전용 머티리얼 연결
+            BuildTextureRing(highlightObject.transform, markerDiameter); // 투명 PNG 고리 표면 생성
             ApplyPulse(0f); // 초기 반짝임 상태 적용
             _initialized = true; // 초기화 완료 기록
         } // 초기화 종료
@@ -65,6 +72,19 @@ namespace ProjectEta.Board // 경로 지도 시각화 네임스페이스
         { // 표시 변경 시작
             if (_highlightTransform != null) _highlightTransform.gameObject.SetActive(visible); // 고리 오브젝트 활성 상태 적용
         } // 표시 변경 종료
+
+        public void SetLocked(bool locked) // 이동 불가 상태 이미지 전환
+        { // 전환 시작
+            _locked = locked; // 잠금 상태 저장
+            string resourcePath = locked ? ProjectEta.UI.Day98UiSkin.RouteNodeLockedRingResourcePath : ProjectEta.UI.Day98UiSkin.RouteNodeHighlightRingResourcePath; // 상태별 고리 경로 선택
+            Texture2D texture = Resources.Load<Texture2D>(resourcePath); // 상태별 고리 텍스처 로드
+            ApplyTexture(texture); // PNG 고리 머티리얼 갱신
+            if (_ringRenderer != null) // 기존 발광선 존재 확인
+            { // 조건 시작
+                _ringRenderer.enabled = !locked; // 잠금 상태에서 기존 발광선 숨김
+            } // 조건 종료
+            ApplyPulse(0f); // 상태별 크기와 색상 즉시 적용
+        } // 전환 종료
 
         public static float EvaluatePulseScale(float elapsedTime) // 시간에 따른 고리 크기 계산
         { // 크기 계산 시작
@@ -90,9 +110,74 @@ namespace ProjectEta.Board // 경로 지도 시각화 네임스페이스
             } // 분할 순회 종료
         } // 원형 구성 종료
 
+        private void BuildTextureRing(Transform parent, float markerDiameter) // 투명 PNG 고리 표면 생성
+        { // 생성 시작
+            _textureRingObject = GameObject.CreatePrimitive(PrimitiveType.Quad); // 고리 이미지 Quad 생성
+            _textureRingObject.name = "RouteNodeImageRing"; // 계층창 식별 이름 지정
+            _textureRingObject.transform.SetParent(parent, false); // 기존 고리 루트 자식 연결
+            _textureRingObject.transform.localPosition = new Vector3(0f, TextureRingHeight, 0f); // 기존 선보다 약간 위 배치
+            _textureRingObject.transform.localRotation = Quaternion.Euler(90f, 0f, 0f); // 보드 평면 방향 회전
+            float textureSize = markerDiameter * TextureRingSizeRatio; // 원판 기준 이미지 고리 크기 계산
+            _textureRingObject.transform.localScale = new Vector3(textureSize, textureSize, 1f); // 정사각 고리 크기 적용
+            Collider collider = _textureRingObject.GetComponent<Collider>(); // 기본 Quad 콜라이더 조회
+            DestroyUnityObject(collider); // 노드 클릭 방해 콜라이더 제거
+            _textureRingRenderer = _textureRingObject.GetComponent<Renderer>(); // 이미지 고리 렌더러 저장
+            _textureRingMaterial = CreateTextureMaterial(); // 투명 이미지 머티리얼 생성
+            _textureRingRenderer.sharedMaterial = _textureRingMaterial; // 이미지 고리 머티리얼 연결
+            SetLocked(false); // 초기 선택 가능 고리 적용
+        } // 생성 종료
+
+        private static Material CreateTextureMaterial() // 투명 고리 이미지 머티리얼 생성
+        { // 생성 시작
+            Shader shader = Shader.Find("Universal Render Pipeline/Unlit"); // URP 비조명 셰이더 조회
+            if (shader == null) // URP 셰이더 누락 확인
+            { // 조건 시작
+                shader = Shader.Find("Sprites/Default"); // Sprite 셰이더 대체
+            } // 조건 종료
+            if (shader == null) // Sprite 셰이더 누락 확인
+            { // 조건 시작
+                shader = Shader.Find("Standard"); // 기본 셰이더 최종 대체
+            } // 조건 종료
+            Material material = new Material(shader); // 이미지 고리 머티리얼 생성
+            material.name = "RouteNodeDay98ImageRing"; // 진단용 머티리얼 이름 지정
+            ConfigureTransparency(material); // 알파 투명 렌더링 설정
+            if (material.HasProperty("_DstBlend")) // 알파 혼합 속성 확인
+            { // 조건 시작
+                material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha); // 일반 알파 혼합 적용
+            } // 조건 종료
+            return material; // 생성 머티리얼 반환
+        } // 생성 종료
+
+        private void ApplyTexture(Texture2D texture) // 상태별 고리 텍스처 적용
+        { // 적용 시작
+            if (_textureRingMaterial == null || texture == null) // 필수 자원 존재 확인
+            { // 조건 시작
+                return; // 누락 상태 적용 종료
+            } // 조건 종료
+            _textureRingMaterial.mainTexture = texture; // 기본 텍스처 연결
+            _textureRingMaterial.color = Color.white; // 원본 색상 유지
+            if (_textureRingMaterial.HasProperty("_BaseMap")) // URP 텍스처 속성 확인
+            { // 조건 시작
+                _textureRingMaterial.SetTexture("_BaseMap", texture); // URP 기본 텍스처 연결
+            } // 조건 종료
+            if (_textureRingMaterial.HasProperty("_BaseColor")) // URP 색상 속성 확인
+            { // 조건 시작
+                _textureRingMaterial.SetColor("_BaseColor", Color.white); // URP 원본 색상 적용
+            } // 조건 종료
+            if (_textureRingMaterial.HasProperty("_Color")) // 기본 색상 속성 확인
+            { // 조건 시작
+                _textureRingMaterial.SetColor("_Color", Color.white); // 기본 셰이더 원본 색상 적용
+            } // 조건 종료
+        } // 적용 종료
+
         private void ApplyPulse(float elapsedTime) // 현재 시간의 밝기와 크기 적용
         { // 반짝임 적용 시작
             if (_highlightTransform == null || _ringRenderer == null) return; // 필수 고리 참조 누락 방어
+            if (_locked) // 잠금 상태 확인
+            { // 잠금 처리 시작
+                _highlightTransform.localScale = _scaleCompensation; // 잠금 고리 고정 크기 적용
+                return; // 발광 애니메이션 제외
+            } // 잠금 처리 종료
             float scale = EvaluatePulseScale(elapsedTime); // 현재 고리 크기 계산
             float pulse = Mathf.InverseLerp(MinimumPulseScale, MaximumPulseScale, scale); // 현재 밝기 비율 계산
             _highlightTransform.localScale = new Vector3(_scaleCompensation.x * scale, _scaleCompensation.y, _scaleCompensation.z * scale); // 크기 변화와 비균일 보정 적용
@@ -136,10 +221,26 @@ namespace ProjectEta.Board // 경로 지도 시각화 네임스페이스
 
         private void OnDestroy() // 런타임 머티리얼 정리
         { // 제거 시작
-            if (_ringMaterial == null) return; // 이미 정리된 머티리얼 제외
-            if (Application.isPlaying) Destroy(_ringMaterial); // 플레이 모드 지연 제거
-            else DestroyImmediate(_ringMaterial); // EditMode 즉시 제거
+            DestroyUnityObject(_ringMaterial); // 기존 발광 머티리얼 제거
+            DestroyUnityObject(_textureRingMaterial); // PNG 고리 머티리얼 제거
             _ringMaterial = null; // 머티리얼 참조 초기화
+            _textureRingMaterial = null; // PNG 머티리얼 참조 초기화
+        } // 제거 종료
+
+        private static void DestroyUnityObject(Object target) // 실행 모드별 안전한 제거
+        { // 제거 시작
+            if (target == null) // 대상 존재 확인
+            { // 조건 시작
+                return; // 빈 대상 제외
+            } // 조건 종료
+            if (Application.isPlaying) // 실행 모드 확인
+            { // 실행 모드 조건 시작
+                Destroy(target); // PlayMode 지연 제거
+            } // 실행 모드 조건 종료
+            else // 편집 모드 처리
+            { // 편집 모드 조건 시작
+                DestroyImmediate(target); // EditMode 즉시 제거
+            } // 편집 모드 조건 종료
         } // 제거 종료
     } // 클래스 종료
 } // 네임스페이스 종료

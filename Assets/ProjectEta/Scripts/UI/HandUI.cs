@@ -232,7 +232,7 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight; // 다양한 화면 비율 대응
             scaler.matchWidthOrHeight = 0.5f; // 가로·세로 균형 보정
 
-            var handRootObject = new GameObject("HandRoot", typeof(RectTransform), typeof(HorizontalLayoutGroup)); // 카드 가로 정렬 컨테이너 생성
+            var handRootObject = new GameObject("HandRoot", typeof(RectTransform), typeof(Image), typeof(HorizontalLayoutGroup)); // 이미지 받침 포함 카드 정렬 컨테이너 생성
             handRootObject.transform.SetParent(canvasObject.transform, false); // Canvas 자식으로 연결
             _handRoot = handRootObject.GetComponent<RectTransform>(); // RectTransform 확보
             _handRoot.anchorMin = new Vector2(0.5f, 0f); // 화면 하단 중앙 앵커
@@ -240,6 +240,13 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             _handRoot.pivot = new Vector2(0.5f, 0f); // 하단 중앙 피벗
             _handRoot.anchoredPosition = _normalHandPosition; // 화면 아래에서 약간 띄운 기본 손패 위치 적용
             _handRoot.sizeDelta = new Vector2(1540f, 270f); // 최대 10장 카드 영역 확보
+            Image handTray = handRootObject.GetComponent<Image>(); // 손패 받침 Image 조회
+            bool handTrayApplied = Day98UiSkin.TryApplyResource(handTray, Day98UiSkin.HandTrayResourcePath, false); // 손패 받침 원본 이미지 적용
+            if (!handTrayApplied) // 손패 받침 누락 확인
+            { // 조건 시작
+                handTray.color = Color.clear; // 투명 받침 유지
+            } // 조건 종료
+            handTray.raycastTarget = false; // 카드 드래그 입력 간섭 제거
 
             _layoutGroup = handRootObject.GetComponent<HorizontalLayoutGroup>(); // 가로 레이아웃 확보
             _layoutGroup.childAlignment = TextAnchor.LowerCenter; // 카드들을 하단 중앙 정렬

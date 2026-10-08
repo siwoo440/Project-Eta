@@ -153,7 +153,8 @@ namespace ProjectEta.UI
             rootRect.sizeDelta = new Vector2(1120f, 112f); // 공통 HUD 영역 크기 적용
 
             Image background = _root.GetComponent<Image>(); // HUD 배경 이미지 조회
-            background.color = new Color(0.035f, 0.045f, 0.06f, 0.88f); // 어두운 반투명 HUD 배경 적용
+            bool skinApplied = Day98UiSkin.TryApplyResource(background, Day98UiSkin.BattleStatusResourcePath); // 98일차 전투 상태 프레임 적용
+            if (!skinApplied) background.color = new Color(0.035f, 0.045f, 0.06f, 0.88f); // 이미지 누락 시 기존 반투명 배경 유지
             background.raycastTarget = false; // 보드·버튼 입력 간섭 제거
 
             _stageText = CreateText("StageText", _root.transform, 25, FontStyle.Bold, TextAnchor.MiddleLeft); // 좌측 Stage 문구 생성

@@ -190,7 +190,8 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
         private void BuildPanel(Transform parent) // 우측 상단에 배치되는 기물 정보 패널을 만드는 메서드
         {
             var body = CreatePanel("PieceInfoPanelBody", parent, new Color(0.09f, 0.1f, 0.13f, 0.96f)); // 패널 배경 생성
-            _panelRoot = body.gameObject; // 패널 전체 루트로 저장(선택 여부에 따라 켜고 끔)
+            _panelRoot = body.gameObject; // 패널 전체 루트 저장
+            Day98UiSkin.TryApplyResource(body.image, Day98UiSkin.PieceInfoFrameResourcePath); // 기물 정보 프레임 적용
             SetRect(body.rect, new Vector2(1f, 1f), new Vector2(-150f, -170f), new Vector2(280f, 320f)); // 화면 우측 상단에 고정 배치
             body.image.raycastTarget = true; // 패널이 아래 보드 클릭을 가로채지 않도록 자체적으로 Raycast 소비
             var bodyBlocker = body.gameObject.AddComponent<Button>(); // 패널 배경 클릭이 보드 쪽으로 새지 않도록 빈 Button으로 이벤트 소비
@@ -224,6 +225,8 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             _hpText = CreateText("HpText", statsRow.transform, 14, FontStyle.Bold, TextAnchor.MiddleCenter, new Color(0.85f, 0.3f, 0.3f, 1f)); // 체력 텍스트 생성
             SetRect(_hpText.rectTransform, new Vector2(1f, 0.5f), new Vector2(-65f, 0f), new Vector2(120f, 26f)); // 오른쪽 절반에 배치
 
+            Image abilityTag = Day98UiSkin.CreateDecoration("AbilityTag", body.rect, Day98UiSkin.AbilityTagResourcePath); // 능력 태그 배경 생성
+            SetRect(abilityTag.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -206f), new Vector2(260f, 26f)); // 능력 태그 위치 설정
             _roleTagsText = CreateText("RoleTagsText", body.rect, 12, FontStyle.Normal, TextAnchor.MiddleCenter, new Color(0.75f, 0.8f, 0.9f, 1f)); // 역할 태그 텍스트 생성
             SetRect(_roleTagsText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -206f), new Vector2(260f, 20f)); // 스탯 아래 배치
 

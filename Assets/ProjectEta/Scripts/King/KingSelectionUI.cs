@@ -8,6 +8,8 @@ using ProjectEta.Battle; // BattleController·TurnManager 사용
 using ProjectEta.Meta; // MetaProgressService 사용
 using ProjectEta.Run; // BoardMode·RunState 사용
 
+using ProjectEta.UI; // 공통 UI 이미지 스킨 사용
+
 namespace ProjectEta.King
 {
     public sealed class KingSelectionUI : MonoBehaviour
@@ -253,7 +255,8 @@ namespace ProjectEta.King
             view.PassiveText.text = presentation.PassiveName; // King 카드 패시브 이름 적용
             view.UnlockText.text = unlocked ? "사용 가능" : "잠김"; // King 카드 해금 상태 적용
             view.UnlockText.color = unlocked ? new Color(0.62f, 0.88f, 0.72f, 1f) : new Color(0.9f, 0.55f, 0.5f, 1f); // 해금 상태 색상 적용
-            view.Background.color = unlocked ? GetArchetypeColor(presentation.Archetype) : new Color(0.12f, 0.12f, 0.14f, 1f); // 해금 여부 기반 카드 배경 적용
+            Color stateColor = unlocked ? GetArchetypeColor(presentation.Archetype) : new Color(0.12f, 0.12f, 0.14f, 1f); // King 상태 색상 선택
+            view.Background.color = view.Background.sprite != null ? Day98UiSkin.GetStateTint(stateColor) : stateColor; // 프레임 밝기와 해금 상태 보존
         }
 
         private void RefreshDetails(RunState runState, KingRunState kingState)
@@ -445,6 +448,7 @@ namespace ProjectEta.King
                 CanvasGroup canvasGroup = cardObject.GetComponent<CanvasGroup>(); // 카드 투명도 그룹 조회
                 Image background = cardObject.GetComponent<Image>(); // 카드 배경 이미지 조회
                 background.color = new Color(0.2f, 0.16f, 0.11f, 1f); // 기본 King 카드 배경 적용
+                Day98UiSkin.TryApplyResource(background, Day98UiSkin.KingCardFrameResourcePath); // King 카드 프레임 적용
 
                 Outline outline = cardObject.GetComponent<Outline>(); // 카드 외곽선 조회
                 outline.effectColor = new Color(0.48f, 0.64f, 0.78f, 0.7f); // 카드 외곽 강조 색상 적용
@@ -530,6 +534,13 @@ namespace ProjectEta.King
         {
             Button button = CreateButton(name, parent, label, position, new Vector2(82f, 82f), out Text text); // 캐러셀 화살표 버튼 생성
             text.fontSize = 30; // 화살표 문구 크기 확대
+            Image image = button.GetComponent<Image>(); // 이동 버튼 이미지 조회
+            string path = name == "PreviousButton" ? Day98UiSkin.UiArrowLeftResourcePath : Day98UiSkin.UiArrowRightResourcePath; // 이동 방향 자산 선택
+            if (Day98UiSkin.TryApplyResource(image, path, false)) // 화살표 자산 로드 확인
+            { // 조건 시작
+                image.preserveAspect = true; // 화살표 비율 유지
+                text.enabled = false; // 중복 문자 화살표 숨김
+            } // 조건 종료
             return button; // 캐러셀 화살표 버튼 반환
         }
 
@@ -556,6 +567,7 @@ namespace ProjectEta.King
             text = CreateText("Label", buttonObject.transform, 21, FontStyle.Bold, TextAnchor.MiddleCenter); // 버튼 문구 생성
             text.text = label; // 버튼 문구 적용
             Stretch(text.rectTransform, 6f); // 버튼 문구 내부 여백 적용
+            Day98UiSkin.TryApplyButton(button, Day98UiSkin.ButtonBaseResourcePath); // King 확정 버튼 이미지 적용
             return button; // 완성 버튼 반환
         }
 
@@ -565,6 +577,15 @@ namespace ProjectEta.King
             result.transform.SetParent(parent, false); // UI 부모 연결
             SetCenteredRect(result.GetComponent<RectTransform>(), position, size); // Image 위치·크기 적용
             result.GetComponent<Image>().color = color; // Image 배경 색상 적용
+            if (name == "PortraitFrame") // King 문양 영역 확인
+            { // 조건 시작
+                Day98UiSkin.TryApplyResource(result.GetComponent<Image>(), Day98UiSkin.KingEmblemFrameResourcePath, false); // 문양 프레임 적용
+                result.GetComponent<Image>().preserveAspect = true; // 문양 비율 보존
+            } // 조건 종료
+            else if (name != "KingSelectionRoot_Day60") // 전체 입력 차단 배경 제외
+            { // 조건 시작
+                Day98UiSkin.TryApplyDarkPanel(result.GetComponent<Image>()); // King 정보 패널 이미지 적용
+            } // 조건 종료
             return result; // 완성 Image UI 반환
         }
 

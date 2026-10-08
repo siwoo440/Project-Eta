@@ -57,7 +57,11 @@ namespace ProjectEta.Boss // 2x2 이상 보스 전투 관련 타입을 모아두
             panelRect.sizeDelta = new Vector2(620f, 42f); // 기존 상단 UI와 같은 폭
 
             var image = panelObject.GetComponent<Image>(); // 패널 배경 Image 확보
-            image.color = new Color(0.22f, 0.025f, 0.02f, 0.92f); // 보스 위험 상태를 강조하는 짙은 적색 배경
+            bool phaseBadgeApplied = ProjectEta.UI.Day98UiSkin.TryApplyResource(image, ProjectEta.UI.Day98UiSkin.PhaseBadgeResourcePath); // 보스 페이즈 배지 적용
+            if (!phaseBadgeApplied) // 페이즈 배지 누락 확인
+            { // 조건 시작
+                image.color = new Color(0.22f, 0.025f, 0.02f, 0.92f); // 기존 적색 배경 유지
+            } // 조건 종료
             image.raycastTarget = false; // 보드 클릭을 가로채지 않음
 
             var textObject = new GameObject("BossPhaseStatusText", typeof(RectTransform), typeof(Text), typeof(Shadow)); // 상태 텍스트 생성

@@ -202,7 +202,11 @@ namespace ProjectEta.Boss // 보스 전투 관련 타입을 모아두는 네임�
             panelRect.sizeDelta = new Vector2(620f, 54f); // 이름·HP·체력바가 들어가는 폭과 높이
 
             var panelImage = panelObject.GetComponent<Image>(); // 패널 배경 이미지 조회
-            panelImage.color = new Color(0.12f, 0.015f, 0.015f, 0.94f); // 어두운 보스 전용 배경
+            bool bossFrameApplied = ProjectEta.UI.Day98UiSkin.TryApplyResource(panelImage, ProjectEta.UI.Day98UiSkin.BossBarResourcePath); // 보스 체력바 프레임 적용
+            if (!bossFrameApplied) // 보스 프레임 누락 확인
+            { // 조건 시작
+                panelImage.color = new Color(0.12f, 0.015f, 0.015f, 0.94f); // 기존 보스 배경 유지
+            } // 조건 종료
             panelImage.raycastTarget = false; // 보드 클릭을 가로채지 않음
 
             var barBackgroundObject = new GameObject("BossHealthBarBackground", typeof(RectTransform), typeof(Image)); // 체력바 배경 생성

@@ -3,6 +3,8 @@ using System.Collections.Generic; // List<T>·Dictionary<T> 사용
 using UnityEngine; // MonoBehaviour·GameObject·Color·Vector2 사용
 using UnityEngine.UI; // Button·Image·Text 사용
 
+using ProjectEta.UI; // 공통 UI 이미지 스킨 사용
+
 namespace ProjectEta.Meta
 {
     public sealed class MetaProgressPanelController : MonoBehaviour
@@ -21,6 +23,7 @@ namespace ProjectEta.Meta
         private Action _closeRequested; // 외부 닫기 콜백
         private MetaProgressState _progress; // 현재 영구 진행 상태
         private Transform _itemRoot; // 해금 카드 목록 부모
+        private ScrollRect _itemScroll; // 해금 목록 세로 스크롤
         private Text _tokenText; // 보유 메타 토큰 문구
         private Text _summaryText; // 영구 해금 요약 문구
         private Text _detailTypeText; // 상세 타입 문구
@@ -74,11 +77,11 @@ namespace ProjectEta.Meta
             Text eyebrow = CreateText("Eyebrow", panel.transform, 18, FontStyle.Bold, TextAnchor.MiddleLeft); // 영구 성장 분류 문구 생성
             eyebrow.text = "PERMANENT PROGRESSION"; // 분류 문구 적용
             eyebrow.color = AccentColor; // 강조 색상 적용
-            SetRect(eyebrow.rectTransform, new Vector2(-575f, 390f), new Vector2(230f, 36f)); // 분류 문구 배치
+            SetRect(eyebrow.rectTransform, new Vector2(-440f, 390f), new Vector2(440f, 36f)); // 분류 문구 배치
 
             Text title = CreateText("Title", panel.transform, 44, FontStyle.Bold, TextAnchor.MiddleLeft); // 영구 성장 제목 생성
             title.text = "영구 성장"; // 영구 성장 제목 적용
-            SetRect(title.rectTransform, new Vector2(-520f, 338f), new Vector2(340f, 60f)); // 영구 성장 제목 배치
+            SetRect(title.rectTransform, new Vector2(-480f, 338f), new Vector2(360f, 60f)); // 영구 성장 제목 배치
 
             _tokenText = CreateText("Token", panel.transform, 28, FontStyle.Bold, TextAnchor.MiddleRight); // 메타 토큰 잔액 문구 생성
             _tokenText.color = AccentColor; // 토큰 강조 색상 적용
@@ -86,7 +89,7 @@ namespace ProjectEta.Meta
 
             _summaryText = CreateText("Summary", panel.transform, 17, FontStyle.Normal, TextAnchor.MiddleRight); // 해금 수 요약 문구 생성
             _summaryText.color = SoftTextColor; // 요약 보조 색상 적용
-            SetRect(_summaryText.rectTransform, new Vector2(470f, 315f), new Vector2(460f, 40f)); // 요약 문구 배치
+            SetRect(_summaryText.rectTransform, new Vector2(435f, 315f), new Vector2(440f, 40f)); // 요약 문구 배치
 
             GameObject navPanel = CreateImage("CategoryNavigation", panel.transform, new Vector2(-555f, -25f), new Vector2(250f, 650f), SecondaryColor); // 카테고리 내비게이션 영역 생성
             BuildCategoryButtons(navPanel.transform); // 카테고리 버튼 생성
@@ -96,10 +99,7 @@ namespace ProjectEta.Meta
             listTitle.text = "해금 목록"; // 목록 제목 적용
             SetRect(listTitle.rectTransform, new Vector2(0f, 275f), new Vector2(440f, 44f)); // 목록 제목 배치
 
-            GameObject itemRootObject = new GameObject("UnlockItems", typeof(RectTransform)); // 동적 해금 카드 부모 생성
-            itemRootObject.transform.SetParent(listPanel.transform, false); // 목록 영역 자식 연결
-            SetRect(itemRootObject.GetComponent<RectTransform>(), new Vector2(0f, -20f), new Vector2(460f, 520f)); // 카드 목록 영역 배치
-            _itemRoot = itemRootObject.transform; // 카드 목록 부모 저장
+            BuildUnlockList(listPanel.transform); // 화면 안쪽 스크롤 목록 생성
 
             GameObject detailPanel = CreateImage("UnlockDetailPanel", panel.transform, new Vector2(390f, -25f), new Vector2(500f, 650f), SecondaryColor); // 선택 해금 상세 영역 생성
             BuildDetailPanel(detailPanel.transform); // 상세 정보 UI 생성
@@ -113,6 +113,46 @@ namespace ProjectEta.Meta
 
             BuildConfirmModal(panel.transform); // 영구 해금 확인 팝업 생성
         }
+
+        private void BuildUnlockList(Transform parent) // 마스크와 스크롤 목록 생성
+        { // 메서드 시작
+            GameObject viewportObject = new GameObject("UnlockViewport", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect)); // 목록 표시 영역 생성
+            viewportObject.transform.SetParent(parent, false); // 목록 패널 부모 연결
+            RectTransform viewport = viewportObject.GetComponent<RectTransform>(); // 표시 영역 조회
+            SetRect(viewport, new Vector2(0f, -20f), new Vector2(480f, 540f)); // 제목 아래 표시 영역 배치
+            viewportObject.GetComponent<Image>().color = Color.clear; // 스크롤 입력용 투명 배경
+            GameObject contentObject = new GameObject("UnlockItems", typeof(RectTransform)); // 전체 해금 카드 부모 생성
+            contentObject.transform.SetParent(viewport, false); // 표시 영역 자식 연결
+            RectTransform content = contentObject.GetComponent<RectTransform>(); // 전체 목록 영역 조회
+            content.anchorMin = new Vector2(0.5f, 1f); // 상단 시작 앵커
+            content.anchorMax = new Vector2(0.5f, 1f); // 상단 끝 앵커
+            content.pivot = new Vector2(0.5f, 1f); // 상단 기준점
+            content.anchoredPosition = new Vector2(-8f, 0f); // 스크롤바 공간 확보
+            content.sizeDelta = new Vector2(440f, 540f); // 기본 전체 목록 크기
+            _itemRoot = content; // 카드 생성 부모 저장
+            _itemScroll = viewportObject.GetComponent<ScrollRect>(); // 목록 스크롤 조회
+            _itemScroll.viewport = viewport; // 표시 영역 연결
+            _itemScroll.content = content; // 전체 목록 연결
+            _itemScroll.horizontal = false; // 가로 이동 차단
+            _itemScroll.vertical = true; // 세로 이동 허용
+            _itemScroll.movementType = ScrollRect.MovementType.Clamped; // 목록 경계 밖 이동 차단
+            _itemScroll.scrollSensitivity = 35f; // 마우스 휠 이동 폭
+            GameObject barObject = new GameObject("UnlockScrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar)); // 세로 스크롤바 생성
+            barObject.transform.SetParent(parent, false); // 마스크 바깥 스크롤바 연결
+            SetRect(barObject.GetComponent<RectTransform>(), new Vector2(237f, -20f), new Vector2(10f, 540f)); // 목록 우측 스크롤바 배치
+            barObject.GetComponent<Image>().color = new Color(0.12f, 0.12f, 0.1f, 1f); // 스크롤바 바탕 색상
+            GameObject handleObject = new GameObject("Handle", typeof(RectTransform), typeof(Image)); // 이동 손잡이 생성
+            handleObject.transform.SetParent(barObject.transform, false); // 스크롤바 손잡이 연결
+            RectTransform handle = handleObject.GetComponent<RectTransform>(); // 손잡이 영역 조회
+            Stretch(handle, 1f); // 손잡이 내부 여백
+            handleObject.GetComponent<Image>().color = new Color(0.76f, 0.58f, 0.23f, 1f); // 금색 손잡이
+            Scrollbar bar = barObject.GetComponent<Scrollbar>(); // 스크롤바 입력 조회
+            bar.handleRect = handle; // 손잡이 영역 연결
+            bar.targetGraphic = handleObject.GetComponent<Image>(); // 손잡이 입력 그래픽 연결
+            bar.direction = Scrollbar.Direction.BottomToTop; // 위쪽 시작 방향
+            _itemScroll.verticalScrollbar = bar; // 목록과 스크롤바 연결
+            _itemScroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide; // 짧은 목록 스크롤바 숨김
+        } // 메서드 종료
 
         private void BuildCategoryButtons(Transform parent)
         {
@@ -186,6 +226,10 @@ namespace ProjectEta.Meta
         private void HandleCategory(MetaProgressCategory category)
         {
             _panelState.ShowCategory(category); // 현재 영구 성장 카테고리 변경
+            if (_itemScroll != null) // 목록 스크롤 존재 확인
+            { // 조건 시작
+                _itemScroll.verticalNormalizedPosition = 1f; // 새 카테고리 목록 처음 표시
+            } // 조건 종료
             _feedbackText.text = string.Empty; // 이전 결과 안내 정리
             RefreshCategoryButtons(); // 카테고리 강조 상태 갱신
             RebuildItems(); // 선택 카테고리 해금 카드 재구성
@@ -194,6 +238,7 @@ namespace ProjectEta.Meta
 
         private void RebuildItems()
         {
+            float scrollPosition = _itemScroll != null && _itemObjects.Count > 0 ? _itemScroll.verticalNormalizedPosition : 1f; // 최초 진입 상단과 기존 목록 위치 보관
             for (int i = 0; i < _itemObjects.Count; i++)
             {
                 if (_itemObjects[i] != null) Destroy(_itemObjects[i]); // 이전 동적 카드 제거
@@ -203,6 +248,8 @@ namespace ProjectEta.Meta
 
             IReadOnlyList<MetaUnlockDefinition> definitions = _panelState.GetFilteredDefinitions(); // 현재 카테고리 해금 목록 조회
             MetaUnlockDefinition selected = _panelState.GetSelectedDefinition(); // 현재 선택 정의 조회
+            RectTransform content = _itemRoot as RectTransform; // 전체 목록 크기 조회
+            content.sizeDelta = new Vector2(440f, Mathf.Max(540f, definitions.Count * 100f)); // 모든 항목 표시 높이 확보
 
             if (selected == null && definitions.Count > 0)
             {
@@ -213,19 +260,28 @@ namespace ProjectEta.Meta
             {
                 MetaUnlockDefinition definition = definitions[i]; // 현재 해금 카드 정의 조회
                 int row = i; // 세로 카드 행 계산
-                Button button = CreateUnlockCard(definition, new Vector2(0f, 205f - row * 100f)); // 동적 해금 카드 생성
+                Button button = CreateUnlockCard(definition, new Vector2(0f, -50f - row * 100f)); // 동적 해금 카드 생성
                 MetaUnlockDefinition captured = definition; // 카드 선택 콜백 정의 고정
                 button.onClick.AddListener(() => HandleSelect(captured)); // 상세 선택 연결
                 _itemObjects.Add(button.gameObject); // 동적 카드 참조 저장
             }
+            if (_itemScroll != null) // 목록 스크롤 존재 확인
+            { // 조건 시작
+                _itemScroll.StopMovement(); // 재생성 전 관성 이동 정리
+                _itemScroll.verticalNormalizedPosition = scrollPosition; // 카드 선택 후 목록 위치 보존
+            } // 조건 종료
         }
 
         private Button CreateUnlockCard(MetaUnlockDefinition definition, Vector2 position)
         {
             MetaUnlockDisplayState state = MetaProgressPanelState.Evaluate(_progress, definition); // 현재 해금 표시 상태 계산
             Button button = CreateButton($"Unlock_{definition.UnlockId}", _itemRoot, string.Empty, position, new Vector2(440f, 82f)); // 해금 카드 버튼 생성
+            RectTransform rect = button.transform as RectTransform; // 해금 카드 배치 영역 조회
+            rect.anchorMin = new Vector2(0.5f, 1f); // 목록 상단 시작 앵커
+            rect.anchorMax = new Vector2(0.5f, 1f); // 목록 상단 끝 앵커
             Image image = button.GetComponent<Image>(); // 해금 카드 배경 조회
-            image.color = GetStateColor(state); // 해금 상태 배경 색상 적용
+            Color stateColor = GetStateColor(state); // 해금 상태 색상 계산
+            image.color = image.sprite != null ? Day98UiSkin.GetStateTint(stateColor) : stateColor; // 해금 상태와 프레임 밝기 보존
 
             Text label = button.GetComponentInChildren<Text>(true); // 해금 카드 문구 조회
             if (label != null)
@@ -260,7 +316,8 @@ namespace ProjectEta.Meta
                 if (pair.Value == null) continue; // 누락 카테고리 버튼 제외
                 Image image = pair.Value.GetComponent<Image>(); // 카테고리 버튼 배경 조회
                 if (image == null) continue; // 카테고리 배경 누락 제외
-                image.color = pair.Key == _panelState.CurrentCategory ? AccentColor : new Color(0.13f, 0.17f, 0.23f, 1f); // 현재 카테고리 강조 적용
+                Color stateColor = pair.Key == _panelState.CurrentCategory ? AccentColor : new Color(0.13f, 0.17f, 0.23f, 1f); // 성장 카테고리 색상 계산
+                image.color = image.sprite != null ? Day98UiSkin.GetStateTint(stateColor) : stateColor; // 선택 강조와 탭 테두리 보존
             }
         }
 
@@ -403,6 +460,17 @@ namespace ProjectEta.Meta
             result.transform.SetParent(parent, false); // UI 부모 연결
             SetRect(result.GetComponent<RectTransform>(), position, size); // UI 위치·크기 적용
             result.GetComponent<Image>().color = color; // UI 배경 색상 적용
+            if (name != "MetaBackdrop_Day58" && name != "UnlockConfirmRoot") // 전체 입력 차단 배경 제외
+            { // 조건 시작
+                if (name == "UnlockConfirmPanel") // 확인 팝업 배경 확인
+                { // 조건 시작
+                    Day98UiSkin.CreateDecoration("ModalFrame", result.transform, Day98UiSkin.UiModalFrameResourcePath); // 불투명 배경 위 투명 프레임 적용
+                } // 조건 종료
+                else // 일반 성장 패널 처리
+                { // 조건 시작
+                    Day98UiSkin.TryApplyDarkPanel(result.GetComponent<Image>()); // 성장 패널 이미지 적용
+                } // 조건 종료
+            } // 조건 종료
             return result; // 완성 UI 오브젝트 반환
         }
 
@@ -431,6 +499,12 @@ namespace ProjectEta.Meta
             Text text = CreateText("Label", result.transform, 21, FontStyle.Bold, TextAnchor.MiddleCenter); // 버튼 문구 생성
             text.text = label; // 버튼 문구 적용
             Stretch(text.rectTransform, 10f); // 버튼 문구 내부 여백 적용
+            string path = name.StartsWith("Category_") ? Day98UiSkin.UiCategoryTabResourcePath : (name.StartsWith("Unlock_") ? Day98UiSkin.MetaUnlockTileResourcePath : (name == "Cancel" ? Day98UiSkin.ButtonDangerResourcePath : Day98UiSkin.ButtonBaseResourcePath)); // 성장 버튼 역할별 자산 선택
+            Day98UiSkin.TryApplyButton(button, path); // 성장 버튼 이미지 적용
+            if (name == "Close") // 뒤로 버튼 확인
+            { // 조건 시작
+                Day98UiSkin.CreateIcon("BackIcon", button.transform, Day98UiSkin.UiArrowLeftResourcePath, new Vector2(-80f, 0f), new Vector2(28f, 28f)); // 뒤로 방향 아이콘 배치
+            } // 조건 종료
             return button; // 완성 버튼 반환
         }
 

@@ -5,6 +5,8 @@ using UnityEngine.InputSystem.UI; // 새 Input System UI 입력 사용
 using UnityEngine.UI; // Canvas·Button·Image·Text 사용
 using ProjectEta.Pieces; // PieceDefinition 사용
 
+using ProjectEta.UI; // 공통 UI 이미지 스킨 사용
+
 namespace ProjectEta.King
 {
     public sealed class StrategyKingSelectionUI : MonoBehaviour
@@ -89,6 +91,7 @@ namespace ProjectEta.King
 
             Image panelImage = panelObject.GetComponent<Image>(); // 중앙 패널 배경 조회
             panelImage.color = new Color(0.10f, 0.08f, 0.16f, 0.98f); // 전략형 보라 계열 패널 적용
+            Day98UiSkin.TryApplyDarkPanel(panelImage); // 전략형 선택 패널 이미지 적용
 
             Text title = CreateText("Title", panelObject.transform, 38, FontStyle.Bold); // 전술적 준비 제목 생성
             title.text = "전술적 준비"; // 전략형 패시브 이름 적용
@@ -121,6 +124,7 @@ namespace ProjectEta.King
 
             Button button = buttonObject.GetComponent<Button>(); // Button 컴포넌트 조회
             button.targetGraphic = background; // 버튼 대상 그래픽 지정
+            Day98UiSkin.TryApplyButton(button, Day98UiSkin.KingCardFrameResourcePath); // 전략형 후보 카드 프레임 적용
 
             label = CreateText("Label", buttonObject.transform, 25, FontStyle.Bold); // 카드 이름 텍스트 생성
             Stretch(label.rectTransform, 12f); // 카드 내부 여백 적용

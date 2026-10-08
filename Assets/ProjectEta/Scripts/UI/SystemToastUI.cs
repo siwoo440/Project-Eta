@@ -122,7 +122,10 @@ namespace ProjectEta.UI
             rect.pivot = new Vector2(1f, 1f); // 우상단 피벗 적용
             rect.anchoredPosition = new Vector2(-42f, -42f); // 화면 우상단 여백 적용
             rect.sizeDelta = new Vector2(500f, 124f); // Toast 카드 크기 적용
-            _toastRoot.GetComponent<Image>().color = new Color(0.035f, 0.043f, 0.058f, 0.97f); // Toast 카드 배경 적용
+            Image toastImage = _toastRoot.GetComponent<Image>(); // 알림 배경 조회
+            toastImage.color = new Color(0.035f, 0.043f, 0.058f, 0.97f); // 기존 알림 배경 설정
+            Day98UiSkin.TryApplyResource(toastImage, Day98UiSkin.SystemToastFrameResourcePath); // 시스템 알림 프레임 적용
+            toastImage.raycastTarget = false; // 알림의 클릭 간섭 차단
 
             GameObject accent = new GameObject("Accent", typeof(RectTransform), typeof(Image)); // Toast 좌측 강조선 생성
             accent.transform.SetParent(_toastRoot.transform, false); // Toast 카드 자식 연결
@@ -133,13 +136,14 @@ namespace ProjectEta.UI
             accentRect.anchoredPosition = Vector2.zero; // 카드 좌측 정렬
             accentRect.sizeDelta = new Vector2(7f, 0f); // 강조선 너비 적용
             accent.GetComponent<Image>().color = new Color(0.38f, 0.68f, 0.88f, 1f); // 시스템 강조 색상 적용
+            accent.GetComponent<Image>().raycastTarget = false; // 강조선 클릭 간섭 차단
 
             _titleText = CreateText("Title", _toastRoot.transform, 21, FontStyle.Bold, TextAnchor.MiddleLeft); // Toast 제목 생성
-            SetRect(_titleText.rectTransform, new Vector2(30f, 24f), new Vector2(420f, 40f)); // Toast 제목 위치 적용
+            SetRect(_titleText.rectTransform, new Vector2(30f, 18f), new Vector2(420f, 32f)); // 테두리 안쪽 알림 제목 배치
 
             _bodyText = CreateText("Body", _toastRoot.transform, 17, FontStyle.Normal, TextAnchor.MiddleLeft); // Toast 본문 생성
             _bodyText.color = new Color(0.72f, 0.76f, 0.82f, 1f); // Toast 본문 보조 색상 적용
-            SetRect(_bodyText.rectTransform, new Vector2(30f, -22f), new Vector2(420f, 48f)); // Toast 본문 위치 적용
+            SetRect(_bodyText.rectTransform, new Vector2(30f, -14f), new Vector2(420f, 32f)); // 테두리 안쪽 알림 본문 배치
 
             _toastRoot.SetActive(false); // 최초 Toast 숨김
         }
