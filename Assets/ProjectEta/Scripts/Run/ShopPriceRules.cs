@@ -13,34 +13,40 @@ namespace ProjectEta.Run
         }
 
         public static int GetCardPurchasePrice(PieceGrade grade, int phase, int stage)
+        { // 기존 가격 호출
+            return GetCardPurchasePrice(grade, phase, stage, RunBalanceProfile.Current); // 실제 설정 적용
+        } // 기존 호출 종료
+
+        public static int GetCardPurchasePrice(PieceGrade grade, int phase, int stage, RunBalanceProfile profile) // 조정 전후 비교 가격
         {
-            int basePrice = GetGradeBasePrice(grade); // 등급 기본 가격 조회
+            profile = profile ?? RunBalanceProfile.Current; // 설정 누락 기본값
+            int basePrice = grade == PieceGrade.OneStar ? profile.oneStarPrice : GetGradeBasePrice(grade); // 등급 기본 가격 조회
             int safePhase = NormalizePhase(phase); // 페이즈 범위 보정
             int safeStage = NormalizeStage(stage); // 스테이지 범위 보정
-            int phaseSurcharge = (safePhase - 1) * 5; // 후반 페이즈 가격 가산
-            int stageSurcharge = ((safeStage - 1) / 3) * 3; // 스테이지 구간 가격 가산
-            return basePrice + phaseSurcharge + stageSurcharge; // 최종 구매 가격 반환
+            long phaseSurcharge = (safePhase - 1) * (long)UnityEngine.Mathf.Max(0, profile.purchasePhaseStep); // 후반 페이즈 가격 가산
+            long stageSurcharge = ((safeStage - 1) / 3) * (long)UnityEngine.Mathf.Max(0, profile.purchaseStageStep); // 스테이지 구간 가격 가산
+            return RunBalanceProfile.ClampCost((long)basePrice + phaseSurcharge + stageSurcharge); // 최종 구매 가격 반환
         }
 
         public static int GetCardRemovePrice(int phase)
         {
             int safePhase = NormalizePhase(phase); // 페이즈 범위 보정
-            return 35 + (safePhase - 1) * 5; // 후반 제거 비용 증가
+            return RunBalanceProfile.ClampCost((long)RunBalanceProfile.Current.removePrice + (safePhase - 1) * (long)UnityEngine.Mathf.Max(0, RunBalanceProfile.Current.removePhaseStep)); // 후반 제거 비용 증가
         }
 
         public static int GetHealPrice(int phase)
         {
             int safePhase = NormalizePhase(phase); // 페이즈 범위 보정
-            return 20 + (safePhase - 1) * 4; // 후반 회복 비용 증가
+            return RunBalanceProfile.ClampCost((long)RunBalanceProfile.Current.healPrice + (safePhase - 1) * (long)UnityEngine.Mathf.Max(0, RunBalanceProfile.Current.healPhaseStep)); // 후반 회복 비용 증가
         }
 
         public static int GetUpgradePrice(int phase, int stage)
         {
             int safePhase = NormalizePhase(phase); // 페이즈 범위 보정
             int safeStage = NormalizeStage(stage); // 스테이지 범위 보정
-            int phaseSurcharge = (safePhase - 1) * 8; // 후반 페이즈 강화 가산
-            int stageSurcharge = ((safeStage - 1) / 5) * 5; // 후반 스테이지 강화 가산
-            return 45 + phaseSurcharge + stageSurcharge; // 최종 강화 가격 반환
+            long phaseSurcharge = (safePhase - 1) * (long)UnityEngine.Mathf.Max(0, RunBalanceProfile.Current.upgradePhaseStep); // 후반 페이즈 강화 가산
+            long stageSurcharge = ((safeStage - 1) / 5) * (long)UnityEngine.Mathf.Max(0, RunBalanceProfile.Current.upgradeStageStep); // 후반 스테이지 강화 가산
+            return RunBalanceProfile.ClampCost((long)RunBalanceProfile.Current.upgradePrice + phaseSurcharge + stageSurcharge); // 최종 강화 가격 반환
         }
 
         private static int GetGradeBasePrice(PieceGrade grade)

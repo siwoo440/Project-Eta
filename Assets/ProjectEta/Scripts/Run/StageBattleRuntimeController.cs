@@ -14,6 +14,7 @@ namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이
     public sealed class StageBattleRuntimeController : MonoBehaviour // StageDefinition의 RoundDefinition을 현재 새 BattleState에 적용하는 런타임
     {
         private const string PieceCatalogResourceName = "PlayerStartingDeck26"; // 26종 PieceDefinition 카탈로그 Resources 이름
+        private const string RunContentResourceName = "RunContent"; // 전체 기물 DB를 연결한 런 콘텐츠 Resources 이름
         private readonly HashSet<int> _processedReinforcementIndices = new HashSet<int>(); // 이번 스테이지에서 처리한 증원 인덱스
         private BattleController _battleController; // 실제 전투 상태 소유자
         private BoardInputController _boardInputController; // 적 PieceView 생성 진입점
@@ -23,6 +24,7 @@ namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이
         private StageDefinition _stageDefinition; // 선택한 실제 스테이지 설정
         private RoundDefinition _roundDefinition; // 스테이지가 재사용하는 기존 라운드 설정
         private PlayerStartingDeckCatalog _pieceCatalog; // PieceId→PieceDefinition 조회 카탈로그
+        private PieceDatabase _pieceDatabase; // 일반·정예 적 후보 전체 기물 DB
         private bool _configured; // 중복 설정 방지 상태
 
         public StageDefinition StageDefinition => _stageDefinition; // 현재 적용 중인 StageDefinition 공개
@@ -42,6 +44,8 @@ namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이
             _stageDefinition = stageDefinition; // 선택 StageDefinition 저장
             _roundDefinition = stageDefinition.RoundDefinition; // 연결된 기존 RoundDefinition 저장
             _pieceCatalog = Resources.Load<PlayerStartingDeckCatalog>(PieceCatalogResourceName); // PieceDefinition 카탈로그 로드
+            RunContentCatalog runContent = Resources.Load<RunContentCatalog>(RunContentResourceName); // 전체 런 콘텐츠 로드
+            _pieceDatabase = runContent != null ? runContent.PieceDatabase : null; // 적 후보 전체 기물 DB 연결
 
             if (_runState == null || _turnManager == null || _boardInputController == null || _boardView == null) // 필수 런타임 객체 확인
             {
@@ -121,7 +125,7 @@ namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이
                 return; // 생성 Encounter 적용 중단
             }
 
-            int spawned = 0; // 실제 생성 적 수 초기화
+            var spawnedPieces = new List<PieceRuntimeState>(); // 원자적 적용을 위한 실제 생성 적 목록
             for (int i = 0; i < encounter.Spawns.Count; i++)
             {
                 EnemyEncounterSpawn spawn = encounter.Spawns[i]; // 현재 Encounter 배치 조회
@@ -129,22 +133,31 @@ namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이
 
                 PieceRuntimeState runtimePiece = _boardInputController.SpawnTestEnemy(spawn.Piece, spawn.Position); // 기존 보드·PieceView 생성 경로 사용
                 if (runtimePiece == null) continue; // 점유·경계 실패 제외
-                spawned++; // 실제 생성 수 누적
+                spawnedPieces.Add(runtimePiece); // 실제 생성 기물 보존
                 Debug.Log($"73일차 Encounter 적: {spawn.Piece.DisplayName} @ {spawn.Position}"); // 생성 결과 기록
             }
 
-            if (spawned <= 0)
+            if (spawnedPieces.Count != encounter.Spawns.Count)
             {
-                Debug.LogWarning("73일차 Encounter 적 생성 실패: 기존 RoundDefinition 편성으로 대체합니다."); // 전체 생성 실패 기록
+                for (int index = 0; index < spawnedPieces.Count; index++) // 부분 생성 적 순회
+                { // 범위 시작
+                    _boardInputController.RollbackSpawnedEnemy(spawnedPieces[index]); // 보드 점유와 화면 등록을 함께 롤백
+                } // 범위 종료
+                Debug.LogWarning("96일차 Encounter 일부 생성 실패: 부분 배치를 정리하고 기존 RoundDefinition 편성으로 대체합니다."); // 원자성 실패 기록
                 SpawnInitialEnemies(); // 기존 편성으로 안전 대체
                 return; // 후속 로그 생략
             }
 
-            Debug.Log($"73일차 Enemy Encounter: Type={_stageDefinition.StageType} / Phase={phase} / Stage={stage} / Seed={encounter.Seed} / Requested={encounter.Spawns.Count} / Spawned={spawned} / Threat={encounter.ThreatScore}"); // Encounter 재현 정보 기록
+            RunBalanceTelemetry.RecordEncounter(_runState, encounter); // 실제 배치 완료 편성 난이도 기록
+            Debug.Log($"96일차 Enemy Encounter: Profile={encounter.ProfileId} / Type={_stageDefinition.StageType} / Phase={phase} / Stage={stage} / Seed={encounter.Seed} / Spawned={spawnedPieces.Count} / Threat={encounter.ThreatScore}"); // 편성 원형과 재현 정보 기록
         }
 
         private List<PieceDefinition> BuildEnemySourcePool() // 카탈로그·Resources에서 일반 적 후보 수집
         {
+            if (_pieceDatabase != null) // 전체 기물 DB 연결 확인
+            { // 범위 시작
+                return EnemyEncounterRules.BuildPool(_pieceDatabase.Definitions); // 표본과 같은 전체 DB 후보 반환
+            } // 범위 종료
             var pool = new List<PieceDefinition>(); // 적 후보 Pool 생성
 
             for (int i = 0; i < _pieceCatalog.Cards.Count; i++)
@@ -158,7 +171,7 @@ namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이
                 AddEnemyCandidate(pool, resources[i]); // 독립 적 기물 후보 등록
             }
 
-            return pool; // 일반 적 후보 Pool 반환
+            return EnemyEncounterRules.BuildPool(pool); // 중복과 정책을 보정한 대체 후보 반환
         }
 
         private static void AddEnemyCandidate(List<PieceDefinition> pool, PieceDefinition definition) // 일반 Enemy Pool 후보 등록

@@ -20,23 +20,27 @@ namespace ProjectEta.Run
             int safePhase = Mathf.Clamp(phase, RunPhaseProgressService.FirstPhase, RunPhaseProgressService.TotalPhases); // Phase 범위 보정
             int safeStage = Mathf.Clamp(stage, RoundState.FirstRound, RoundState.FinalRound); // Stage 범위 보정
             int seed = CreateStableSeed(mapSeed, safePhase, safeStage, nodeId, stageType); // 재현 가능한 Encounter Seed 생성
+            EnemyEncounterProfile profile = EnemyEncounterProfileCatalog.Select(stageType, seed); // 일반 5종·정예 3종 원형 선택
+            string profileId = profile != null ? profile.ProfileId : string.Empty; // 측정 가능한 원형 ID 보정
+            string encounterId = CreateEncounterId(seed, safePhase, safeStage, stageType, profileId); // 저장 가능한 편성 고유 ID 생성
             List<PieceDefinition> candidates = BuildCandidatePool(sourcePool); // 적 후보 Pool 생성
             var spawns = new List<EnemyEncounterSpawn>(); // 결과 배치 목록 생성
 
             if (roundDefinition == null || candidates.Count <= 0)
             {
-                return new EnemyEncounterResult(seed, stageType, safePhase, safeStage, nodeId, spawns, 0); // 생성 불가 시 빈 Encounter 반환
+                return new EnemyEncounterResult(seed, stageType, safePhase, safeStage, nodeId, profileId, encounterId, spawns, 0); // 생성 불가 시 빈 Encounter 반환
             }
 
             int baseCount = CountAuthoredEnemies(roundDefinition); // 기존 Round 적 수 조회
             bool elite = stageType == StageType.Elite; // Elite 여부 계산
-            int requestedCount = Mathf.Max(1, baseCount) + (elite ? EnemyEncounterRules.GetEliteExtraEnemyCount(safePhase, safeStage) : 0); // 최종 적 수 계산
+            int profileBonus = profile != null ? profile.EnemyCountBonus : 0; // 원형별 추가 적 수 조회
+            int requestedCount = Mathf.Max(1, baseCount) + profileBonus + (elite ? EnemyEncounterRules.GetEliteExtraEnemyCount(safePhase, safeStage) : 0); // 최종 적 수 계산
             var usedCells = new HashSet<int>(); // Encounter 점유 Cell 집합 생성
             int threatScore = 0; // 전체 위협도 초기화
 
             for (int i = 0; i < requestedCount; i++)
             {
-                PieceDefinition piece = SelectPiece(candidates, seed, safePhase, elite, i); // 진행도·Seed 기반 적 선택
+                PieceDefinition piece = SelectPiece(candidates, seed, safePhase, elite, i, profile); // 진행도·원형·Seed 기반 적 선택
                 if (piece == null) continue; // 선택 실패 항목 제외
 
                 if (!TryResolveSpawnCell(roundDefinition, usedCells, seed, i, baseCount, elite, out Vector2Int position))
@@ -49,8 +53,14 @@ namespace ProjectEta.Run
                 threatScore += EnemyEncounterRules.GetPieceThreatScore(piece); // 위협도 누적
             }
 
-            return new EnemyEncounterResult(seed, stageType, safePhase, safeStage, nodeId, spawns, threatScore); // 생성 결과 반환
+            return new EnemyEncounterResult(seed, stageType, safePhase, safeStage, nodeId, profileId, encounterId, spawns, threatScore); // 원형 포함 생성 결과 반환
         }
+
+        public static string CreateEncounterId(int seed, int phase, int stage, StageType stageType, string profileId) // 재현과 측정에 사용할 편성 ID 생성
+        { // 범위 시작
+            string safeProfileId = string.IsNullOrWhiteSpace(profileId) ? "fallback" : profileId; // 빈 원형 ID 보정
+            return phase + ":" + stage + ":" + stageType + ":" + safeProfileId + ":" + seed.ToString("X8"); // 사람이 확인 가능한 안정 ID 반환
+        } // 범위 종료
 
         public static int CreateStableSeed(int mapSeed, int phase, int stage, string nodeId, StageType stageType)
         {
@@ -113,7 +123,7 @@ namespace ProjectEta.Run
             return count; // 기존 유효 적 수 반환
         }
 
-        private static PieceDefinition SelectPiece(List<PieceDefinition> candidates, int seed, int phase, bool elite, int index)
+        private static PieceDefinition SelectPiece(List<PieceDefinition> candidates, int seed, int phase, bool elite, int index, EnemyEncounterProfile profile) // 편성 역할과 진행도 기반 적 선택
         {
             if (candidates == null || candidates.Count <= 0) return null; // 후보 누락 시 선택 실패
 
@@ -121,15 +131,29 @@ namespace ProjectEta.Run
             int maximum = EnemyEncounterRules.GetMaximumCandidateIndex(candidates.Count, phase); // 현재 진행도 최대 후보 인덱스 조회
             if (minimum > maximum) minimum = maximum; // 잘못된 범위 보정
 
-            if (elite && index == 0)
-            {
-                return candidates[maximum]; // Elite 핵심 적은 현재 범위 최상위 기물 선택
-            }
+            PieceRoleTag preferredRole = profile != null ? profile.GetPreferredRole(index) : PieceRoleTag.None; // 현재 순번 우선 역할 조회
+            var matchingIndices = new List<int>(); // 진행도 범위 안 역할 일치 후보
+            for (int candidateIndex = minimum; candidateIndex <= maximum; candidateIndex++) // 현재 페이즈 허용 범위 순회
+            { // 범위 시작
+                PieceDefinition candidate = candidates[candidateIndex]; // 현재 역할 검사 후보
+                if (preferredRole != PieceRoleTag.None && (candidate.RoleTags & preferredRole) == 0) continue; // 요구 역할 없는 후보 제외
+                matchingIndices.Add(candidateIndex); // 역할 일치 후보 인덱스 등록
+            } // 범위 종료
 
-            int width = maximum - minimum + 1; // 선택 후보 폭 계산
+            if (elite && index == 0 && matchingIndices.Count > 0) // 정예 핵심 적 순번 확인
+            { // 범위 시작
+                return candidates[matchingIndices[matchingIndices.Count - 1]]; // 정예 핵심 적은 역할 범위 최상위 기물 선택
+            } // 범위 종료
+
             int mixed = unchecked(seed + index * 1103515245 + phase * 97); // 항목별 결정 Seed 혼합
-            int offset = PositiveModulo(mixed, width); // 범위 내 결정 오프셋 계산
-            return candidates[minimum + offset]; // 결정된 적 기물 반환
+            if (matchingIndices.Count > 0) // 역할 일치 후보 존재 확인
+            { // 범위 시작
+                int matchingOffset = PositiveModulo(mixed, matchingIndices.Count); // 역할 후보 안 결정 오프셋
+                return candidates[matchingIndices[matchingOffset]]; // 역할에 맞는 적 기물 반환
+            } // 범위 종료
+            int width = maximum - minimum + 1; // 역할 후보 부족 시 전체 선택 폭
+            int fallbackOffset = PositiveModulo(mixed, width); // 전체 범위 결정 오프셋
+            return candidates[minimum + fallbackOffset]; // 역할 부족 안전 대체 기물 반환
         }
 
         private static bool TryResolveSpawnCell(

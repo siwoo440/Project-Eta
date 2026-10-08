@@ -14,6 +14,11 @@ namespace ProjectEta.Run
     {
         private int _kingHp; // 킹 체력 내부 값
 
+        public RunBalanceData BalanceData // 해당 런의 경제 측정 기록
+        { // 측정 상태 속성 범위
+            get; // 현재 런 측정 기록 조회
+            private set; // 생성과 복원에서만 기록 교체
+        } // 측정 상태 속성 종료
         public string RunId { get; private set; } // 메타 보상 중복 방지용 런 고유 ID
         public BattleState Battle { get; private set; } // 현재 전투 임시 상태
         public RoundState Round { get; } // 현재 1~10라운드 진행 상태
@@ -53,6 +58,7 @@ namespace ProjectEta.Run
             Flow = new RunFlowState(); // 전투 모드 런 흐름 생성
             RouteMap = new RouteMapState(); // 빈 경로 지도 상태 생성
             Deck = new DeckState(); // 새 덱 상태 생성
+            BalanceData = new RunBalanceData(); // 새 런 측정 기록
             FusionDiscovery = new FusionDiscoveryLog(); // 합성 발견 기록 생성
         }
 
@@ -115,6 +121,7 @@ namespace ProjectEta.Run
                 runCurrency = economy != null ? economy.Currency : RunEconomyRules.StartingCurrency, // 런 Gold 기록
                 selectedKingArchetype = kingState != null ? (int)kingState.Archetype : (int)KingArchetype.Default, // 선택 킹 기록
                 currentStageDefinitionId = ResolveCurrentStageDefinitionId(), // 현재 스테이지 정의 ID 기록
+                balanceData = BalanceData.Copy(), // 독립된 측정 저장 스냅샷
                 routeMap = RouteMap.ToSaveData() // 현재 지도·위치·선택 경로 기록
             };
 
@@ -194,6 +201,7 @@ namespace ProjectEta.Run
             int restoredKingHp = data.kingHp < 0 ? 0 : data.kingHp; // 저장 킹 HP 음수만 보정
             var runState = new RunState(restoredKingHp)
             {
+                BalanceData = data.balanceData?.Copy() ?? new RunBalanceData(), // 구버전과 측정 기록 복원
                 MetaCurrency = data.metaCurrency // 기존 런 세이브 호환 재화 복원
             };
 

@@ -75,7 +75,12 @@ namespace ProjectEta.Run
             if (runState == null || runState.CurrentFlowPhase != RunFlowPhase.Battle) return false; // 런 누락·전투 외 결과 처리 차단
             if (outcome == BattleOutcome.None) return false; // 미결정 전투 결과 차단
 
-            runState.RecordBattleOutcome(outcome); // 전투 결과를 라운드 상태에 먼저 기록
+            runState.RecordBattleOutcome(outcome); // 승패 확정 기록
+            if (outcome == BattleOutcome.Victory) // 실제 승리 여부 확인
+            { // 승리 보상 범위
+                RunBattleGoldRewardService.TryGrant(runState); // 페이즈 전환 전에 Gold 한 번 지급
+            } // 승리 보상 종료
+
 
             if (outcome == BattleOutcome.Defeat)
             {

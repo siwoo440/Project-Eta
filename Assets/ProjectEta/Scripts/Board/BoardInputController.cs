@@ -410,6 +410,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
             if (_selectedCard == materialA || _selectedCard == materialB) _selectedCard = null; // 합성에 쓰인 카드가 숫자키로 선택돼 있었다면 선택 해제
 
             Debug.Log($"합성: {materialA.DisplayName} + {materialB.DisplayName} -> {recipe.Result.DisplayName}"); // 합성 결과를 콘솔에 출력
+            RunBalanceTelemetry.RecordFusion(_runState, recipe, _turnManager?.TurnNumber ?? 0); // 실제 합성 완료 시점 기록
             FusionCompleted?.Invoke(recipe); // 실제 합성 성공 이벤트 전달
 
             if (_runState != null && _runState.FusionDiscovery.TryMarkDiscovered(recipe)) // 22일차: 숨김 레시피를 이번 합성으로 처음 성공시켰으면
@@ -1292,6 +1293,29 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
             return SpawnPiece(definition, tileState, isPlayerPiece: false, objectName: "Piece(Enemy)"); // 적 기물로 생성하고 보드·화면에 등록
         }
+
+        public bool RollbackSpawnedEnemy(PieceRuntimeState piece) // 편성 적용 실패 시 생성 적 완전 제거
+        { // 범위 시작
+            if (!IsBound || piece == null || piece.IsPlayerPiece) // 연결 상태와 적 기물 확인
+            { // 범위 시작
+                return false; // 잘못된 롤백 요청 거부
+            } // 범위 종료
+            bool hadView = _pieceViews.TryGetValue(piece, out PieceView pieceView); // 화면 등록 존재 여부 조회
+            int clearedCells = _runState.Board.ClearPiece(piece); // 보드 전체 점유 제거
+            _pieceViews.Remove(piece); // 화면 등록 참조 제거
+            if (pieceView != null) // 제거할 화면 오브젝트 확인
+            { // 범위 시작
+                if (Application.isPlaying) // 실제 플레이 실행 상태 확인
+                { // 범위 시작
+                    Destroy(pieceView.gameObject); // 현재 프레임 종료 시 화면 오브젝트 제거
+                } // 범위 종료
+                else // 에디터 테스트 실행 상태
+                { // 범위 시작
+                    DestroyImmediate(pieceView.gameObject); // 에디터 화면 오브젝트 즉시 제거
+                } // 범위 종료
+            } // 범위 종료
+            return clearedCells > 0 || hadView; // 실제 점유 또는 화면 제거 성공 반환
+        } // 범위 종료
 
         private PieceRuntimeState SpawnPiece(PieceDefinition definition, TileState tileState, bool isPlayerPiece, string objectName) // 기물 런타임 상태와 화면 표시를 함께 만드는 공용 메서드
         {

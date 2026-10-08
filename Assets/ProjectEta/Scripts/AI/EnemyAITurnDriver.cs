@@ -105,6 +105,7 @@ namespace ProjectEta.AI // 적 AI 관련 타입을 모아두는 네임스페이�
             if (_bossPhase2Controller != null && _bossPhase2Controller.TryHandleEnemyTurn()) // Phase 2 보스가 예고 또는 예고 공격으로 이번 EnemyTurn을 소비했다면
             {
                 LastTurnPerformanceStats = EnemyAIPerformanceStats.Empty; // 일반 AI를 계산하지 않은 턴임을 F1 통계에 명확히 표시
+                BattleController.FinalizeCompletedBattle(_battleController.RunState, _turnManager); // 범위 공격 왕 처치의 런 패배 처리
                 _enemyTurnCoroutine = null; // 현재 적 턴 코루틴 참조 정리
                 yield break; // 같은 턴에 일반 적·Phase 1 보스가 추가 행동하지 않도록 즉시 종료
             }
@@ -179,6 +180,7 @@ namespace ProjectEta.AI // 적 AI 관련 타입을 모아두는 네임스페이�
                 CompleteTurnWithoutAction(); // 턴 교착 없이 정상 종료
             }
 
+            BattleController.FinalizeCompletedBattle(_battleController.RunState, _turnManager); // 일반 AI·보스 직접 왕 처치의 런 패배 처리
             _enemyTurnCoroutine = null; // 이번 적 턴 처리 완료 후 참조 정리
         }
 

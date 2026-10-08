@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64b0d7d0b20343e29c812f6ee9748257, type: 3}
+  m_Name: RunBalance96
+  m_EditorClassIdentifier:
+  _materialWeights:
+  - pieceId: alfil
+    weight: 100
+  - pieceId: bishop
+    weight: 100
+  - pieceId: camel
+    weight: 100
+  - pieceId: dabbaba
+    weight: 100
+  - pieceId: ferz
+    weight: 100
+  - pieceId: flag_bearer
+    weight: 100
+  - pieceId: knight
+    weight: 100
+  - pieceId: pawn
+    weight: 100
+  - pieceId: pursuer
+    weight: 100
+  - pieceId: queen
+    weight: 100
+  - pieceId: rook
+    weight: 100
+  - pieceId: scout
+    weight: 100
+  - pieceId: shield_guard
+    weight: 100
+  - pieceId: shooter
+    weight: 100
+  - pieceId: spearman
+    weight: 100
+  - pieceId: wazir
+    weight: 100
+  - pieceId: zebra
+    weight: 100
+  _profileId: day96-baseline
+  startingGold: 100
+  oneStarPrice: 25
+  purchasePhaseStep: 5
+  purchaseStageStep: 3
+  removePrice: 35
+  removePhaseStep: 5
+  healPrice: 20
+  healPhaseStep: 4
+  upgradePrice: 45
+  upgradePhaseStep: 8
+  upgradeStageStep: 5
+  battleGold: 15
+  eliteGold: 25
+  midBossGold: 40
+  finalBossGold: 60
+  rewardPhaseStep: 5

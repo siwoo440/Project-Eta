@@ -1,3 +1,4 @@
+using System.Collections.Generic; // 후보 목록과 중복 ID 집합
 using UnityEngine; // Mathf 사용
 using ProjectEta.Board; // BoardState 크기 사용
 using ProjectEta.Pieces; // PieceDefinition 사용
@@ -6,13 +7,39 @@ namespace ProjectEta.Run
 {
     public static class EnemyEncounterRules
     {
-        public static int EnemyFallbackStartRow => BoardState.Height / 2; // 적 진영 대체 배치 시작 행
+        public static int EnemyFallbackStartRow => Mathf.Max(BoardState.Height / 2, BoardState.Height - 3); // 플레이어 진영과 두 행 이상 떨어진 후방 배치 시작
         public static int EliteFallbackStartRow => Mathf.Max(EnemyFallbackStartRow, BoardState.Height - 2); // Elite 추가 적 후방 배치 시작 행
 
         public static bool CanUsePiece(PieceDefinition piece)
         {
-            return RunContentPoolRules.CanUseAsEnemy(piece); // 공통 Enemy Pool 정책 결과 반환
+            if (!RunContentPoolRules.CanUseAsEnemy(piece)) return false; // 공통 Enemy Pool 정책 검사
+            if (piece.Category != PieceCategory.Monster && piece.Grade > PieceGrade.TwoStar) return false; // 일반·특수 3~5성 플레이어 기물 제외
+            return true; // 1~2성 일반·특수와 적 전용 몬스터 허용
         }
+
+        public static List<PieceDefinition> BuildPool(IEnumerable<PieceDefinition> definitions) // 런타임과 표본 공용 적 후보 생성
+        { // 범위 시작
+            var result = new List<PieceDefinition>(); // 필터된 후보 목록 생성
+            var pieceIds = new HashSet<string>(); // 기물 ID 중복 차단 집합 생성
+            if (definitions == null) // 원본 목록 존재 확인
+            { // 범위 시작
+                return result; // 빈 후보 목록 반환
+            } // 범위 종료
+            foreach (PieceDefinition definition in definitions) // 실제 기물 원본 순회
+            { // 범위 시작
+                if (!CanUsePiece(definition)) // 일반·정예 허용 정책 확인
+                { // 범위 시작
+                    continue; // 금지 기물 제외
+                } // 범위 종료
+                string pieceId = definition.PieceId ?? string.Empty; // 중복 확인용 ID 보정
+                if (!pieceIds.Add(pieceId)) // 같은 기물 ID 등록 여부 확인
+                { // 범위 시작
+                    continue; // 중복 후보 제외
+                } // 범위 종료
+                result.Add(definition); // 허용 후보 등록
+            } // 범위 종료
+            return result; // 공용 적 후보 반환
+        } // 범위 종료
 
         public static int GetPieceThreatScore(PieceDefinition piece)
         {

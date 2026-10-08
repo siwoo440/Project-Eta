@@ -160,8 +160,27 @@ namespace ProjectEta.Battle
             }
 
             _turnManager.EndBattle(outcome); // 먼저 BattleEnded 이벤트를 발행해 카드 보상 등 기존 구독자에게 결과 전달
-            RunStageFlowService.CompleteBattle(_runState, outcome); // TurnManager 결과를 RunState Map·Completed·Failed 흐름과 동기화
+            FinalizeCompletedBattle(_runState, _turnManager); // 이벤트 뒤 측정·지도·완료 흐름 공통 처리
         }
+
+        public static bool FinalizeCompletedBattle(RunState runState, TurnManager turnManager) // BattleController·AI·보스 공통 전투 완료 진입점
+        { // 범위 시작
+            if (runState == null || turnManager == null) // 필수 전투 상태 확인
+            { // 범위 시작
+                return false; // 필수 전투 상태 누락 차단
+            } // 범위 종료
+            if (turnManager.CurrentState != TurnState.BattleEnded || turnManager.Outcome == BattleOutcome.None) // 확정 전투 결과 확인
+            { // 범위 시작
+                return false; // 확정 결과 이전 호출 차단
+            } // 범위 종료
+            if (runState.CurrentFlowPhase != RunFlowPhase.Battle) // 현재 전투 흐름 확인
+            { // 범위 시작
+                return false; // 이미 처리한 전투 결과 중복 차단
+            } // 범위 종료
+            ApplyOutcomeState(runState, turnManager.Outcome); // 외부 AI 종료도 왕 상태 동일 규칙 적용
+            RunBalanceTelemetry.RecordBattleResult(runState, turnManager.Outcome, turnManager.TurnNumber); // 전환 전 실제 승패·턴·왕 체력 기록
+            return RunStageFlowService.CompleteBattle(runState, turnManager.Outcome); // RunState 지도·완료·실패 흐름 동기화
+        } // 범위 종료
 
         public static void ApplyOutcomeState(RunState runState, BattleOutcome outcome) // 전투 종료 상태의 단일 소유 규칙
         {

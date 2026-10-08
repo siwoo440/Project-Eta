@@ -8,6 +8,7 @@ namespace ProjectEta.Run
     {
         public const int CurrentVersion = 2; // 51일차 런 세이브 포맷 버전
 
+        public RunBalanceData balanceData; // 선택적 경제 측정 기록
         public int saveVersion; // 저장 포맷 버전
         public string runId; // 51일차 런 고유 ID
         public int kingHp; // 저장 시점 킹 체력

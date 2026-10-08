@@ -57,7 +57,7 @@ namespace ProjectEta.Run
             }
         }
 
-        private static CardRewardProfile CreateShopProfile(int phase, int stage)
+        public static CardRewardProfile CreateShopProfile(int phase, int stage)
         {
             int progress = (phase - 1) * RoundState.FinalRound + stage; // 전체 런 진행도 계산
 

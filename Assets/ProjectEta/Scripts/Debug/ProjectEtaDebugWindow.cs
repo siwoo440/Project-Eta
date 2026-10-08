@@ -345,6 +345,22 @@ namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
             DrawKeyValue("Hand", runState.Hand.Hand.Count.ToString()); // 손패 수 출력
             DrawKeyValue("Gold", GetCurrencyText(runState)); // 런 재화 출력
             EndSection(); // 카드·재화 구역 종료
+            BeginSection("96일차 경제 측정"); // 측정 구역 시작
+            GUILayout.Label(RunBalanceReport.BuildSummary(runState)); // 실제 런 기록 요약
+            if (GUILayout.Button("측정 JSON / CSV 저장")) // 사용자 내보내기 선택
+            { // 범위 시작
+                try // 파일 저장 시도
+                { // 범위 시작
+                    string directory = System.IO.Path.Combine(Application.persistentDataPath, "BalanceReports"); // 사용자 측정 폴더
+                    string path = RunBalanceReport.Export(runState, directory); // 현재 기록 내보내기
+                    UnityEngine.Debug.Log("96일차 측정 저장: " + path); // 저장 경로 안내
+                } // 범위 종료
+                catch (System.Exception exception) // 파일 접근 실패 확인
+                { // 범위 시작
+                    UnityEngine.Debug.LogError("96일차 측정 저장 실패: " + exception.Message); // 재시도 근거 안내
+                } // 범위 종료
+            } // 범위 종료
+            EndSection(); // 측정 구역 종료
             GUILayout.EndScrollView(); // 상태 스크롤 종료
         } // 메서드 종료
 

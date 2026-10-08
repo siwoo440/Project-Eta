@@ -118,6 +118,16 @@ namespace ProjectEta.Run
                 _runState.RouteMap.CurrentNodeId,
                 _runState.Deck.DeadCardPile); // Phase·Stage·Node·전체 소유 카드 기반 상품 생성
 
+            var cards = new List<PieceDefinition>(); // 상품 후보 기록 목록
+            foreach (var offer in generated) // 실제 상품 순회
+            { // 범위 시작
+                if (offer?.Card != null) // 유효 카드 확인
+                { // 범위 시작
+                    cards.Add(offer.Card); // 후보 카드 추가
+                } // 범위 종료
+            } // 범위 종료
+            int offerSeed = ShopOfferGenerator.CreateSeed(_runState.RouteMap.MapSeed, phase, _runState.CurrentRound, _runState.RouteMap.CurrentNodeId, _runState.Deck.OwnedCardPool.Count); // 상품 생성 Seed
+            RunBalanceTelemetry.RecordOffers(_runState, "Shop", offerSeed, cards); // 상점 후보 기록
             for (int i = 0; i < generated.Count; i++)
             {
                 ShopOffer offer = generated[i]; // 현재 생성 상품 조회
@@ -484,13 +494,15 @@ namespace ProjectEta.Run
                 _eventScenario.Definition.Id,
                 _pendingEventChoice.Id); // 이벤트·선택지 기반 카드 Seed 생성
             CardRewardProfile profile = StageEventRules.GetCardRewardProfile(phase, _runState.CurrentRound); // 진행도 기반 이벤트 카드 품질 조회
-            return CardRewardGenerator.Generate(
+            var candidates = CardRewardGenerator.Generate(
                 _cardCatalog.Cards,
                 _runState.Deck.OwnedCardPool,
                 _runState.Deck.DeadCardPile,
                 StageEventRules.EventCardChoiceCount,
                 seed,
                 profile); // 이벤트 카드 후보 생성
+            RunBalanceTelemetry.RecordOffers(_runState, "Event:" + _pendingEventChoice.Id, seed, candidates); // 이벤트 후보 기록
+            return candidates; // 실제 후보 반환
         }
 
         private string BuildEventCardDescription(PieceDefinition card)

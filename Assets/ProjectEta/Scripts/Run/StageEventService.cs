@@ -1,3 +1,4 @@
+using ProjectEta.Meta; // 런 시작 해금 상태 검증
 using ProjectEta.Pieces; // PieceDefinition 사용
 
 namespace ProjectEta.Run
@@ -54,7 +55,7 @@ namespace ProjectEta.Run
                 case StageEventChoiceEffectType.HealKing:
                     return TryResolveFreeHeal(runState, choice, maxKingHp, out resolution); // 무료 회복 처리
                 case StageEventChoiceEffectType.CurrencyGain:
-                    economy.Add(StageEventRules.GoldCacheCurrency); // 이벤트 Gold 보상 지급
+                    economy.Add(StageEventRules.GoldCacheCurrency, "EventGold"); // 이벤트 Gold 보상 지급
                     resolution = new StageEventResolution(
                         StageEventFollowUp.Complete,
                         new StageChoiceResult(StageChoiceEffectType.CurrencyChanged, choice.Title, StageEventRules.GoldCacheCurrency, 0, null)); // Gold 획득 결과 생성
@@ -69,15 +70,22 @@ namespace ProjectEta.Run
             }
         }
 
-        public static bool TryTakeEventCard(RunState runState, RunEconomyState economy, PieceDefinition card, StageEventChoice choice, out StageChoiceResult result)
+        public static bool TryTakeEventCard(RunState runState, RunEconomyState economy, PieceDefinition card, StageEventChoice choice, out StageChoiceResult result, RunContentUnlockSnapshot snapshot = null) // 런 고정 해금 기반 획득
         {
             result = null; // 기본 실패 결과 초기화
             if (runState == null || economy == null || card == null || choice == null) return false; // 필수 카드 이벤트 상태 누락 차단
+
+            snapshot = snapshot ?? RunContentUnlockSnapshotService.GetOrCreate(runState, MetaProgressService.Current); // 전달된 런의 고정 해금 상태
+            if (!CardRewardRules.CanOffer(card, runState.Deck.OwnedCardPool, runState.Deck.DeadCardPile) || !MetaContentAvailabilityService.IsPieceAvailable(card, snapshot)) // 일반 획득과 실제 해금 정책 검사
+            { // 잘못된 카드 차단
+                return false; // 비용과 카드 변경 없이 거부
+            } // 획득 정책 검사 종료
 
             if (choice.EffectType == StageEventChoiceEffectType.CardReward)
             {
                 if (!CardRewardRules.TryAddOwnedCard(runState.Deck, card)) return false; // 무료 카드 획득 실패 차단
                 result = new StageChoiceResult(StageChoiceEffectType.CardAdded, $"{card.DisplayName} 획득", 0, 0, card); // 무료 카드 결과 생성
+                RunBalanceTelemetry.RecordCard(runState, card, "Event:CardReward"); // 무료 카드 획득 기록
                 return true; // 무료 카드 획득 성공 반환
             }
 
@@ -86,28 +94,30 @@ namespace ProjectEta.Run
                 if (runState.KingHp <= 1) return false; // 위험 이벤트 즉사 차단
                 if (!CardRewardRules.TryAddOwnedCard(runState.Deck, card)) return false; // 카드 추가 실패 시 비용 미적용
                 runState.KingHp -= 1; // 위험 계약 HP 비용 적용
-                economy.Add(StageEventRules.RiskRewardCurrency); // 위험 계약 Gold 보상 지급
+                economy.Add(StageEventRules.RiskRewardCurrency, "EventRisk"); // 위험 계약 Gold 보상 지급
                 result = new StageChoiceResult(
                     StageChoiceEffectType.Mixed,
                     $"위험한 계약: {card.DisplayName} 획득",
                     StageEventRules.RiskRewardCurrency,
                     -1,
                     card); // 위험 계약 최종 결과 생성
+                RunBalanceTelemetry.RecordCard(runState, card, "Event:RiskReward"); // 위험 계약 카드 기록
                 return true; // 위험 계약 성공 반환
             }
 
             if (choice.EffectType == StageEventChoiceEffectType.PurchaseCard)
             {
                 int price = StageEventRules.TravelingMerchantCardPrice; // 이벤트 카드 가격 조회
-                if (!economy.TrySpend(price)) return false; // Gold 부족 구매 차단
+                if (!economy.TrySpend(price, "EventPurchase")) return false; // Gold 부족 구매 차단
 
                 if (!CardRewardRules.TryAddOwnedCard(runState.Deck, card))
                 {
-                    economy.Add(price); // 카드 추가 실패 Gold 환불
+                    economy.Add(price, "Refund"); // 카드 추가 실패 Gold 환불
                     return false; // 유료 카드 획득 실패 반환
                 }
 
                 result = new StageChoiceResult(StageChoiceEffectType.CardAdded, $"{card.DisplayName} 구매", -price, 0, card); // 유료 카드 결과 생성
+                RunBalanceTelemetry.RecordCard(runState, card, "Event:Purchase"); // 유료 이벤트 카드 기록
                 return true; // 이벤트 카드 구매 성공 반환
             }
 
@@ -142,7 +152,7 @@ namespace ProjectEta.Run
             resolution = null; // 기본 실패 결과 초기화
             if (runState.KingHp >= maxKingHp) return false; // 최대 HP 유료 회복 차단
             int price = StageEventRules.ShrineHealPrice; // 제단 회복 가격 조회
-            if (!economy.TrySpend(price)) return false; // Gold 부족 회복 차단
+            if (!economy.TrySpend(price, "EventHeal")) return false; // Gold 부족 회복 차단
             int before = runState.KingHp; // 회복 전 HP 저장
             runState.KingHp = System.Math.Min(maxKingHp, runState.KingHp + StageEventRules.HealAmount); // 유료 HP 회복 적용
             resolution = new StageEventResolution(

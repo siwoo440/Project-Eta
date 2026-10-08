@@ -24,6 +24,8 @@ namespace ProjectEta.Run
         private bool _combatVictoryPending; // 전투 승리 후 지도 전환 대기
         private CardRewardSource _pendingBattleRewardSource = CardRewardSource.BattleVictory; // 완료 전투별 대기 보상 경로
         private int _pendingRewardStage = RoundState.FirstRound; // 전투 전환 전 보상 Stage 보존
+        private int _rewardPhase = 1; // 완료 전 페이즈 보존
+        private string _rewardNode = string.Empty; // 완료 전 노드 보존
         private string _pendingRewardProfileId = string.Empty; // StageDefinition 전용 보상 프로필 ID 보존
 
         private IEnumerator Start()
@@ -91,6 +93,8 @@ namespace ProjectEta.Run
             if (completedType == StageType.FinalBoss) return; // Final Boss 승리는 카드 보상 없이 Run Complete 유지
 
             _pendingBattleRewardSource = ResolveBattleRewardSource(completedType); // Battle·Elite·MidBoss 보상 경로 분리
+            _rewardPhase = RunPhaseProgressService.GetCurrentPhase(_runState); // 완료 전 페이즈 기록
+            _rewardNode = _runState.RouteMap.CurrentNodeId; // 완료 전 노드 기록
             _pendingRewardStage = ResolveRewardStage(completedStage, _runState.CurrentRound); // Phase 전환 전 Stage 번호 보존
             _pendingRewardProfileId = completedStage != null ? completedStage.RewardProfileId : string.Empty; // StageDefinition 보상 ID 보존
             _combatVictoryPending = true; // 지도 전환 후 보상 예약
@@ -113,11 +117,18 @@ namespace ProjectEta.Run
                 return; // 후보 생성 중단
             }
 
+            if (source == CardRewardSource.RewardNode) // 비전투 보상 위치 확인
+            { // 범위 시작
+                _rewardPhase = RunPhaseProgressService.GetCurrentPhase(_runState); // 현재 페이즈 기록
+                _rewardNode = _runState.RouteMap.CurrentNodeId; // 현재 노드 기록
+            } // 범위 종료
+            _pendingRewardStage = rewardStage; // 선택 완료 위치 보존
             int safeRewardStage = Mathf.Clamp(rewardStage, RoundState.FirstRound, RoundState.FinalRound); // 보상 계산 Stage 범위 보정
             CardRewardProfile profile = CardRewardQualityRules.GetProfile(safeRewardStage, source, rewardProfileId); // Stage·Source·ProfileId 기반 품질 계산
             int seed = CreateRewardSeed(source, safeRewardStage); // 현재 런 상태 기반 재현 가능한 시드 생성
             var candidates = CardRewardGenerator.Generate(_rewardCatalog.Cards, _runState.Deck.OwnedCardPool, _runState.Deck.DeadCardPile, CandidateCount, seed, profile); // 정상·사망 보유 카드 기반 품질 가중 후보 생성
 
+            RunBalanceTelemetry.RecordOffersAt(_runState, "Reward:" + source, seed, candidates, _rewardPhase, safeRewardStage, _rewardNode); // 실제 보상 후보 기록
             if (candidates.Count == 0)
             {
                 Debug.LogWarning("75일차 카드 보상 후보 없음: 현재 획득 가능한 카드가 없어 보상을 건너뜁니다."); // 보상 풀 소진 기록
@@ -134,7 +145,7 @@ namespace ProjectEta.Run
         {
             unchecked
             {
-                int seed = rewardStage * 73856093; // 실제 보상 Stage 시드 반영
+                int seed = ShopOfferGenerator.CreateSeed(_runState.RouteMap.MapSeed, _rewardPhase, rewardStage, _rewardNode, _runState.Deck.OwnedCardPool.Count); // 지도와 완료 노드 Seed 반영
                 seed ^= _runState.Deck.OwnedCardPool.Count * 19349663; // 현재 보유 카드 수 반영
 
                 switch (source)
@@ -206,6 +217,7 @@ namespace ProjectEta.Run
             }
 
             if (!_rewardState.TrySelect(definition)) return; // 한 보상 두 번째 선택 차단
+            RunBalanceTelemetry.RecordCardAt(_runState, definition, "Reward:" + _rewardState.Source, _rewardPhase, _pendingRewardStage, _rewardNode); // 확정 카드 획득 기록
             CardRewardSource source = _rewardState.Source; // 상태 초기화 전 발생 경로 저장
             _rewardUI.Hide(); // 보상 화면 종료
             Debug.Log($"75일차 카드 보상 획득: {definition.DisplayName} / Grade={definition.Grade} / Owned={_runState.Deck.OwnedCardPool.Count}"); // 획득 결과 기록
