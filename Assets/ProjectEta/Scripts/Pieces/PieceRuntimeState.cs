@@ -14,6 +14,15 @@ namespace ProjectEta.Pieces
         private bool _movedSinceOwnTurnStart;
         private bool _bastionFortifyReady;
         private bool _bastionFortifySpent;
+        public bool PaladinGuardSpent { get; set; } // 이번 턴 대성기사 보호 사용 여부
+        public int LastPaladinResetTurn { get; set; } // 보호 초기화 완료 턴
+        public int LastEmperorDeploymentTurn { get; set; } // 황제 회복 완료 배치 턴
+        public int SageGuardAmount { get; private set; } // 다음 피격 보호 수치
+
+        public void SetSageGuard(int amount) // 다음 피격 보호 설정
+        { // 설정 범위 시작
+            SageGuardAmount = Mathf.Max(0, amount); // 음수 보호 방지
+        } // 설정 범위 종료
 
         public PieceDefinition Definition { get; }
 

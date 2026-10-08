@@ -326,10 +326,10 @@ namespace ProjectEta.Battle
 
         private void HandleTurnChanged(TurnState state, int turnNumber)
         {
-            if (state == TurnState.PlayerTurn)
-            {
-                _battleHooks?.RaiseTurnStart(state, turnNumber); // 새 일반 턴 시작 훅 발행
-            }
+            if (state == TurnState.PlayerTurn || state == TurnState.DeploymentTurn) // 일반 턴과 배치 진입 확인
+            { // 턴 시작 범위
+                _battleHooks?.RaiseTurnStart(state, turnNumber, _runState); // 배치 회복과 일반 턴 보호 갱신
+            } // 턴 시작 범위 종료
 
             if (state == TurnState.EnemyTurn)
             {
@@ -395,9 +395,27 @@ namespace ProjectEta.Battle
 
             _boardInputController.AttackResolved -= HandleAttackResolved; // 중복 공격 결과 구독 제거
             _boardInputController.AttackResolved += HandleAttackResolved; // 킹 HP·승패 판정 구독
+            _boardInputController.StatusEffectsResolved -= HandleStatusEffectsResolved; // 중복 상태 정산 구독 정리
+            _boardInputController.StatusEffectsResolved += HandleStatusEffectsResolved; // 독과 화상 이후 승패 판정
 
             Debug.Log($"Battle state bound: Board={_boardView.IsBound}, Hand={_runState.Hand.Hand.Count}장, KingHP={_runState.KingHp}, Turn={_turnManager.TurnNumber}/{_turnManager.CurrentState}"); // 연결 결과 출력
         }
+
+        private void HandleStatusEffectsResolved() // 모든 상태 피해 이후 승패 판단
+        { // 승패 판정 범위
+            if (_runState == null || _turnManager == null || _turnManager.CurrentState == TurnState.BattleEnded) // 종료 상태 확인
+            { // 중복 처리 차단 범위
+                return; // 이미 끝난 전투 유지
+            } // 중복 처리 차단 범위 종료
+            if (_runState.IsDefeated) // 왕 사망 우선 확인
+            { // 패배 범위
+                EndBattle(BattleOutcome.Defeat); // 동시 사망도 패배 처리
+            } // 패배 범위 종료
+            else if (_runState.Board.CountPieces(isPlayerPiece: false) == 0) // 마지막 적 사망 확인
+            { // 승리 범위
+                EndBattle(BattleOutcome.Victory); // 독 처치도 지도와 보상으로 진행
+            } // 승리 범위 종료
+        } // 승패 판정 범위 종료
 
         private void HandleAttackResolved(CombatResult result)
         {
@@ -434,6 +452,7 @@ namespace ProjectEta.Battle
             if (_boardInputController != null)
             {
                 _boardInputController.AttackResolved -= HandleAttackResolved; // 공격 결과 이벤트 구독 정리
+                _boardInputController.StatusEffectsResolved -= HandleStatusEffectsResolved; // 상태 정산 이벤트 구독 정리
             }
 
             if (_turnManager != null)

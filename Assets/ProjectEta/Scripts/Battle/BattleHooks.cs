@@ -71,14 +71,16 @@ namespace ProjectEta.Battle
                 appliedAmount);
         }
 
-        public void RaiseTurnStart(
-            TurnState state,
-            int turnNumber)
+        public void RaiseTurnStart( // 전투 턴 진입 훅
+            TurnState state, // 진입 턴 상태
+            int turnNumber, // 일반 턴 번호
+            ProjectEta.Run.RunState runState = null) // 회복 체력 동기화 대상 런
         {
             FourStarTurnStateService.ProcessTurnStart(
                 state,
                 turnNumber);
 
+            FiveStarTurnAbilityResolver.ProcessTurnStart(state, turnNumber, runState); // 보호 재충전과 배치 회복
             TurnStart?.Invoke(
                 state,
                 turnNumber);

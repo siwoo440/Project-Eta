@@ -170,7 +170,8 @@ namespace ProjectEta.AI
             int attackPower = Mathf.Max(
                 0,
                 AuraResolver.GetAttack(actor, board) +
-                FourStarCombatAbilityResolver.PreviewDamageBonus(actor, targetPiece));
+                FourStarCombatAbilityResolver.PreviewDamageBonus(actor, targetPiece) + // 기존 피해 보정
+                FiveStarCombatAbilityResolver.PreviewAttackBonus(actor, targetPiece, board)); // 5성 라이더 공격 평가
 
             int expectedDamage = Mathf.Min(
                 attackPower,

@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9df6f7ed2d1b473ba6f90e0aad5ee131, type: 3}
+  m_Name: AbilityStatusDatabase95
+  m_EditorClassIdentifier: ProjectEta.Runtime::ProjectEta.Pieces.StatusEffectDatabase
+  _definitions:
+  - {fileID: 11400000, guid: a3db31b0931628f47b07a510da2ab810, type: 2}
+  - {fileID: 11400000, guid: 9a49ee98d7dec024a89c5bb398fefb62, type: 2}
+  - {fileID: 11400000, guid: 7c0e086d833f7284998a4caa9066b8b8, type: 2}

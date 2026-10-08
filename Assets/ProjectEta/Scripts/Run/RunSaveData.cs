@@ -74,6 +74,10 @@ namespace ProjectEta.Run
         public int currentHp; // 저장 시점 현재 체력
         public bool isPlayerPiece; // 아군 기물 여부
         public int movementCycleIndex; // Chameleon 이동 순환 단계
+        public bool paladinGuardSpent; // 대성기사 보호 사용 여부
+        public int lastPaladinResetTurn; // 보호 초기화 완료 턴
+        public int lastEmperorDeploymentTurn; // 황제 회복 완료 턴
+        public int sageGuardAmount; // 다음 피격 보호 수치
         public List<StatusEffectSaveData> statusEffects = new List<StatusEffectSaveData>(); // 저장 상태 이상 목록
     }
 

@@ -72,12 +72,9 @@ namespace ProjectEta.Run
             if (!TryReadData(out RunSaveData data)) return false; // 저장 DTO 읽기 실패 처리
             if (!IsContinueDataValid(data)) return false; // MainMenu와 동일한 안전 세이브 규칙 적용
 
-            PieceDatabase pieceDatabase = LoadFirstResource<PieceDatabase>(); // Resources PieceDatabase 자동 탐색
-            StatusEffectDatabase statusEffectDatabase = LoadFirstResource<StatusEffectDatabase>(); // Resources 상태 이상 DB 자동 탐색
-
             try
             {
-                RunState candidate = RunState.FromSaveData(data, pieceDatabase, statusEffectDatabase); // 저장 DTO 기반 자동 복원 후보 생성
+                RunState candidate = RestoreFromResources(data); // 실제 콘텐츠 데이터베이스로 자동 복원
 
                 if (!IsSafeCheckpoint(candidate))
                 {
@@ -242,6 +239,14 @@ namespace ProjectEta.Run
 
             return null; // 일치 저장 노드 없음
         }
+
+        public static RunState RestoreFromResources(RunSaveData data) // 자동 불러오기와 공통인 리소스 복원
+        { // 리소스 복원 범위
+            var content = Resources.Load<RunContentCatalog>("RunContent"); // 원본 데이터 연결 조회
+            var pieces = content != null ? content.PieceDatabase : LoadFirstResource<PieceDatabase>(); // 기존 기물 DB 재사용
+            var statuses = content != null ? content.StatusEffectDatabase : LoadFirstResource<StatusEffectDatabase>(); // 공통 상태 정의 조회
+            return RunState.FromSaveData(data, pieces, statuses); // JSON 상태와 기물 복원
+        } // 리소스 복원 범위 종료
 
         private static T LoadFirstResource<T>() where T : UnityEngine.Object
         {

@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5aaee6fd666940d9826c67212ca24a69, type: 3}
+  m_Name: five_emperor_heal
+  m_EditorClassIdentifier: ProjectEta.Runtime::ProjectEta.Abilities.PieceAbilityDefinition
+  _abilityId: five_emperor_heal
+  _displayName: "\ud669\uc81c\uc758 \ud68c\ubcf5"
+  _trigger: 7
+  _actionCost: 0
+  _effects:
+  - _effectType: 0
+    _amount: 1
+    _durationTurns: 1
+    _radius: 1
+    _statusEffect: {fileID: 0}
+    _summonPiece: {fileID: 0}
+    _vector: {x: 0, y: 0}
+    _auraGroupId:
+    _includeSelf: 0
+    _maxActiveSummons: 0
+  _description: "\ubc30\uce58 \ud134\ub9c8\ub2e4 \uac00\uc7a5 HP\uac00 \ub0ae\uc740 \uc778\uc811 \ubd80\uc0c1 \uc544\uad70 1\uac1c HP +1. \ucc98\uc74c \ubc30\uce58\ud55c \ud669\uc81c\ub294 \uccab \uc77c\ubc18 \ud134 \uc9c4\uc785 \uc2dc \uc801\uc6a9."

@@ -115,6 +115,7 @@ namespace ProjectEta.SceneFlow // 씬 흐름 네임스페이스
         { // 메서드 범위
             EnsureComponent<RunResultMainMenuController>("RunResultMainMenuController_Day54"); // 런 결과 복귀 UI 생성
             EnsureComponent<BattleSettingsOverlayController>("BattleSettingsOverlayController_Day56"); // Battle 설정 패널 생성
+            EnsureComponent<PieceAbilityOverlayUI>("PieceAbilityOverlayUI_Day95"); // 전투 씬마다 능력 선택 UI 생성
             EnsureComponent<BattleHUD>("BattleHUD_Day62"); // 전투 상단 HUD 생성
             EnsureComponent<BattleInteractionStatusUI>("BattleInteractionStatusUI_Day63"); // 전투 입력 안내 UI 생성
             EnsureComponent<CombatFloatingTextUI>("CombatFloatingTextUI_Day63"); // 전투 숫자 UI 생성

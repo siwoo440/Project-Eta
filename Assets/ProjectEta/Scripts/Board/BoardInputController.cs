@@ -5,6 +5,7 @@ using UnityEngine; // MonoBehaviour, Physics 등을 사용하기 위한 네임�
 using UnityEngine.EventSystems; // 버그 수정: 클릭이 UI(카드 더미 버튼·패널) 위에서 발생했는지 확인하기 위한 네임스페이스
 using UnityEngine.InputSystem; // 새 Input System(Mouse, Keyboard)을 사용하기 위한 네임스페이스
 using UnityEngine.Rendering; // 드래그 중 기물 고스트 머티리얼의 투명 블렌딩을 설정하기 위한 네임스페이스
+using ProjectEta.Abilities; // 5성 선택 능력 참조
 using ProjectEta.Battle; // TurnManager, TurnState를 사용하기 위한 네임스페이스
 using ProjectEta.Cards; // HandState, DeckState를 사용하기 위한 네임스페이스
 using ProjectEta.Debugging; // F1 패널 클릭 관통 차단
@@ -54,6 +55,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         public bool IsCardDropPreviewValid => _isCardDropPreviewValid; // 현재 고스트 위치가 실제 소환 가능한 칸인지 여부
 
         public event Action<CombatResult> AttackResolved; // 공격 판정이 끝날 때마다 외부 전투 시스템에 알리는 이벤트
+        public event Action StatusEffectsResolved; // 모든 상태 이상 정산 완료 알림
         public event Action HandChanged; // 18일차: Draw·소환 등 실제 플레이어 손패가 바뀔 때 카드 UI에 알리는 이벤트
         public event Action DeckChanged; // 19일차: 보유 풀·드로우 더미·죽은 카드 더미 구성이 바뀔 때 덱/무덤 패널 UI에 알리는 이벤트
         public event Action FusionSelectionChanged; // 21일차: 합성 모드 On/Off, 재료 선택, 결과 미리보기가 바뀔 때 합성 패널 UI에 알리는 이벤트
@@ -73,6 +75,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         private Vector2Int? _selectedCell; // 현재 선택된 칸 좌표
         private PieceDefinition _selectedCard; // 현재 선택된 손패 카드
         private PieceRuntimeState _selectedPiece; // 현재 이동을 위해 선택된 보드 위 기물
+        private PieceAbilityDefinition _pendingAbility; // 대상 지정 대기 능력
         private MovementResult _pendingMovement; // 선택된 기물의 이동/공격 후보 칸 계산 결과
         private readonly Dictionary<PieceRuntimeState, PieceView> _pieceViews = new Dictionary<PieceRuntimeState, PieceView>(); // 기물 데이터와 화면 표시 연결 목록
         private GameObject _cardDropGhost; // 카드 드래그 중 목표 셀에 표시하는 실제 기물 실루엣 고스트 루트
@@ -557,7 +560,10 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
             if (_turnManager == null || _turnManager.CurrentState == TurnState.DeploymentTurn) // 자유 배치 턴 또는 테스트용 턴 매니저 미연결 상태라면
             {
-                DeselectPiece(); // 배치 턴에서는 기존 기물 이동 후보가 남지 않도록 해제
+                if (_selectedPiece?.Definition.PieceId != "phantom_general") // 배치 형태 선택 유지 여부
+                { // 일반 기물 선택 정리 범위
+                    DeselectPiece(); // 배치 이동 후보 제거
+                } // 일반 기물 선택 정리 범위 종료
                 DeselectCurrentCell(); // 일반 칸 선택 강조도 해제
 
                 if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && !IsPointerOverInteractiveUI()) // 배치 턴에 마우스 좌클릭이 들어오고 UI 위가 아니면
@@ -829,7 +835,8 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
             if (CanUseDeploymentInput) // 자유 배치 턴인데 선택 카드가 없다면
             {
-                return; // 기물 이동·공격 입력을 완전히 차단하고 카드 선택을 기다림
+                TrySelectPieceAt(cell); // 배치 턴 환영장군 형태 선택
+                return; // 배치 턴 이동과 공격 차단
             }
 
             if (!CanUseCombatInput) // 일반 전투 행동 권한이 없다면
@@ -837,6 +844,11 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 return; // 보드 클릭을 더 이상 처리하지 않음
             }
 
+            if (_pendingAbility != null) // 능력 대상 선택 대기 확인
+            { // 능력 클릭 처리 범위
+                TryUseSelectedAbilityAt(cell); // 유효 대상에 능력 사용
+                return; // 이동 및 공격 중복 처리 차단
+            } // 능력 클릭 처리 범위 종료
             if (_selectedPiece != null) // 이동을 위해 선택해 둔 기물이 있으면
             {
                 if (_pendingMovement != null && _pendingMovement.MoveTiles.Contains(cell)) // 클릭한 칸이 이동 후보면
@@ -863,7 +875,8 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
         public bool TrySelectPieceAt(Vector2Int cell) // 지정한 칸에 내 기물이 있으면 선택하고 이동/공격 후보를 계산하는 진입점
         {
-            if (!CanUseCombatInput) // 배치 턴·적 턴·종료 상태거나 아직 연결되지 않았으면
+            bool formSelection = CanUseDeploymentInput && _boardView.GetTile(cell)?.OccupyingPiece?.Definition.PieceId == "phantom_general"; // 배치 형태 선택 예외
+            if (!CanUseCombatInput && !formSelection) // 일반 행동 또는 배치 선택 권한 확인
             {
                 return false; // 기물 선택을 금지하고 실패 반환
             }
@@ -882,13 +895,89 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
             _selectedCard = null; // 일반 턴에 기물을 선택하면 손패 소환 선택을 취소해 행동 종류를 명확히 분리
             _selectedPiece = tileState.OccupyingPiece; // 새로 선택한 기물 저장
-            _pendingMovement = MovementResolver.GetReachableTiles(_selectedPiece, _boardView.State); // 31일차: 런타임 상태 기반 오버로드로 교체 — 기절·속박 게이팅과 카멜레온 순환 단계를 실제 하이라이트에 반영
+            _pendingAbility = null; // 이전 대상 지정 능력 취소
+            _pendingMovement = CanUseCombatInput ? MovementResolver.GetReachableTiles(_selectedPiece, _boardView.State) : new MovementResult(); // 31일차: 런타임 상태 기반 오버로드로 교체 — 기절·속박 게이팅과 카멜레온 순환 단계를 실제 하이라이트에 반영
             _boardView.HighlightMoveCandidates(_pendingMovement.MoveTiles, _pendingMovement.AttackTiles); // 계산한 후보 칸을 화면에 강조 표시
             SelectionChanged?.Invoke(_selectedPiece); // 31일차: 정보 패널 UI에 새로 선택된 기물을 통지
 
             Debug.Log($"{_selectedPiece.Definition.DisplayName} 선택: 이동 {_pendingMovement.MoveTiles.Count}칸 / 공격 {_pendingMovement.AttackTiles.Count}칸"); // 선택 결과 출력
             return true; // 정상적으로 선택했음을 반환
         }
+
+
+        public PieceAbilityDefinition PendingAbility => _pendingAbility; // 현재 선택한 대상 지정 능력
+
+        public bool TryBeginSelectedAbility(PieceAbilityDefinition ability) // 능력 대상 선택 시작
+        { // 범위 시작
+            if (!CanUseCombatInput || _selectedPiece == null || ability == null || ability.Trigger != AbilityTrigger.Active || ability.ActionCost != AbilityActionCost.PlayerAction || !Array.Exists(_selectedPiece.Definition.Abilities, item => item == ability)) // 행동 권한과 보유 능력 확인
+            { // 범위 시작
+                return false; // 잘못된 능력 선택 거부
+            } // 범위 종료
+            var targets = new MovementResult(); // 능력 대상 강조 목록
+            foreach (var target in AbilityBoardRegistry.GetUniquePieces(_runState.Board)) // 보드 기물 순회
+            { // 범위 시작
+                var context = new AbilityExecutionContext(_selectedPiece, target, board: _runState.Board, runState: _runState, battleHooks: _battleHooks, turnManager: _turnManager); // 실제 전투 실행 정보
+                if (!PieceAbilityService.PreviewAbility(ability, context).Success) // 능력 적용 가능 여부
+                { // 범위 시작
+                    continue; // 적용 불가 대상 제외
+                } // 범위 종료
+                if (target.IsPlayerPiece) // 아군 대상 확인
+                { // 범위 시작
+                    targets.AddMove(target.BoardPosition); // 아군 대상 이동색 강조
+                } // 범위 종료
+                else // 적 대상 분기
+                { // 범위 시작
+                    targets.AddAttack(target.BoardPosition); // 적 대상 공격색 강조
+                } // 범위 종료
+            } // 범위 종료
+            _pendingAbility = ability; // 선택한 능력 저장
+            _boardView.HighlightMoveCandidates(targets.MoveTiles, targets.AttackTiles); // 유효 대상 강조
+            SelectionChanged?.Invoke(_selectedPiece); // 선택 UI 갱신
+            return true; // 대상 선택 시작 완료
+        } // 범위 종료
+
+        public void CancelSelectedAbility() // 능력 선택 취소
+        { // 범위 시작
+            _pendingAbility = null; // 선택 능력 초기화
+            if (_selectedPiece != null && CanUseCombatInput) // 일반 이동 후보 복원 가능 여부
+            { // 범위 시작
+                _pendingMovement = MovementResolver.GetReachableTiles(_selectedPiece, _runState.Board); // 이동 후보 재계산
+                _boardView.HighlightMoveCandidates(_pendingMovement.MoveTiles, _pendingMovement.AttackTiles); // 이동 후보 복원
+            } // 범위 종료
+            SelectionChanged?.Invoke(_selectedPiece); // 능력 선택 UI 갱신
+        } // 범위 종료
+
+        public bool TryUseSelectedAbilityAt(Vector2Int cell) // 선택한 능력을 보드 대상에 실행
+        { // 범위 시작
+            if (!CanUseCombatInput || _selectedPiece == null || _pendingAbility == null) // 능력 실행 권한 확인
+            { // 범위 시작
+                return false; // 권한 없는 실행 거부
+            } // 범위 종료
+            var target = _runState.Board.GetTile(cell)?.OccupyingPiece; // 클릭한 실제 대상
+            var context = new AbilityExecutionContext(_selectedPiece, target, cell, _runState.Board, _runState, _battleHooks, _turnManager); // 실제 전투 실행 정보
+            var result = PieceAbilityService.ExecuteAbility(_pendingAbility, context); // 대상 재검증 후 능력 적용
+            if (!result.Success) // 능력 적용 실패 확인
+            { // 범위 시작
+                Debug.Log(result.FailureReason); // 선택 오류 안내
+                return false; // 재선택 대기 유지
+            } // 범위 종료
+            if (target?.Definition != null && target.Definition.PieceId == "king") // 왕 회복 상태 확인
+            { // 범위 시작
+                _runState.KingHp = target.CurrentHp; // 런 체력 표시와 저장 동기화
+            } // 범위 종료
+            DeselectPiece(); // 사용 완료 후 선택 정리
+            return true; // 능력 적용 완료
+        } // 범위 종료
+
+        public bool TrySelectPhantomForm(int index) // UI 형태 버튼의 배치 선택
+        { // 범위 시작
+            bool changed = FiveStarActiveAbilityService.TrySelectStartForm(_selectedPiece, index, _runState?.Board, _turnManager); // 실제 배치 권한 검증
+            if (changed) // 형태 변경 성공 확인
+            { // 범위 시작
+                SelectionChanged?.Invoke(_selectedPiece); // 현재 형태 표시 갱신
+            } // 범위 종료
+            return changed; // 변경 결과 반환
+        } // 범위 종료
 
         public bool TryMoveSelectedPieceTo(Vector2Int destination) // 현재 선택된 기물을 지정한 후보 칸으로 이동시키는 진입점
         {
@@ -1003,17 +1092,24 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 return; // 정산할 대상이 없으므로 종료
             }
 
+            bool hadDamage = false; // 상태 피해 발생 기록
+            var processed = new HashSet<PieceRuntimeState>(); // 대형 기물 중복 정산 방지
             for (int x = 0; x < BoardState.Width; x++) // 보드 가로 순회
             {
                 for (int y = 0; y < BoardState.Height; y++) // 보드 세로 순회
                 {
                     var tile = _boardView.GetTile(new Vector2Int(x, y)); // 현재 칸 조회
                     var piece = tile?.OccupyingPiece; // 점유 기물 조회
-                    if (piece == null) continue; // 빈 칸은 건너뜀
+                    if (piece == null || !processed.Add(piece)) continue; // 빈 칸과 중복 점유 제외
 
                     int damage = StatusEffectTickResolver.ResolveTurnEndDamage(piece, _battleHooks); // 독·화상 등 이번 턴 틱 피해 정산(29일차: BeforeDamage/AfterDamage 훅과 함께)
                     if (damage > 0) // 실제 피해가 있었다면
                     {
+                        hadDamage = true; // 상태 피해 발생 표시
+                        if (piece.IsPlayerPiece && piece.Definition.MovementType == PieceMovementType.King) // 왕 피격 확인
+                        { // 왕 체력 동기화 범위
+                            _runState.KingHp = piece.CurrentHp; // 제거 전 런 체력 동기화
+                        } // 왕 체력 동기화 범위 종료
                         Debug.Log($"{piece.Definition.DisplayName} 상태 이상 피해 {damage}, 남은 HP {piece.CurrentHp}"); // 결과 출력
                     }
 
@@ -1024,8 +1120,12 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                         RemovePieceFromBoard(piece); // 기존 사망 처리(보드 해제·화면 제거·죽은 카드 더미 이동) 재사용
                     }
                 }
-            }
-        }
+            } // 보드 순회 종료
+            if (hadDamage) // 피해 정산 완료 확인
+            { // 완료 통지 범위
+                StatusEffectsResolved?.Invoke(); // 동시 사망 정산 후 승패 판단
+            } // 완료 통지 범위 종료
+        } // 상태 정산 함수 종료
 
         private void RemovePieceFromBoard(PieceRuntimeState piece) // 사망한 기물을 보드 점유와 화면에서 제거하는 메서드
         {
@@ -1034,11 +1134,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 DeselectPiece(); // 정보 패널이 죽은 기물을 계속 보여주지 않도록 선택도 함께 해제
             }
 
-            var tile = _boardView.GetTile(piece.BoardPosition); // 이 기물이 있던 칸 조회
-            if (tile != null && tile.OccupyingPiece == piece) // 아직 그 칸을 이 기물이 점유하면
-            {
-                tile.OccupyingPiece = null; // 점유 상태 해제
-            }
+            _runState?.Board.ClearPiece(piece); // 대형 기물을 포함한 전체 점유 해제
 
             if (_pieceViews.TryGetValue(piece, out var pieceView) && pieceView != null) // 연결된 화면 표시가 있으면
             {
@@ -1065,6 +1161,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
                 return; // 할 일이 없으므로 종료
             }
 
+            _pendingAbility = null; // 대상 지정 능력 초기화
             _selectedPiece = null; // 선택 상태 초기화
             _pendingMovement = null; // 후보 계산 결과 초기화
             if (_boardView != null) // 보드 뷰가 존재하면

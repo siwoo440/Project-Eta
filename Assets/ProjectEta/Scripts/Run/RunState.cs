@@ -163,7 +163,11 @@ namespace ProjectEta.Run
                         pieceId = occupyingPiece.Definition.PieceId, // 기물 ID 기록
                         currentHp = occupyingPiece.CurrentHp, // 현재 체력 기록
                         isPlayerPiece = occupyingPiece.IsPlayerPiece, // 진영 기록
-                        movementCycleIndex = occupyingPiece.MovementCycleIndex // Chameleon 순환 단계 기록
+                        movementCycleIndex = occupyingPiece.MovementCycleIndex, // 이동 형태 기록
+                        paladinGuardSpent = occupyingPiece.PaladinGuardSpent, // 수호 사용 여부 기록
+                        lastPaladinResetTurn = occupyingPiece.LastPaladinResetTurn, // 수호 초기화 턴 기록
+                        lastEmperorDeploymentTurn = occupyingPiece.LastEmperorDeploymentTurn, // 배치 회복 턴 기록
+                        sageGuardAmount = occupyingPiece.SageGuardAmount // 다음 피격 보호 기록
                     };
 
                     foreach (var statusEffect in occupyingPiece.StatusEffects)
@@ -259,7 +263,11 @@ namespace ProjectEta.Run
                         CurrentHp = pieceData.currentHp // 현재 체력 복원
                     };
 
-                    runtimePiece.RestoreMovementCycleIndex(pieceData.movementCycleIndex); // Chameleon 순환 단계 복원
+                    runtimePiece.RestoreMovementCycleIndex(pieceData.movementCycleIndex); // 이동 형태 복원
+                    runtimePiece.PaladinGuardSpent = pieceData.paladinGuardSpent; // 수호 사용 여부 복원
+                    runtimePiece.LastPaladinResetTurn = pieceData.lastPaladinResetTurn; // 수호 초기화 턴 복원
+                    runtimePiece.LastEmperorDeploymentTurn = pieceData.lastEmperorDeploymentTurn; // 배치 회복 턴 복원
+                    runtimePiece.SetSageGuard(pieceData.sageGuardAmount); // 다음 피격 보호 복원
 
                     if (statusEffectDatabase != null && pieceData.statusEffects != null)
                     {

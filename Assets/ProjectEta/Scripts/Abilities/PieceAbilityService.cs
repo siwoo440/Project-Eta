@@ -65,6 +65,14 @@ namespace ProjectEta.Abilities
         {
             if (ability == null) return AbilityExecutionResult.Failed("Ability 정의가 없습니다.");
             if (context == null) return AbilityExecutionResult.Failed("Ability 실행 Context가 없습니다.");
+            if (FiveStarActiveAbilityService.IsSageChoice(ability)) // 현자 선택 대상 확인
+            { // 대상 검증 범위
+                string reason = FiveStarActiveAbilityService.ValidateSageChoice(ability, context); // 진영과 거리 검증
+                if (!string.IsNullOrEmpty(reason)) // 검증 실패 확인
+                { // 거부 범위
+                    return AbilityExecutionResult.Failed(reason); // 상태 변경 없이 거부
+                } // 거부 범위 종료
+            } // 대상 검증 범위 종료
 
             if (ability.ActionCost == AbilityActionCost.PlayerAction &&
                 context.TurnManager != null)
@@ -82,6 +90,10 @@ namespace ProjectEta.Abilities
             AbilityEffectData[] effects = ability.Effects;
             if (effects.Length == 0) return AbilityExecutionResult.Failed("Ability Effect가 없습니다.");
 
+            if (ability.AbilityId == FiveStarAbilityIds.SageGuard) // 다음 피격 보호 선택 확인
+            { // 피격 보호 범위
+                return FiveStarActiveAbilityService.EvaluateGuard(ability, context, execute); // 공격 보정과 독립된 보호 적용
+            } // 피격 보호 범위 종료
             int totalAmount = 0;
             PieceRuntimeState actualTarget = context.TargetPiece;
 
@@ -136,6 +148,10 @@ namespace ProjectEta.Abilities
                 if (result.ActualTarget != null) actualTarget = result.ActualTarget;
             }
 
+            if (FiveStarActiveAbilityService.IsSageChoice(ability) && context.RunState != null && actualTarget != null && actualTarget.IsPlayerPiece && actualTarget.Definition.MovementType == PieceMovementType.King) // 왕 대상 능력 확인
+            { // 왕 체력 동기화 범위
+                context.RunState.KingHp = actualTarget.CurrentHp; // 턴 전환 전 왕 체력 반영
+            } // 왕 체력 동기화 범위 종료
             bool consumedAction = false;
 
             if (ability.ActionCost == AbilityActionCost.PlayerAction &&

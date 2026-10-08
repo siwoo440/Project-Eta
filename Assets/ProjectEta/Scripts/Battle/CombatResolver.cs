@@ -11,6 +11,7 @@ namespace ProjectEta.Battle
             BattleHooks hooks = null)
         {
             int rawDamage = AuraResolver.GetAttack(attacker); // BaseAtk + 현재 위치 기준 유효 Aura 보정
+            rawDamage += FiveStarCombatAbilityResolver.PreviewAttackBonus(attacker, defender); // 라이더 반복 공격의 추가 피해
             int appliedDamage = DamageResolver.ApplyDamage(defender, rawDamage, attacker, hooks);
 
             return new CombatResult(attacker, defender, appliedDamage, defender.IsDead);

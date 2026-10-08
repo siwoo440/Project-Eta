@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5aaee6fd666940d9826c67212ca24a69, type: 3}
+  m_Name: five_regent_barrier
+  m_EditorClassIdentifier: ProjectEta.Runtime::ProjectEta.Abilities.PieceAbilityDefinition
+  _abilityId: five_regent_barrier
+  _displayName: "\uc12d\uc815\uc758 \ubc29\ubcbd"
+  _trigger: 9
+  _actionCost: 0
+  _effects:
+  - _effectType: 1
+    _amount: -2
+    _durationTurns: 1
+    _radius: 2
+    _statusEffect: {fileID: 0}
+    _summonPiece: {fileID: 0}
+    _vector: {x: 0, y: 0}
+    _auraGroupId:
+    _includeSelf: 0
+    _maxActiveSummons: 0
+  _description: "\uac70\ub9ac 2 \uc774\ub0b4 \uc544\uad70\uc758 \ud53c\ud574 \uc911 \ucd5c\ub300 2 \ubd84\ub2f4. \uc790\uc2e0\uc758 HP 1 \ubcf4\uc7a5. HP 1 \uc774\ud558 \ubc1c\ub3d9 \ubd88\uac00, \uc6d0\ub798 \ub300\uc0c1 \ucd5c\uc18c \ud53c\ud574 1."

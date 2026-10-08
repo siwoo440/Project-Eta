@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5aaee6fd666940d9826c67212ca24a69, type: 3}
+  m_Name: five_phantom_form
+  m_EditorClassIdentifier: ProjectEta.Runtime::ProjectEta.Abilities.PieceAbilityDefinition
+  _abilityId: five_phantom_form
+  _displayName: "\ubcc0\ud658 \uc81c\uc5b4"
+  _trigger: 0
+  _actionCost: 0
+  _effects: []
+  _description: "\ubc30\uce58 \ud134\uc5d0 \uae30\ubcd1\u00b7\uc0ac\uc81c\u00b7\uc131\ucc44\u00b7\uc7a5\uad70\u00b7\ucc99\ud0c4\ubcd1 \uc911 \uc2dc\uc791 \ud615\ud0dc \uc120\ud0dd. \uc774\ud6c4 \uc774\ub3d9\ub9c8\ub2e4 \uc21c\uc11c\ub300\ub85c \uc21c\ud658."

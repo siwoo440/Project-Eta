@@ -1,0 +1,12 @@
+{
+    "name": "ProjectEta.Tests.PlayMode",
+    "references": ["UnityEngine.TestRunner", "UnityEditor.TestRunner", "ProjectEta.Runtime", "Unity.InputSystem"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": ["nunit.framework.dll"],
+    "autoReferenced": false,
+    "defineConstraints": ["UNITY_INCLUDE_TESTS"],
+    "noEngineReferences": false
+}

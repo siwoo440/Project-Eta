@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5aaee6fd666940d9826c67212ca24a69, type: 3}
+  m_Name: five_sky_breakthrough
+  m_EditorClassIdentifier: ProjectEta.Runtime::ProjectEta.Abilities.PieceAbilityDefinition
+  _abilityId: five_sky_breakthrough
+  _displayName: "\uacf5\uc911 \ub3cc\ud30c"
+  _trigger: 9
+  _actionCost: 0
+  _effects:
+  - _effectType: 1
+    _amount: 2
+    _durationTurns: 1
+    _radius: 0
+    _statusEffect: {fileID: 0}
+    _summonPiece: {fileID: 0}
+    _vector: {x: 0, y: 0}
+    _auraGroupId:
+    _includeSelf: 0
+    _maxActiveSummons: 0
+  _description: "\ub3d9\uc77c \ub77c\uc774\ub354 \ubca1\ud130\ub85c 2\ud68c \uc774\uc0c1 \ubc18\ubcf5 \ucc29\uc9c0\uc810\uc758 \uc801\uc5d0\uac8c \uacf5\uaca9\ud558\uba74 \ud53c\ud574 +2. \ub2e8\uc77c \uc81c\ube0c\ub77c \ub3c4\uc57d \uc81c\uc678."

@@ -25,6 +25,8 @@ MonoBehaviour:
     _vectors: []
     _maxSteps: 1
     _condition: 19
+  _abilities:
+  - {fileID: 11400000, guid: 93853d435f094771837cac96c73769e0, type: 2}
   _baseHp: 8
   _baseAtk: 8
   _occupancySize: {x: 1, y: 1}

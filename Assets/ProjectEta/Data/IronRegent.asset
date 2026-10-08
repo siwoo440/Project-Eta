@@ -41,6 +41,8 @@ MonoBehaviour:
     - {x: -1, y: -1}
     _maxSteps: 1
     _condition: 0
+  _abilities:
+  - {fileID: 11400000, guid: cb7b4085fac84d2fbdacce85a2d0e23a, type: 2}
   _baseHp: 10
   _baseAtk: 7
   _occupancySize: {x: 1, y: 1}

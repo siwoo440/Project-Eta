@@ -68,6 +68,10 @@ namespace ProjectEta.AI
                         }
                         break;
 
+                    case AbilityEffectType.ApplyStatus: // 독 적용 후보 평가
+                        int stacks = targetPiece?.FindStatus(effect.StatusEffect.StatusType)?.StackCount ?? 0; // 기존 중첩 조회
+                        score += stacks < effect.StatusEffect.MaxStacks ? 160 : 20; // 새 독 중첩 우선
+                        break; // 상태 이상 평가 종료
                     case AbilityEffectType.Summon:
                         score += 260;
                         if (effect.SummonPiece != null)
