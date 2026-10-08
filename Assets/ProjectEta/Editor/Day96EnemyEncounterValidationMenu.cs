@@ -59,7 +59,7 @@ namespace ProjectEta.EditorTools // 96일차 편성 검증 도구 영역
                 throw new InvalidOperationException("5페이즈 평균 위협도가 1페이즈보다 높지 않음"); // 진행도 난이도 회귀 보고
             } // 범위 종료
             report.AppendLine(); // 표 아래 단락 구분
-            report.AppendLine("일반 5종·정예 3종이 모든 페이즈에서 사용되며, 모든 적은 후방 3행의 서로 다른 칸에 배치됐다."); // 자동 검증 결과
+            report.AppendLine("일반 5종·정예 3종은 현재 페이즈에 해금된 범위에서 사용되며, 모든 적은 후방 3행의 서로 다른 칸에 배치됐다."); // 자동 검증 결과
             report.AppendLine("실제 승률·종료 턴·왕 HP는 F1 상태 페이지의 JSON/CSV 기록으로 3런 이상 수집한 뒤 조정한다."); // 다음 실측 기준
             string directory = System.Environment.GetEnvironmentVariable("PROJECT_ETA_DAY96_REPORT"); // 배치 보고서 폴더 조회
             if (string.IsNullOrWhiteSpace(directory)) // 수동 메뉴 실행 확인
@@ -90,7 +90,7 @@ namespace ProjectEta.EditorTools // 96일차 편성 검증 도구 영역
                 } // 범위 종료
                 summary.Add(encounter); // 정상 표본 집계
             } // 범위 종료
-            int expectedProfiles = stageType == StageType.Battle ? 5 : 3; // 종류별 요구 원형 수
+            int expectedProfiles = EnemyEncounterProfileCatalog.GetAvailableProfiles(stageType, phase).Count; // 현재 페이즈 해금 원형 수
             if (summary.ProfileCounts.Count != expectedProfiles) // 모든 원형 도달 확인
             { // 범위 시작
                 throw new InvalidOperationException(stageType + " 원형 도달 수 불일치: " + summary.ProfileCounts.Count + "/" + expectedProfiles); // 누락 원형 보고

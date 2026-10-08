@@ -140,6 +140,9 @@ namespace ProjectEta.Run // 경제 측정 연결 영역
             entry.enemyCount = encounter.Spawns.Count; // 실제 생성 예정 적 수 저장
             entry.threatScore = encounter.ThreatScore; // 시작 위협도 저장
             entry.kingHp = run.KingHp; // 전투 시작 왕 체력 저장
+            entry.startingKingHp = run.KingHp; // 연결 결과용 시작 왕 체력 저장
+            entry.profileId = encounter.ProfileId; // 편성 원형 전용 열 저장
+            entry.stageType = (int)encounter.StageType; // 전투 종류 전용 열 저장
             foreach (EnemyEncounterSpawn spawn in encounter.Spawns) // 실제 편성 순서 순회
             { // 범위 시작
                 if (spawn?.Piece != null) // 유효 기물 확인
@@ -147,6 +150,19 @@ namespace ProjectEta.Run // 경제 측정 연결 영역
                     entry.candidateIds.Add(spawn.Piece.PieceId); // 적 기물 ID 순서 저장
                 } // 범위 종료
             } // 범위 종료
+            run.BalanceData.activeEncounter = new RunBattleEncounterSnapshot // 상세 상한과 독립된 시작 편성 저장
+            { // 범위 시작
+                encounterId = encounter.EncounterId, // 편성 고유 ID 저장
+                profileId = encounter.ProfileId, // 편성 원형 ID 저장
+                stageType = (int)encounter.StageType, // 전투 종류 저장
+                phase = encounter.Phase, // 시작 페이즈 저장
+                stage = encounter.Stage, // 시작 스테이지 저장
+                nodeId = encounter.NodeId, // 시작 노드 저장
+                enemyCount = encounter.Spawns.Count, // 시작 적 수 저장
+                threatScore = encounter.ThreatScore, // 시작 위협도 저장
+                startingKingHp = run.KingHp // 시작 왕 체력 저장
+            }; // 범위 종료
+            run.BalanceData.SetLastEncounterProfile(encounter.StageType, encounter.ProfileId); // 종류별 최근 원형을 상세 상한과 별도 저장
             run.BalanceData.encounterClaims.Add(encounter.EncounterId); // 상세 상한과 별도 중복 방지
             Append(run, entry); // 편성 상세 기록 추가
         } // 범위 종료
@@ -170,18 +186,73 @@ namespace ProjectEta.Run // 경제 측정 연결 영역
             entry.turn = Math.Max(0, turn); // 종료 턴 음수 보정
             entry.kingHp = Math.Max(0, run.KingHp); // 종료 왕 체력 보정
             entry.outcome = (int)outcome; // 승패 열거값 저장
-            for (int index = run.BalanceData.entries.Count - 1; index >= 0; index--) // 최근 편성 기록 역순 검색
+            RunBattleEncounterSnapshot snapshot = run.BalanceData.activeEncounter; // 상세 상한과 독립된 시작 편성 조회
+            if (snapshot != null && snapshot.Matches(phase, stage, nodeId)) // 현재 전투 시작 편성 확인
             { // 범위 시작
-                RunBalanceEntry previous = run.BalanceData.entries[index]; // 현재 이전 기록 조회
-                if (previous == null || previous.kind != "Encounter") continue; // 편성 이외 기록 제외
-                if (previous.phase != phase || previous.stage != stage || previous.nodeId != nodeId) continue; // 다른 전투 위치 제외
-                entry.encounterId = previous.encounterId; // 시작 편성 ID 연결
-                entry.enemyCount = previous.enemyCount; // 시작 적 수 연결
-                entry.threatScore = previous.threatScore; // 시작 위협도 연결
-                break; // 최근 일치 편성 사용
+                entry.encounterId = snapshot.encounterId; // 시작 편성 ID 연결
+                entry.profileId = snapshot.profileId; // 시작 원형 ID 연결
+                entry.stageType = snapshot.stageType; // 시작 전투 종류 연결
+                entry.enemyCount = snapshot.enemyCount; // 시작 적 수 연결
+                entry.threatScore = snapshot.threatScore; // 시작 위협도 연결
+                entry.startingKingHp = snapshot.startingKingHp; // 시작 왕 체력 연결
+                snapshot.isCompleted = true; // 최근 편성 완료 상태 저장
+                snapshot.outcome = entry.outcome; // 최근 승패 저장
+                snapshot.turn = entry.turn; // 최근 종료 턴 저장
+                snapshot.endingKingHp = entry.kingHp; // 최근 종료 왕 체력 저장
             } // 범위 종료
+            else // 구버전 상세 기록 대체 조회
+            { // 범위 시작
+                for (int index = run.BalanceData.entries.Count - 1; index >= 0; index--) // 최근 편성 기록 역순 검색
+                { // 범위 시작
+                    RunBalanceEntry previous = run.BalanceData.entries[index]; // 현재 이전 기록 조회
+                    if (previous == null || previous.kind != "Encounter") continue; // 편성 이외 기록 제외
+                    if (previous.phase != phase || previous.stage != stage || previous.nodeId != nodeId) continue; // 다른 전투 위치 제외
+                    entry.encounterId = previous.encounterId; // 시작 편성 ID 연결
+                    entry.profileId = string.IsNullOrWhiteSpace(previous.profileId) ? previous.source : previous.profileId; // 구버전 원형 ID 보정
+                    entry.stageType = previous.stageType; // 시작 전투 종류 연결
+                    entry.enemyCount = previous.enemyCount; // 시작 적 수 연결
+                    entry.threatScore = previous.threatScore; // 시작 위협도 연결
+                    entry.startingKingHp = previous.startingKingHp > 0 ? previous.startingKingHp : previous.kingHp; // 구버전 시작 왕 체력 보정
+                    break; // 최근 일치 편성 사용
+                } // 범위 종료
+            } // 범위 종료
+            run.BalanceData.latestBattleResult = new RunBattleResultSnapshot // 상세 상한과 독립된 최신 전투 결과 저장
+            { // 범위 시작
+                phase = phase, // 완료 페이즈 저장
+                stage = stage, // 완료 스테이지 저장
+                nodeId = nodeId, // 완료 노드 저장
+                encounterId = entry.encounterId, // 연결 편성 ID 저장
+                profileId = entry.profileId, // 연결 원형 ID 저장
+                stageType = entry.stageType, // 전투 종류 저장
+                enemyCount = entry.enemyCount, // 시작 적 수 저장
+                threatScore = entry.threatScore, // 시작 위협도 저장
+                startingKingHp = entry.startingKingHp, // 시작 왕 체력 저장
+                endingKingHp = entry.kingHp, // 종료 왕 체력 저장
+                turn = entry.turn, // 종료 턴 저장
+                outcome = entry.outcome // 승패 저장
+            }; // 범위 종료
             run.BalanceData.battleResultClaims.Add(claim); // 상세 상한과 별도 결과 완료 보존
+            AccumulateDifficulty(run.BalanceData, entry); // 원형별 실제 난이도 지표 누적
             Append(run, entry); // 전투 결과 상세 기록 추가
+        } // 범위 종료
+        private static void AccumulateDifficulty(RunBalanceData data, RunBalanceEntry entry) // 완료 전투 원형별 집계
+        { // 범위 시작
+            if (data == null || entry == null || string.IsNullOrWhiteSpace(entry.profileId)) // 연결 편성 누락 확인
+            { // 범위 시작
+                return; // 원형 없는 구버전 결과 집계 제외
+            } // 범위 종료
+            data.Normalize(); // 집계 목록 보정
+            RunBattleDifficultySummary summary = data.difficultySummaries.Find(item => item != null && item.profileId == entry.profileId && item.stageType == entry.stageType); // 같은 원형 집계 조회
+            if (summary == null) // 첫 완료 전투 확인
+            { // 범위 시작
+                summary = new RunBattleDifficultySummary // 새 원형 집계 생성
+                { // 범위 시작
+                    profileId = entry.profileId, // 편성 원형 ID 저장
+                    stageType = entry.stageType // 전투 종류 저장
+                }; // 범위 종료
+                data.difficultySummaries.Add(summary); // 런 집계 목록 추가
+            } // 범위 종료
+            summary.Accumulate(entry.outcome, entry.turn, entry.startingKingHp, entry.kingHp, entry.threatScore); // 완료 결과 누적
         } // 범위 종료
     } // 범위 종료
 } // 범위 종료

@@ -16,11 +16,24 @@ namespace ProjectEta.Run
             int phase,
             int stage,
             string nodeId)
+        { // 기존 생성 진입점 시작
+            return Generate(sourcePool, roundDefinition, stageType, mapSeed, phase, stage, nodeId, string.Empty, string.Empty); // 반복 제외 없는 기존 동작 유지
+        } // 기존 생성 진입점 종료
+        public static EnemyEncounterResult Generate( // 97일차 반복 방지·강제 선택 포함 생성
+            IEnumerable<PieceDefinition> sourcePool, // 적 후보 원본
+            RoundDefinition roundDefinition, // 기본 라운드 설정
+            StageType stageType, // 일반·정예 구분
+            int mapSeed, // 지도 결정 Seed
+            int phase, // 현재 페이즈
+            int stage, // 현재 스테이지
+            string nodeId, // 현재 지도 노드
+            string excludedProfileId, // 직전 편성 원형
+            string forcedProfileId) // 개발 강제 원형
         {
             int safePhase = Mathf.Clamp(phase, RunPhaseProgressService.FirstPhase, RunPhaseProgressService.TotalPhases); // Phase 범위 보정
             int safeStage = Mathf.Clamp(stage, RoundState.FirstRound, RoundState.FinalRound); // Stage 범위 보정
             int seed = CreateStableSeed(mapSeed, safePhase, safeStage, nodeId, stageType); // 재현 가능한 Encounter Seed 생성
-            EnemyEncounterProfile profile = EnemyEncounterProfileCatalog.Select(stageType, seed); // 일반 5종·정예 3종 원형 선택
+            EnemyEncounterProfile profile = EnemyEncounterProfileCatalog.Select(stageType, seed, safePhase, excludedProfileId, forcedProfileId); // 해금·반복·개발 설정 기반 원형 선택
             string profileId = profile != null ? profile.ProfileId : string.Empty; // 측정 가능한 원형 ID 보정
             string encounterId = CreateEncounterId(seed, safePhase, safeStage, stageType, profileId); // 저장 가능한 편성 고유 ID 생성
             List<PieceDefinition> candidates = BuildCandidatePool(sourcePool); // 적 후보 Pool 생성

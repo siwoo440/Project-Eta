@@ -133,6 +133,47 @@ namespace ProjectEta.Run // 96일차 경제 보고 영역
                     break; // 역순 검색 종료
                 } // 범위 종료
             } // 범위 종료
+            RunBattleEncounterSnapshot activeEncounter = run.BalanceData.activeEncounter; // 상세 상한과 독립된 최근 편성 조회
+            RunBattleResultSnapshot resultSnapshot = run.BalanceData.latestBattleResult; // 상세 상한과 독립된 최근 결과 조회
+            bool useActiveEncounter = activeEncounter != null && !string.IsNullOrWhiteSpace(activeEncounter.profileId) && (resultSnapshot == null || !activeEncounter.isCompleted || resultSnapshot.Matches(activeEncounter)); // 현재 또는 최신 결과와 연결된 편성 확인
+            if (useActiveEncounter) // 최근 편성 스냅샷 사용 확인
+            { // 범위 시작
+                latestEncounter = new RunBalanceEntry // F1 표시용 최근 편성 구성
+                { // 객체 시작
+                    sequence = int.MaxValue, // 상세 기록보다 최신 순서 보정
+                    kind = "Encounter", // 편성 기록 종류
+                    source = activeEncounter.profileId, // 기존 표시 호환 원형 ID
+                    profileId = activeEncounter.profileId, // 전용 원형 ID
+                    stageType = activeEncounter.stageType, // 전투 종류
+                    encounterId = activeEncounter.encounterId, // 편성 고유 ID
+                    enemyCount = activeEncounter.enemyCount, // 시작 적 수
+                    threatScore = activeEncounter.threatScore, // 시작 위협도
+                    kingHp = activeEncounter.startingKingHp, // 시작 왕 체력
+                    startingKingHp = activeEncounter.startingKingHp // 결과 연결용 시작 왕 체력
+                }; // 객체 종료
+            } // 범위 종료
+            else if (resultSnapshot != null && string.IsNullOrWhiteSpace(resultSnapshot.profileId)) // 보스처럼 생성 원형 없는 최신 결과 확인
+            { // 범위 시작
+                latestEncounter = null; // 오래된 일반·정예 편성 표시 제거
+            } // 범위 종료
+            if (resultSnapshot != null) // 최신 결과 스냅샷 확인
+            { // 범위 시작
+                latestResult = new RunBalanceEntry // F1 표시용 최신 결과 구성
+                { // 객체 시작
+                    sequence = int.MaxValue, // 상세 기록보다 최신 순서 보정
+                    kind = "BattleResult", // 결과 기록 종류
+                    source = ((ProjectEta.Battle.BattleOutcome)resultSnapshot.outcome).ToString(), // 승패 표시 문자열
+                    profileId = resultSnapshot.profileId, // 연결 원형 ID
+                    stageType = resultSnapshot.stageType, // 전투 종류
+                    encounterId = resultSnapshot.encounterId, // 연결 편성 ID
+                    enemyCount = resultSnapshot.enemyCount, // 시작 적 수
+                    threatScore = resultSnapshot.threatScore, // 시작 위협도
+                    startingKingHp = resultSnapshot.startingKingHp, // 시작 왕 체력
+                    kingHp = resultSnapshot.endingKingHp, // 종료 왕 체력
+                    turn = resultSnapshot.turn, // 종료 턴
+                    outcome = resultSnapshot.outcome // 승패 열거값
+                }; // 객체 종료
+            } // 범위 종료
             if (latestResult != null && !string.IsNullOrWhiteSpace(latestResult.encounterId)) // 최근 결과와 연결된 편성 확인
             { // 범위 시작
                 RunBalanceEntry matchedEncounter = run.BalanceData.entries.FindLast(entry => entry != null && entry.kind == "Encounter" && entry.encounterId == latestResult.encounterId); // 결과 편성 ID와 일치하는 시작 기록 검색
@@ -144,6 +185,15 @@ namespace ProjectEta.Run // 96일차 경제 보고 영역
             if (latestEncounter != null) // 표시할 최근 편성 확인
             { // 범위 시작
                 text.AppendLine("최근 편성: " + latestEncounter.source + " / 적 " + latestEncounter.enemyCount + " / 위협도 " + latestEncounter.threatScore); // 편성 원형과 난이도 표시
+                string latestProfileId = string.IsNullOrWhiteSpace(latestEncounter.profileId) ? latestEncounter.source : latestEncounter.profileId; // 구버전 원형 ID 보정
+                RunBattleDifficultySummary difficulty = run.BalanceData.difficultySummaries.Find(item => item != null && item.profileId == latestProfileId); // 최근 원형 실제 집계 조회
+                if (difficulty != null && difficulty.battleCount > 0) // 완료 전투 집계 존재 확인
+                { // 범위 시작
+                    long winRate = (long)difficulty.victoryCount * 100L / difficulty.battleCount; // 정수 승률 계산
+                    long averageTurnsByProfile = difficulty.totalTurns / difficulty.battleCount; // 원형 평균 턴 계산
+                    long averageKingHpLoss = difficulty.totalKingHpLoss / difficulty.battleCount; // 원형 평균 왕 HP 손실 계산
+                    text.AppendLine("원형 난이도: 승률 " + winRate + "% / 평균 턴 " + averageTurnsByProfile + " / 왕 HP 손실 " + averageKingHpLoss); // F1 난이도 지표 표시
+                } // 범위 종료
             } // 범위 종료
             if (latestResult != null) // 표시할 최근 결과 확인
             { // 범위 시작
@@ -176,7 +226,7 @@ namespace ProjectEta.Run // 96일차 경제 보고 영역
             string jsonPath = Path.Combine(directory, stem + ".json"); // JSON 출력 경로 조합
             string csvPath = Path.Combine(directory, stem + ".csv"); // CSV 출력 경로 조합
             File.WriteAllText(jsonPath, JsonUtility.ToJson(export, true), new UTF8Encoding(false)); // 전체 측정 JSON 저장
-            var csv = new StringBuilder("sequence,kind,source,phase,stage,turn,node,seed,piece,recipe,grade,beforeGold,afterGold,amount,successful,candidates,materials,encounterId,enemyCount,threatScore,kingHp,outcome\r\n"); // CSV 열 이름과 문자열 준비
+            var csv = new StringBuilder("sequence,kind,source,phase,stage,turn,node,seed,piece,recipe,grade,beforeGold,afterGold,amount,successful,candidates,materials,encounterId,profileId,stageType,enemyCount,threatScore,startingKingHp,kingHp,outcome\r\n"); // 난이도 열 포함 CSV 머리글 준비
             foreach (var entry in export.measurements.entries) // 실제 런 기록 순회
             { // 범위 시작
                 string[] cells = // 기록 하나의 CSV 열 배열
@@ -186,7 +236,8 @@ namespace ProjectEta.Run // 96일차 경제 보고 영역
                     entry.beforeGold.ToString(), entry.afterGold.ToString(), entry.amount.ToString(), entry.successful.ToString(), // 실제 재화 변화와 성공 여부
                     string.Join("|", entry.candidateIds ?? new System.Collections.Generic.List<string>()), // 후보 재료 ID 목록 조합
                     string.Join("|", entry.materialIds ?? new System.Collections.Generic.List<string>()), // 합성 소모 재료 ID 목록 조합
-                    entry.encounterId, entry.enemyCount.ToString(), entry.threatScore.ToString(), entry.kingHp.ToString(), entry.outcome.ToString() // 적 편성과 전투 결과 정보
+                    entry.encounterId, entry.profileId, entry.stageType.ToString(), entry.enemyCount.ToString(), entry.threatScore.ToString(), // 적 편성과 전투 종류 정보
+                    entry.startingKingHp.ToString(), entry.kingHp.ToString(), entry.outcome.ToString() // 왕 체력과 전투 결과 정보
                 }; // 범위 종료
                 for (int index = 0; index < cells.Length; index++) // CSV 각 열 순회
                 { // 범위 시작

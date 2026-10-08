@@ -107,6 +107,8 @@ namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이
             int stage = Mathf.Clamp(_runState.CurrentRound, RoundState.FirstRound, RoundState.FinalRound); // 현재 Stage 번호 보정
             int mapSeed = _runState.RouteMap != null ? _runState.RouteMap.MapSeed : 0; // 현재 RouteMap Seed 조회
             string nodeId = _runState.RouteMap != null ? _runState.RouteMap.CurrentNodeId : string.Empty; // 현재 RouteMap 노드 ID 조회
+            string previousProfileId = FindPreviousProfileId(_runState, _stageDefinition.StageType); // 직전 같은 종류 편성 원형 조회
+            string forcedProfileId = EnemyEncounterDebugOverrides.ForcedProfileId; // F1 다음 편성 강제값 조회
 
             EnemyEncounterResult encounter = EnemyEncounterGenerator.Generate(
                 sourcePool,
@@ -115,7 +117,9 @@ namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이
                 mapSeed,
                 phase,
                 stage,
-                nodeId); // 일반·Elite Encounter 생성
+                nodeId, // 현재 지도 노드 전달
+                previousProfileId, // 직전 편성 원형 전달
+                forcedProfileId); // 해금·반복 방지·개발 강제를 포함한 Encounter 생성
 
             IReadOnlyList<EnemyEncounterContentIssue> issues = EnemyEncounterContentValidator.Validate(encounter); // Encounter 무결성 검사
             if (issues.Count > 0)
@@ -149,8 +153,29 @@ namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이
             }
 
             RunBalanceTelemetry.RecordEncounter(_runState, encounter); // 실제 배치 완료 편성 난이도 기록
+            EnemyEncounterDebugOverrides.Consume(encounter.ProfileId); // 성공 적용한 다음 편성 강제값 한 번만 소비
             Debug.Log($"96일차 Enemy Encounter: Profile={encounter.ProfileId} / Type={_stageDefinition.StageType} / Phase={phase} / Stage={stage} / Seed={encounter.Seed} / Spawned={spawnedPieces.Count} / Threat={encounter.ThreatScore}"); // 편성 원형과 재현 정보 기록
         }
+
+        private static string FindPreviousProfileId(RunState runState, StageType stageType) // 직전 같은 전투 종류 원형 조회
+        { // 범위 시작
+            if (runState?.BalanceData == null) return string.Empty; // 기록 누락 시 반복 제외 없음
+            string storedProfileId = runState.BalanceData.GetLastEncounterProfile(stageType); // 상세 상한과 독립된 최근 원형 조회
+            if (!string.IsNullOrWhiteSpace(storedProfileId)) return storedProfileId; // 새 저장 형식 최근 원형 우선 반환
+            if (runState.BalanceData.entries == null) return string.Empty; // 구버전 상세 기록 누락 처리
+            IReadOnlyList<EnemyEncounterProfile> profiles = EnemyEncounterProfileCatalog.GetProfiles(stageType); // 현재 전투 종류 전체 원형 조회
+            for (int entryIndex = runState.BalanceData.entries.Count - 1; entryIndex >= 0; entryIndex--) // 최근 기록부터 역순 검색
+            { // 범위 시작
+                RunBalanceEntry entry = runState.BalanceData.entries[entryIndex]; // 현재 기록 조회
+                if (entry == null || entry.kind != "Encounter") continue; // 편성 이외 기록 제외
+                string profileId = string.IsNullOrWhiteSpace(entry.profileId) ? entry.source : entry.profileId; // 구버전 원형 ID 보정
+                for (int profileIndex = 0; profileIndex < profiles.Count; profileIndex++) // 현재 종류 원형 순회
+                { // 범위 시작
+                    if (profiles[profileIndex].ProfileId == profileId) return profileId; // 가장 최근 같은 종류 원형 반환
+                } // 범위 종료
+            } // 범위 종료
+            return string.Empty; // 이전 같은 종류 편성 없음
+        } // 범위 종료
 
         private List<PieceDefinition> BuildEnemySourcePool() // 카탈로그·Resources에서 일반 적 후보 수집
         {

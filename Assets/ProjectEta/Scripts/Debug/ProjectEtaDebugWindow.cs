@@ -35,6 +35,7 @@ namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
         private FusionProgressionReport _fusionProgression = FusionProgressionReport.Empty; // 최신 1~5성 합성 성장 진단
         private BattleController _battleController; // 현재 전투 관리자
         private BoardInputController _boardInputController; // 현재 합성 데이터 연결 관리자
+        private StageBattleRuntimeController _stageBattleRuntimeController; // 현재 스테이지 종류 확인 관리자
         private Rect _windowRect; // 왼쪽 패널 영역
         private Vector2 _statusScrollPosition; // 상태 페이지 스크롤 위치
         private Vector2 _battleScrollPosition; // 전투 페이지 스크롤 위치
@@ -110,6 +111,13 @@ namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
             return timeScale > 0f; // 일시정지·튜토리얼 정지 중 변경 차단
         } // 메서드 종료
 
+        public static int CalculateDebugBossHp(int maximumHp, float ratio) // 보스 단계 확인용 생존 HP 계산
+        { // 메서드 범위
+            if (maximumHp <= 0) return 0; // 잘못된 최대 HP 차단
+            int calculated = Mathf.FloorToInt(maximumHp * Mathf.Clamp01(ratio)); // 페이즈 경계를 넘지 않는 비율 HP 내림 계산
+            return Mathf.Clamp(calculated, 1, maximumHp); // 사망하지 않는 안전 범위 반환
+        } // 메서드 종료
+
         private void Awake() // 직접 배치·자동 생성 공통 초기화
         { // 메서드 범위
             if (!ShouldCreateDebugPanel(Application.isEditor, Debug.isDebugBuild)) // 출시 환경 생성 여부 확인
@@ -157,6 +165,7 @@ namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
             { // 조건 범위
                 _battleController = null; // 이전 전투 참조 제거
                 _boardInputController = null; // 이전 합성 데이터 참조 제거
+                _stageBattleRuntimeController = null; // 이전 스테이지 전투 참조 제거
                 _snapshot = AIDebugScoreSnapshot.Empty(); // AI 정보 초기화
                 _runtimeDiagnostics = BattleRuntimeDiagnostics.Empty; // Battle 진단 초기화
                 _fusionProgression = FusionProgressionReport.Empty; // 합성 성장 진단 초기화
@@ -166,6 +175,7 @@ namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
             _runtimeDiagnostics = SceneRuntimeBootstrap.RefreshBattleDiagnostics(); // 현재 관리자 누락·중복 갱신
             if (_battleController == null) _battleController = Object.FindFirstObjectByType<BattleController>(); // 전투 관리자 최초 탐색
             if (_boardInputController == null) _boardInputController = Object.FindFirstObjectByType<BoardInputController>(); // 합성 데이터 관리자 최초 탐색
+            if (_stageBattleRuntimeController == null) _stageBattleRuntimeController = Object.FindFirstObjectByType<StageBattleRuntimeController>(); // 스테이지 전투 관리자 최초 탐색
             _fusionProgression = _boardInputController != null // 보드 입력 연결 여부 확인
                 ? FusionProgressionAnalyzer.Analyze(_boardInputController.PieceDatabase, _boardInputController.FusionRecipeDatabase) // 실제 등록 콘텐츠 분석
                 : FusionProgressionReport.Empty; // 연결 전 빈 결과 적용
@@ -401,7 +411,67 @@ namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
             GUI.enabled = previousEnabled; // 기존 입력 활성 상태 다시 복원
             GUILayout.Label(canChangeSpeed ? "기존 전투 속도를 기준으로 1·2·3단계를 선택합니다." : "일시정지·튜토리얼 또는 전투 외 상태에서는 변경할 수 없습니다.", _mutedLabelStyle); // 배속 도구 설명
             EndSection(); // 전투 속도 구역 종료
+            DrawEncounterOverride(runState); // 다음 편성 강제 선택 구역 출력
+            DrawBossPhaseTools(runState); // 보스 HP 단계 확인 구역 출력
             GUILayout.EndScrollView(); // 전투 스크롤 종료
+        } // 메서드 종료
+
+        private void DrawEncounterOverride(RunState runState) // 다음 일반·정예 편성 개발 선택 출력
+        { // 메서드 범위
+            StageType stageType = _stageBattleRuntimeController?.StageDefinition != null ? _stageBattleRuntimeController.StageDefinition.StageType : StageType.Battle; // 현재 전투 종류 보정
+            int phase = runState != null ? RunPhaseProgressService.GetCurrentPhase(runState) : RunPhaseProgressService.FirstPhase; // 현재 페이즈 보정
+            bool supported = stageType == StageType.Battle || stageType == StageType.Elite; // 생성 편성 적용 대상 확인
+            BeginSection("다음 적 편성"); // 강제 편성 구역 시작
+            DrawKeyValue("현재 설정", string.IsNullOrWhiteSpace(EnemyEncounterDebugOverrides.ForcedProfileId) ? "자동" : EnemyEncounterDebugOverrides.ForcedProfileId); // 강제 원형 상태 출력
+            bool previousEnabled = GUI.enabled; // 기존 입력 활성 상태 저장
+            GUI.enabled = supported; // 일반·정예 전투에서만 편성 선택 허용
+            GUILayout.BeginHorizontal(); // 편성 버튼 가로 영역 시작
+            if (GUILayout.Button("자동", GUILayout.Height(30f))) EnemyEncounterDebugOverrides.Clear(); // 자동 선택 복귀
+            if (GUILayout.Button("이전", GUILayout.Height(30f))) EnemyEncounterDebugOverrides.Cycle(stageType, phase, -1); // 이전 해금 원형 선택
+            if (GUILayout.Button("다음", GUILayout.Height(30f))) EnemyEncounterDebugOverrides.Cycle(stageType, phase, 1); // 다음 해금 원형 선택
+            GUILayout.EndHorizontal(); // 편성 버튼 가로 영역 종료
+            GUI.enabled = previousEnabled; // 기존 입력 활성 상태 복원
+            GUILayout.Label("선택값은 다음 일반·정예 전투 한 번에 적용된 뒤 자동으로 해제됩니다.", _mutedLabelStyle); // 일회 적용 시점 안내
+            EndSection(); // 강제 편성 구역 종료
+        } // 메서드 종료
+
+        private void DrawBossPhaseTools(RunState runState) // 보스 체력 구간 개발 도구 출력
+        { // 메서드 범위
+            PieceRuntimeState boss = FindDebugBoss(runState); // 현재 살아 있는 보스 조회
+            BeginSection("보스 단계 확인"); // 보스 도구 구역 시작
+            DrawKeyValue("Boss HP", boss?.Definition != null ? boss.CurrentHp + " / " + boss.Definition.BaseHp : "-"); // 현재 보스 HP 출력
+            bool previousEnabled = GUI.enabled; // 기존 입력 활성 상태 저장
+            GUI.enabled = boss?.Definition != null && !boss.IsDead; // 살아 있는 보스에서만 단계 이동 허용
+            GUILayout.BeginHorizontal(); // 보스 HP 버튼 가로 영역 시작
+            if (GUILayout.Button("75%", GUILayout.Height(30f))) SetDebugBossHp(boss, 0.75f); // 75퍼센트 HP 적용
+            if (GUILayout.Button("50%", GUILayout.Height(30f))) SetDebugBossHp(boss, 0.50f); // 50퍼센트 HP 적용
+            if (GUILayout.Button("25%", GUILayout.Height(30f))) SetDebugBossHp(boss, 0.25f); // 25퍼센트 HP 적용
+            GUILayout.EndHorizontal(); // 보스 HP 버튼 가로 영역 종료
+            GUI.enabled = previousEnabled; // 기존 입력 활성 상태 복원
+            GUILayout.Label("다음 보스 상태 검사에서 페이즈 전환과 예고를 확인합니다.", _mutedLabelStyle); // 보스 적용 안내
+            EndSection(); // 보스 도구 구역 종료
+        } // 메서드 종료
+
+        private static PieceRuntimeState FindDebugBoss(RunState runState) // 현재 보드의 첫 살아 있는 적 보스 조회
+        { // 메서드 범위
+            if (runState?.Board == null) return null; // 보드 누락 처리
+            for (int y = 0; y < BoardState.Height; y++) // 보드 세로 순회
+            { // 반복 범위
+                for (int x = 0; x < BoardState.Width; x++) // 보드 가로 순회
+                { // 반복 범위
+                    PieceRuntimeState piece = runState.Board.GetTile(new Vector2Int(x, y))?.OccupyingPiece; // 현재 칸 기물 조회
+                    if (piece?.Definition == null || piece.IsPlayerPiece || piece.IsDead) continue; // 유효한 살아 있는 적만 사용
+                    if (piece.Definition.Category == PieceCategory.Boss) return piece; // 첫 보스 반환
+                } // 반복 종료
+            } // 반복 종료
+            return null; // 살아 있는 보스 없음
+        } // 메서드 종료
+
+        private static void SetDebugBossHp(PieceRuntimeState boss, float ratio) // 현재 보스 HP 구간 적용
+        { // 메서드 범위
+            if (boss?.Definition == null || boss.IsDead) return; // 잘못된 보스 입력 차단
+            boss.CurrentHp = CalculateDebugBossHp(boss.Definition.BaseHp, ratio); // 생존 범위 HP 적용
+            Debug.Log("97일차 F1 보스 HP 설정: " + boss.CurrentHp + " / " + boss.Definition.BaseHp); // 개발 변경 로그 출력
         } // 메서드 종료
 
         private void DrawColoredActionButton(string label, Color color, System.Action action) // 색상 개발 버튼 출력
