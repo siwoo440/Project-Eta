@@ -122,8 +122,10 @@ namespace ProjectEta.Run
             for (int i = 0; i < sourcePool.Count; i++)
             {
                 PieceDefinition definition = sourcePool[i]; // 현재 카드 정의
-                if (!MetaContentAvailabilityService.IsPieceAvailable(definition, snapshot)) continue; // 미해금 신규 기물 제외
-                if (!CardRewardRules.CanOffer(definition, ownedCards, deadCards)) continue; // 1성·보유 제한 검사
+                if (!string.IsNullOrEmpty(RunContentEligibility.GetExclusionReason(definition, ownedCards, deadCards, snapshot))) // 공통 획득 정책 확인
+                { // 조건 시작
+                    continue; // 제외 사유 있는 후보 차단
+                } // 조건 종료
                 if (!uniqueIds.Add(definition.PieceId)) continue; // 같은 PieceId 중복 제외
                 eligible.Add(definition); // 정상 후보 등록
             }

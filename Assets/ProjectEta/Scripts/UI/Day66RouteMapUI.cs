@@ -118,7 +118,7 @@ namespace ProjectEta.UI // 프로젝트 UI 네임스페이스
         private void RefreshHoveredNode() // Hover 노드 상세 갱신
         { // 메서드 범위 시작
             StageNode hoveredNode = ResolveHoveredNode(); // 현재 Hover 노드 조회
-            string nodeId = hoveredNode != null ? hoveredNode.NodeId : string.Empty; // 노드 ID 변환
+            string nodeId = hoveredNode != null ? hoveredNode.NodeId + ":" + RunPhaseProgressService.GetCurrentPhase(_runState) + ":" + _runState.RouteMap.CurrentNodeId + ":" + StagePreviewFormatter.GetStatus(_runState, hoveredNode) : string.Empty; // 노드·진행·접근 상태 캐시 키
 
             if (string.Equals(nodeId, _lastHoverNodeId, System.StringComparison.Ordinal)) // 동일 노드 확인
             { // 조건 범위 시작
@@ -134,10 +134,9 @@ namespace ProjectEta.UI // 프로젝트 UI 네임스페이스
             } // 조건 범위 종료
 
             StageDefinition definition = StageDefinitionCatalog.Resolve(hoveredNode.StageDefinitionId, hoveredNode.Depth); // 스테이지 정의 조회
-            StageType stageType = definition != null ? definition.StageType : StageType.Battle; // 스테이지 종류 보정
             string displayName = definition != null ? definition.DisplayName : $"{hoveredNode.Depth}단계"; // 표시 이름 보정
-            _hoverTitleText.text = $"{GetStageLabel(stageType)}  ·  {displayName}"; // 상세 제목 적용
-            _hoverBodyText.text = $"Depth {hoveredNode.Depth}\n{GetStageDescription(stageType)}\n\n상태: 선택 가능"; // 상세 본문 적용
+            _hoverTitleText.text = displayName; // 중복 종류 안내를 줄인 상세 제목
+            _hoverBodyText.text = StagePreviewFormatter.Build(_runState, hoveredNode); // 실제 규칙·보상·접근 상태 표시
             _hoverRoot.SetActive(true); // 상세 영역 표시
         } // 메서드 범위 종료
 
@@ -332,12 +331,12 @@ namespace ProjectEta.UI // 프로젝트 UI 네임스페이스
             background.raycastTarget = false; // 지도 입력 간섭 제거
             _hoverTitleText = CreateText("HoverTitle", _hoverRoot.transform, 19, FontStyle.Bold, PrimaryTextColor); // 상세 제목 생성
             _hoverTitleText.alignment = TextAnchor.MiddleLeft; // 상세 제목 좌측 정렬
-            SetCenteredRect(_hoverTitleText.rectTransform, new Vector2(0f, 82f), new Vector2(254f, 48f)); // 상세 제목 위치 적용
+            SetCenteredRect(_hoverTitleText.rectTransform, new Vector2(0f, 72f), new Vector2(238f, 48f)); // 테두리 안쪽 상세 제목 배치
             _hoverBodyText = CreateText("HoverBody", _hoverRoot.transform, 15, FontStyle.Normal, SecondaryTextColor); // 상세 본문 생성
             _hoverBodyText.alignment = TextAnchor.UpperLeft; // 상세 본문 좌상단 정렬
             _hoverBodyText.horizontalOverflow = HorizontalWrapMode.Wrap; // 긴 본문 줄바꿈 적용
             _hoverBodyText.verticalOverflow = VerticalWrapMode.Truncate; // 넘친 본문 잘라내기
-            SetCenteredRect(_hoverBodyText.rectTransform, new Vector2(0f, -36f), new Vector2(254f, 166f)); // 상세 본문 위치 적용
+            SetCenteredRect(_hoverBodyText.rectTransform, new Vector2(0f, -30f), new Vector2(238f, 156f)); // 테두리 안쪽 규칙 안내 배치
             _hoverRoot.SetActive(false); // 초기 상세 영역 숨김
         } // 메서드 범위 종료
 

@@ -25,7 +25,9 @@ namespace ProjectEta.Run // 전투 재화 보상 영역
                     return false; // 손상된 노드 지급 차단
                 } // 범위 종료
             } // 범위 종료
-            int amount = RunBalanceProfile.Current.GetBattleGold(type, phase); // 설정된 임시 승리 보상
+            StageDefinition definition = StageDefinitionCatalog.Resolve(current != null ? current.StageDefinitionId : StageDefinitionCatalog.CreateDefinitionId(stage, type), stage); // 완료 스테이지 정의 조회
+            StageRuleSnapshot rules = RunStageRuleService.GetOrCreate(run, definition, phase); // 전투와 같은 저장 규칙 조회
+            int amount = rules != null ? rules.victoryGold : 0; // 저장된 승리 보상 적용
             if (amount <= 0) // 비전투 노드 확인
             { // 범위 시작
                 return false; // 비전투 보상 제외

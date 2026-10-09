@@ -51,10 +51,9 @@ namespace ProjectEta.UI // 카드 보상 UI 네임스페이스
             ClearCardObjects(); // 이전 후보 UI 제거
             _selectionCallback = selectionCallback; // 현재 선택 콜백 저장
             _selectedDefinition = null; // 이전 선택 카드 초기화
-            string sourceTitle = source == CardRewardSource.RewardNode ? "REWARD STAGE" : "BATTLE REWARD"; // 보상 발생 경로 제목 계산
-            _titleText.text = profile == null
-                ? $"{sourceTitle} · 카드 1장 선택" // 기존 호출 기본 제목 표시
-                : $"{sourceTitle} · S{profile.Stage} · {profile.DisplayName}"; // 현재 Stage·보상 품질 표시
+            string sourceTitle = GetRewardSourceTitle(source); // 실제 완료 경로 제목 조회
+            string stageTitle = profile != null ? $" · S{profile.Stage}" : string.Empty; // 완료 스테이지 안내
+            _titleText.text = $"{sourceTitle}{stageTitle} · 1성 선택"; // 실제 획득 등급과 경로 표시
             RefreshRunStatus(); // 현재 런 Gold·HP·보유 카드 표시
             RefreshDetailPanel(); // 상세 패널 초기화
             RefreshConfirmButton(); // 확정 버튼 초기 비활성화
@@ -78,6 +77,17 @@ namespace ProjectEta.UI // 카드 보상 UI 네임스페이스
 
             _root.SetActive(true); // 보상 화면 활성화
         }
+
+        private static string GetRewardSourceTitle(CardRewardSource source) // 카드 보상 발생 경로 안내
+        { // 메서드 시작
+            switch (source) // 완료 경로 분기
+            { // 분기 시작
+                case CardRewardSource.RewardNode: return "카드 보상"; // 보상 노드 안내
+                case CardRewardSource.EliteVictory: return "정예 승리 보상"; // 정예 전투 안내
+                case CardRewardSource.MidBossVictory: return "중간 보스 승리 보상"; // 보스 전투 안내
+                default: return "일반 승리 보상"; // 일반 전투 안내
+            } // 분기 종료
+        } // 메서드 종료
 
         public void Hide() // 현재 카드 보상 화면 숨김
         {
@@ -144,7 +154,7 @@ namespace ProjectEta.UI // 카드 보상 UI 네임스페이스
             } // 조건 종료
             headerBackground.raycastTarget = false; // 카드 선택 클릭 간섭 제거
 
-            _titleText = CreateText("RewardTitle", headerObject.transform, 32, FontStyle.Bold); // 보상 제목 생성
+            _titleText = CreateText("RewardTitle", headerObject.transform, 24, FontStyle.Bold); // 보상 경로·등급 한 줄 제목 생성
             _titleText.alignment = TextAnchor.MiddleLeft; // 제목 좌측 정렬
             SetRect(_titleText.rectTransform, new Vector2(-350f, 18f), new Vector2(540f, 48f)); // 제목 위치·크기 적용
 
@@ -153,7 +163,7 @@ namespace ProjectEta.UI // 카드 보상 UI 네임스페이스
             SetRect(_statusText.rectTransform, new Vector2(310f, 18f), new Vector2(650f, 48f)); // 상태 위치·크기 적용
 
             Text guideText = CreateText("RewardGuide", headerObject.transform, 17, FontStyle.Normal); // 선택 안내 문구 생성
-            guideText.text = "후보를 비교한 뒤 한 장을 선택하고 아래의 선택 확정 버튼을 누르세요."; // Reward 조작 안내 적용
+            guideText.text = "1성 기물 중 카드 1장 선택 · 후보를 선택한 뒤 아래의 선택 확정 버튼을 누르세요."; // 실제 획득 정책과 확정 조작 안내
             guideText.alignment = TextAnchor.MiddleLeft; // 안내 좌측 정렬
             guideText.color = new Color(0.78f, 0.82f, 0.90f, 1f); // 보조 문구 색상 적용
             SetRect(guideText.rectTransform, new Vector2(-105f, -28f), new Vector2(1030f, 38f)); // 안내 위치 적용

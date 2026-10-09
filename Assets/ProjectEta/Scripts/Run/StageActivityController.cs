@@ -5,6 +5,7 @@ using ProjectEta.Battle; // BattleController 사용
 using ProjectEta.Board; // BoardView·RouteMapBoardController 사용
 using ProjectEta.Cards; // PlayerStartingDeckCatalog 사용
 using ProjectEta.Pieces; // PieceDefinition 사용
+using ProjectEta.Meta; // 런 시작 해금 상태 조회
 using ProjectEta.UI; // 판 위 StageBoardOverlayUI 사용
 
 namespace ProjectEta.Run
@@ -202,7 +203,9 @@ namespace ProjectEta.Run
             }
 
             options.Add(new StageOverlayOption("뒤로", "상점 메인으로 돌아갑니다.", true, ShowShopMain)); // 메인 복귀 버튼
-            _overlayUI.ShowPage(StageOverlayMode.Shop, "카드 구매", $"Gold {_economy.Currency} · 등급별 가격", options); // 구매 페이지 표시
+            var snapshot = RunContentUnlockSnapshotService.GetOrCreate(_runState, MetaProgressService.Current); // 이번 런의 고정 해금 조회
+            int locked = RunContentEligibility.CountLocked(snapshot); // 실제 원본 후보의 미해금 수 조회
+            _overlayUI.ShowPage(StageOverlayMode.Shop, "카드 구매", $"Gold {_economy.Currency} · 1성 기물\n미해금 {locked}종 제외 · 해금은 다음 런부터", options); // 구매·잠금 정책 안내
         }
 
         private void PurchaseCard(ShopOffer offer)

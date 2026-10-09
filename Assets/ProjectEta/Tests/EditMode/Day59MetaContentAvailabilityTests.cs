@@ -1,4 +1,4 @@
-using System.IO; // 소스 회귀 검사 사용
+using System.Linq; // 실제 후보 포함 여부 확인
 using System.Reflection; // 테스트용 PieceDefinition 필드 설정
 using NUnit.Framework; // EditMode 테스트 사용
 using UnityEngine; // ScriptableObject 사용
@@ -69,14 +69,27 @@ namespace ProjectEta.Tests.EditMode
         }
 
         [Test]
-        public void CardRewardGenerator_UsesMetaContentAvailabilitySnapshot()
-        {
-            string sourcePath = Path.Combine(Application.dataPath, "ProjectEta/Scripts/Run/CardRewardGenerator.cs"); // 카드 보상 생성기 소스 경로
-            string source = File.ReadAllText(sourcePath); // 현재 카드 보상 생성기 소스 읽기
-
-            StringAssert.Contains("RunContentUnlockSnapshotService.GetOrCreateForActiveRun", source); // 현재 런 Snapshot 조회 연결 검증
-            StringAssert.Contains("MetaContentAvailabilityService.IsPieceAvailable", source); // 영구 해금 기물 필터 연결 검증
-        }
+        public void CardRewardGenerator_UsesMetaContentAvailabilitySnapshot() // 실제 후보의 런 고정 해금 검증
+        { // 메서드 시작
+            PieceDefinition piece = CreatePiece("gated_reward_test", "piece_unlock_test"); // 해금 요구 기물 생성
+            SetPrivateField(piece, "_grade", PieceGrade.OneStar); // 실제 획득 등급 설정
+            SetPrivateField(piece, "_movementType", PieceMovementType.Pawn); // 일반 기물 이동 설정
+            var progress = new MetaProgressState(); // 미해금 진행 생성
+            RunContentUnlockSnapshot current = RunContentUnlockSnapshot.Capture("current", progress); // 현재 런 해금 고정
+            progress.Unlock(MetaUnlockType.Piece, "piece_unlock_test"); // 런 도중 영구 해금 재현
+            RunContentUnlockSnapshot next = RunContentUnlockSnapshot.Capture("next", progress); // 다음 런 해금 고정
+            try // 시험 자원 보호
+            { // 보호 시작
+                var locked = CardRewardGenerator.Generate(new[] { piece }, new PieceDefinition[0], 100, 42, current); // 현재 런 후보 생성
+                var unlocked = CardRewardGenerator.Generate(new[] { piece }, new PieceDefinition[0], 100, 42, next); // 다음 런 후보 생성
+                Assert.That(locked.Any(candidate => candidate.PieceId == piece.PieceId), Is.False); // 현재 런 잠금 유지 확인
+                Assert.That(unlocked.Any(candidate => candidate.PieceId == piece.PieceId), Is.True); // 다음 런 실제 후보 포함 확인
+            } // 보호 종료
+            finally // 시험 종료 정리
+            { // 정리 시작
+                Object.DestroyImmediate(piece); // 시험 기물 정리
+            } // 정리 종료
+        } // 메서드 종료
 
         [Test]
         public void KingUnlockRules_SnapshotDoesNotChangeAfterMetaProgressChanges()

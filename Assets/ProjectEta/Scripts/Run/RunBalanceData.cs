@@ -16,6 +16,7 @@ namespace ProjectEta.Run // 런 측정 데이터 영역
         public int droppedEntries; // 상한 초과 생략 수
         public List<RunBalanceEntry> entries = new List<RunBalanceEntry>(); // 행동과 후보 기록
         public List<RunBalanceEntry> firstFusions = new List<RunBalanceEntry>(); // 최초 등급 도달 기록
+        public List<StageRuleSnapshot> stageRuleSnapshots = new List<StageRuleSnapshot>(); // 페이즈별 안내·전투·보상 고정 규칙
         public List<string> goldRewardClaims = new List<string>(); // 승리 보상 지급 이력
         public List<string> encounterClaims = new List<string>(); // 생성 편성 중복 기록 차단 이력
         public List<string> battleResultClaims = new List<string>(); // 전투 결과 중복 기록 차단 이력
@@ -32,6 +33,8 @@ namespace ProjectEta.Run // 런 측정 데이터 영역
         } // 범위 종료
         public void Normalize() // 누락된 저장 목록 보정
         { // 범위 시작
+            stageRuleSnapshots = stageRuleSnapshots ?? new List<StageRuleSnapshot>(); // 구버전 규칙 목록 복구
+            stageRuleSnapshots.RemoveAll(item => item == null || !item.IsValid); // 손상된 규칙 제외
             entries = entries ?? new List<RunBalanceEntry>(); // 행동 목록 복구
             firstFusions = firstFusions ?? new List<RunBalanceEntry>(); // 최초 합성 목록 복구
             goldRewardClaims = goldRewardClaims ?? new List<string>(); // 지급 이력 복구

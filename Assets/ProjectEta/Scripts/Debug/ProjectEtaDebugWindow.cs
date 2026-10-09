@@ -6,6 +6,7 @@ using ProjectEta.AI; // AI 점수·성능 정보 사용
 using ProjectEta.Battle; // 전투 상태·결과·배속 사용
 using ProjectEta.Board; // 보드 입력과 합성 데이터베이스 사용
 using ProjectEta.Fusion; // 합성 성장 콘텐츠 진단 사용
+using ProjectEta.Meta; // 현재 런의 고정 해금 조회
 using ProjectEta.Pieces; // 기물 등급 표시 사용
 using ProjectEta.Run; // 런 흐름·경제 상태 사용
 using ProjectEta.SceneFlow; // Battle 초기화 진단 사용
@@ -44,6 +45,7 @@ namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
         private GUIStyle _sectionTitleStyle; // 구역 제목 스타일
         private GUIStyle _mutedLabelStyle; // 보조 문구 스타일
         private GUIStyle _statusValueStyle; // 상태 값 스타일
+        private bool _showExcludedContent; // 제외 후보 목록 펼침 상태
         private bool _isOpen; // F1 패널 열림 상태
         private int _currentPage = StatusPage; // 현재 페이지 번호
         private float _nextRefreshTime; // 다음 자동 갱신 시각
@@ -355,6 +357,8 @@ namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
             DrawKeyValue("Hand", runState.Hand.Hand.Count.ToString()); // 손패 수 출력
             DrawKeyValue("Gold", GetCurrencyText(runState)); // 런 재화 출력
             EndSection(); // 카드·재화 구역 종료
+            DrawStageRuleStatus(runState); // 현재 전투 규칙·보상 안내
+            DrawContentEligibility(runState); // 실제 후보의 해금·상한 안내
             BeginSection("96일차 경제 측정"); // 측정 구역 시작
             GUILayout.Label(RunBalanceReport.BuildSummary(runState)); // 실제 런 기록 요약
             if (GUILayout.Button("측정 JSON / CSV 저장")) // 사용자 내보내기 선택
@@ -372,6 +376,57 @@ namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
             } // 범위 종료
             EndSection(); // 측정 구역 종료
             GUILayout.EndScrollView(); // 상태 스크롤 종료
+        } // 메서드 종료
+
+        private void DrawStageRuleStatus(RunState run) // 현재 스테이지 고정 규칙 표시
+        { // 메서드 시작
+            StageNode node = run.RouteMap.CurrentNode; // 현재 스테이지 노드 조회
+            StageDefinition definition = node != null ? StageDefinitionCatalog.Resolve(node.StageDefinitionId, node.Depth) : StageDefinitionCatalog.Resolve(StageDefinitionCatalog.CreateDefinitionId(run.CurrentRound, StageType.Battle), run.CurrentRound); // 현재 정의 조회
+            StageRuleSnapshot rules = RunStageRuleService.GetOrCreate(run, definition, RunPhaseProgressService.GetCurrentPhase(run)); // 런 고정 규칙 조회
+            BeginSection("스테이지 규칙·보상"); // 규칙 구역 시작
+            if (rules != null) // 전투 규칙 존재 확인
+            { // 조건 시작
+                DrawKeyValue("제한 턴", rules.turnLimit.ToString()); // 저장된 턴 제한 표시
+                DrawKeyValue("증원", StagePreviewFormatter.GetReinforcementTurns(rules.reinforcements)); // 실제 증원 턴 표시
+                DrawKeyValue("승리 Gold", rules.victoryGold.ToString()); // 실제 승리 보상 표시
+                GUILayout.Label("진행 중인 런의 규칙은 저장 후에도 유지", _mutedLabelStyle); // 이어하기 정책 안내
+            } // 조건 종료
+            else // 비전투 노드 확인
+            { // 분기 시작
+                GUILayout.Label("현재 노드는 비전투 활동", _mutedLabelStyle); // 전투 외 상태 안내
+            } // 분기 종료
+            EndSection(); // 규칙 구역 종료
+        } // 메서드 종료
+
+        private void DrawContentEligibility(RunState run) // 실제 후보 제외 사유 표시
+        { // 메서드 시작
+            var snapshot = RunContentUnlockSnapshotService.GetOrCreate(run, MetaProgressService.Current); // 이번 런의 해금 조회
+            var pool = RunContentEligibility.GetCandidatePool(); // 실제 후보 원본 조회
+            int available = 0; // 획득 가능 후보 수
+            foreach (PieceDefinition definition in pool) // 전체 후보 순회
+            { // 반복 시작
+                if (string.IsNullOrEmpty(RunContentEligibility.GetExclusionReason(definition, run.Deck.OwnedCardPool, run.Deck.DeadCardPile, snapshot))) // 실제 획득 가능 확인
+                { // 조건 시작
+                    available++; // 획득 가능 수 증가
+                } // 조건 종료
+            } // 반복 종료
+            BeginSection("콘텐츠 해금·획득 제한"); // 콘텐츠 구역 시작
+            DrawKeyValue("획득 가능", available.ToString()); // 가능한 1성 후보 수 표시
+            DrawKeyValue("미해금 1성", RunContentEligibility.CountLocked(snapshot).ToString()); // 잠긴 직접 획득 후보 수 표시
+            GUILayout.Label("합성 결과는 직접 획득 제외 · 영구 해금은 다음 런부터", _mutedLabelStyle); // 획득 정책 안내
+            _showExcludedContent = GUILayout.Toggle(_showExcludedContent, "제외 후보와 사유 펼치기"); // 긴 목록 표시 전환
+            if (_showExcludedContent) // 목록 펼침 확인
+            { // 조건 시작
+                foreach (PieceDefinition definition in pool) // 전체 후보 순회
+                { // 반복 시작
+                    string reason = RunContentEligibility.GetExclusionReason(definition, run.Deck.OwnedCardPool, run.Deck.DeadCardPile, snapshot); // 실제 제외 사유 조회
+                    if (!string.IsNullOrEmpty(reason)) // 제외된 후보 확인
+                    { // 조건 시작
+                        GUILayout.Label($"{definition.DisplayName} · {reason}", _mutedLabelStyle); // 기물별 제외 사유 표시
+                    } // 조건 종료
+                } // 반복 종료
+            } // 조건 종료
+            EndSection(); // 콘텐츠 구역 종료
         } // 메서드 종료
 
         private void DrawBattlePage() // 전투 개발 도구 출력

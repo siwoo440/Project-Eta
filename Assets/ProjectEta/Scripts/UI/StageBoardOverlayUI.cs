@@ -82,6 +82,7 @@ namespace ProjectEta.UI
             ApplyModeVisual(mode); // Shop/Event 돗자리 색상 적용
             _titleText.text = title ?? string.Empty; // 페이지 제목 적용
             _subtitleText.text = subtitle ?? string.Empty; // 페이지 설명 적용
+            _subtitleText.fontSize = subtitle != null && subtitle.Contains("\n") ? 18 : 22; // 두 줄 정책 안내의 글자 잘림 방지
             RebuildOptions(options); // 카드형 선택지 재배치
             ApplyPrimaryCameraPresentation(); // 1번 카메라 전용 고정 UI 위치·각도 적용
             _overlayRoot.SetActive(true); // 판 위 오버레이 표시

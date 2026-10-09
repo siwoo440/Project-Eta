@@ -25,6 +25,7 @@ namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이
         private RoundDefinition _roundDefinition; // 스테이지가 재사용하는 기존 라운드 설정
         private PlayerStartingDeckCatalog _pieceCatalog; // PieceId→PieceDefinition 조회 카탈로그
         private PieceDatabase _pieceDatabase; // 일반·정예 적 후보 전체 기물 DB
+        private bool _ownsRoundDefinition; // 독립 런타임 라운드 정리 여부
         private bool _configured; // 중복 설정 방지 상태
 
         public StageDefinition StageDefinition => _stageDefinition; // 현재 적용 중인 StageDefinition 공개
@@ -65,6 +66,9 @@ namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이
                 return false; // 구성 실패 반환
             }
 
+            StageRuleSnapshot rules = RunStageRuleService.GetOrCreate(_runState, stageDefinition, RunPhaseProgressService.GetCurrentPhase(_runState)); // 저장된 전투 규칙 조회
+            _roundDefinition = rules.CreateRuntimeRound(); // 이번 런의 독립 라운드 적용
+            _ownsRoundDefinition = true; // 런타임 객체 정리 표시
             ApplyTurnLimit(); // StageDefinition의 RoundDefinition 턴 제한을 기존 BattleController에 적용
 
             if (_stageDefinition.StageType == StageType.Battle || _stageDefinition.StageType == StageType.Elite)
@@ -342,6 +346,10 @@ namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이
         private void OnDestroy() // 스테이지 전투 런타임 제거 시 이벤트 정리
         {
             if (_turnManager != null) _turnManager.TurnChanged -= HandleTurnChanged; // 턴 이벤트 구독 해제
+            if (_ownsRoundDefinition && _roundDefinition != null) // 소유한 라운드 확인
+            { // 조건 시작
+                Destroy(_roundDefinition); // 런타임 규칙 객체 정리
+            } // 조건 종료
         }
     }
 }

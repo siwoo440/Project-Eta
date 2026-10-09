@@ -7,7 +7,8 @@ namespace ProjectEta.Run // 스테이지 런타임 카탈로그 네임스페이�
 {
     public static class StageDefinitionCatalog // StageDefinitionId를 실제 StageDefinition으로 변환하는 런타임 카탈로그
     {
-        private const string NormalRoundResourceName = "PrototypeRound36"; // 일반·엘리트 전투 기본 RoundDefinition
+        private const string NormalRoundResourceName = "PrototypeRound36"; // 일반 전투 기본 라운드
+        private const string EliteRoundResourceName = "EliteRound99"; // 정예 전투 전용 라운드
         private const string MidBossRoundResourceName = "MidBossRound74"; // 74일차 중간 보스 전용 RoundDefinition
         private const string FinalBossRoundResourceName = "FinalBossRound74"; // 74일차 최종 보스 전용 RoundDefinition
         private static readonly Dictionary<string, StageDefinition> Cache = new Dictionary<string, StageDefinition>(); // 동일 ID 런타임 정의 재사용 캐시
@@ -51,7 +52,14 @@ namespace ProjectEta.Run // 스테이지 런타임 카탈로그 네임스페이�
         {
             if (stageType == StageType.MidBoss) return Resources.Load<RoundDefinition>(MidBossRoundResourceName); // 중간 보스 전용 라운드 로드
             if (stageType == StageType.FinalBoss) return Resources.Load<RoundDefinition>(FinalBossRoundResourceName); // 최종 보스 전용 라운드 로드
-            if (stageType == StageType.Battle || stageType == StageType.Elite) return Resources.Load<RoundDefinition>(NormalRoundResourceName); // 일반·Elite 라운드 로드
+            if (stageType == StageType.Elite) // 정예 전투 종류 확인
+            { // 조건 시작
+                return Resources.Load<RoundDefinition>(EliteRoundResourceName); // 정예 전용 라운드 조회
+            } // 조건 종료
+            if (stageType == StageType.Battle) // 일반 전투 종류 확인
+            { // 조건 시작
+                return Resources.Load<RoundDefinition>(NormalRoundResourceName); // 일반 라운드 조회
+            } // 조건 종료
             return null; // 비전투 스테이지는 전투 데이터 없음
         }
 

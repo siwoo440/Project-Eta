@@ -242,7 +242,15 @@ namespace ProjectEta.UI // 프로젝트 UI 네임스페이스
         { // 메서드 시작
             Rect area = new Rect(0f, 0f, 1f, 1f); // 원본 전체 영역 설정
             bool horizontal = false; // 가로 명패 여부 초기화
-            if (path == ShopPriceTagResourcePath) // 가격표 여백 확인
+            if (path == RouteSidePanelResourcePath) // 지도 세로 패널의 투명 여백 확인
+            { // 조건 시작
+                area = new Rect(0.183f, 0.035f, 0.635f, 0.945f); // 원본 패널 테두리를 포함한 표시 영역
+            } // 조건 종료
+            else if (path == RouteNodeTooltipResourcePath) // 노드 설명 패널의 투명 여백 확인
+            { // 조건 시작
+                area = new Rect(0.025f, 0.16f, 0.95f, 0.685f); // 원본 설명 테두리를 포함한 표시 영역
+            } // 조건 종료
+            else if (path == ShopPriceTagResourcePath) // 가격표 여백 확인
             { // 조건 시작
                 area = new Rect(0.01f, 0.18f, 0.98f, 0.64f); // 가격표 실제 프레임 영역
                 horizontal = true; // 가로 명패 표시

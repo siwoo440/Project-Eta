@@ -39,6 +39,33 @@ namespace ProjectEta.Round // 라운드 데이터 타입을 모아두는 네임�
         [SerializeField] private List<EnemySpawnDefinition> _initialEnemies = new List<EnemySpawnDefinition>(); // 시작 적 목록
         [SerializeField] private List<EnemySpawnDefinition> _reinforcements = new List<EnemySpawnDefinition>(); // 턴별 증원 목록
 
+        public void ConfigureRuntime(string displayName, int turnLimit, bool isBossRound, string bossResourceName, Vector2Int bossAnchor, IReadOnlyList<EnemySpawnDefinition> initialEnemies, IReadOnlyList<EnemySpawnDefinition> reinforcements) // 독립 런타임 규칙 적용
+        { // 메서드 시작
+            _displayName = displayName ?? "Round"; // 라운드 이름 보정
+            _turnLimit = Mathf.Max(1, turnLimit); // 제한 턴 보정
+            _isBossRound = isBossRound; // 보스 여부 저장
+            _bossResourceName = bossResourceName; // 보스 리소스 저장
+            _bossAnchor = bossAnchor; // 보스 좌표 저장
+            _initialEnemies = CopyRuntimeSpawns(initialEnemies); // 시작 배치 독립 복사
+            _reinforcements = CopyRuntimeSpawns(reinforcements); // 증원 배치 독립 복사
+        } // 메서드 종료
+
+        private static List<EnemySpawnDefinition> CopyRuntimeSpawns(IReadOnlyList<EnemySpawnDefinition> source) // 외부 배치 데이터 보호
+        { // 메서드 시작
+            var result = new List<EnemySpawnDefinition>(); // 독립 배치 목록 생성
+            if (source != null) // 원본 목록 확인
+            { // 조건 시작
+                foreach (EnemySpawnDefinition spawn in source) // 배치 목록 순회
+                { // 반복 시작
+                    if (spawn != null) // 유효 배치 확인
+                    { // 조건 시작
+                        result.Add(new EnemySpawnDefinition(spawn.PieceId, spawn.Position, spawn.SpawnTurn)); // 값 기반 복사
+                    } // 조건 종료
+                } // 반복 종료
+            } // 조건 종료
+            return result; // 복사 배치 반환
+        } // 메서드 종료
+
         public string DisplayName => _displayName; // 표시 이름 공개
         public int TurnLimit => Mathf.Max(1, _turnLimit); // 최소 1턴 보정
         public bool IsBossRound => _isBossRound; // 보스 라운드 여부 공개
