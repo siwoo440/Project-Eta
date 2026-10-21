@@ -1,4 +1,4 @@
-using System.Collections.Generic; // 옵션 목록 사용
+﻿using System.Collections.Generic; // 옵션 목록 사용
 using UnityEngine; // 보드 위 3D 오버레이 생성
 using UnityEngine.EventSystems; // EventSystem 사용
 using UnityEngine.InputSystem.UI; // 새 Input System UI 입력 모듈 사용
@@ -181,6 +181,9 @@ namespace ProjectEta.UI
             _titlePlaqueImage.color = new Color(0.16f, 0.09f, 0.04f, 0.95f); // 어두운 목재 느낌 배경 적용
 
             _titleText = CreateText("Title", plaqueObject.transform, 46, FontStyle.Bold); // 제목 텍스트 생성
+            _titleText.resizeTextForBestFit = true; // 긴 기획 이벤트 이름의 프레임 이탈 방지
+            _titleText.resizeTextMinSize = 28; // 긴 제목 최소 가독 크기
+            _titleText.resizeTextMaxSize = 46; // 기존 제목 크기 상한
             SetRect(_titleText.rectTransform, Vector2.zero, new Vector2(TitlePlaqueWidth - 24f, TitlePlaqueHeight - 18f)); // 제목 텍스트 위치·크기 적용
         }
 
@@ -301,6 +304,14 @@ namespace ProjectEta.UI
             int count = options != null ? Mathf.Min(options.Count, _optionViews.Count) : 0; // 표시 가능한 옵션 수 계산
             if (count <= 0) return; // 표시할 선택지 없음 방어
 
+            bool hasNavigation = false; // 별도 탐색 행 사용 여부
+            for (int index = 0; index < count; index++) hasNavigation |= options[index].IsNavigation; // 명시된 버튼 역할 확인
+            if (hasNavigation) // 이벤트 대상과 탐색 분리
+            { // 조건 시작
+                RebuildTargetOptions(options, count); // 카드 위·버튼 아래 배치
+                return; // 기존 상점 배치 유지
+            } // 조건 종료
+
             int bottomIndex = HasDedicatedBottomCard(options, count) ? count - 1 : -1; // 하단 전용 카드 인덱스 계산
             int primaryCount = bottomIndex >= 0 ? count - 1 : count; // 일반 카드 수 계산
             int viewIndex = 0; // 현재 사용 중 카드 뷰 인덱스
@@ -317,6 +328,24 @@ namespace ProjectEta.UI
             }
         }
 
+        private void RebuildTargetOptions(IReadOnlyList<StageOverlayOption> options, int count) // 대상 두 장과 탐색 세 버튼의 독립 행
+        { // 메서드 시작
+            int navigationCount = 0; // 하단 버튼 수
+            for (int index = 0; index < count; index++) navigationCount += options[index].IsNavigation ? 1 : 0; // 대상과 버튼 구분
+            int targetCount = count - navigationCount; // 상단 카드 수
+            int targetIndex = 0; // 현재 대상 순서
+            int navigationIndex = 0; // 현재 버튼 순서
+            for (int index = 0; index < count; index++) // 현재 화면 옵션 배치
+            { // 반복 시작
+                StageOverlayOption option = options[index]; // 실제 콜백과 표시 정보
+                bool navigation = option.IsNavigation; // 탐색 역할
+                float x = navigation ? (navigationIndex++ - (navigationCount - 1) * 0.5f) * 270f : (targetIndex++ - (targetCount - 1) * 0.5f) * 460f; // 각 행 중앙 정렬
+                Vector2 position = new Vector2(x, navigation ? -145f : 65f); // 대상·탐색 사이 충분한 간격
+                Vector2 size = navigation ? new Vector2(240f, 80f) : new Vector2(NormalCardWidth, NormalCardHeight); // 탐색은 작은 버튼
+                ConfigureOptionView(_optionViews[index], option, position, size, 0f, navigation); // 회전 없는 비중첩 배치
+            } // 반복 종료
+        } // 메서드 종료
+
         private void ConfigureOptionView(OptionView view, StageOverlayOption option, Vector2 position, Vector2 size, float rotationZ, bool isBottomCard)
         {
             if (view == null || option == null) return; // 잘못된 카드 뷰·옵션 방어
@@ -324,7 +353,7 @@ namespace ProjectEta.UI
             view.RootRect.sizeDelta = size; // 카드 크기 적용
             RectTransform titleBandRect = view.TitleText.transform.parent.GetComponent<RectTransform>(); // 현재 카드 제목 영역 조회
             if (titleBandRect != null) titleBandRect.sizeDelta = new Vector2(size.x - 36f, size.y - 28f); // 카드별 실제 크기에 제목 영역 맞춤
-            view.TitleText.rectTransform.sizeDelta = new Vector2(size.x - 56f, size.y - 38f); // 카드 전체를 사용하는 제목 텍스트 크기 적용
+            SetRect(view.TitleText.rectTransform, Vector2.zero, new Vector2(size.x - 56f, size.y - 38f)); // 상세 카드 재사용 시 위치·크기 중앙 복원
             view.RootRect.anchoredPosition = position; // 카드 위치 적용
             view.RootRect.localRotation = Quaternion.Euler(0f, 0f, rotationZ); // 카드 약간 기울어진 배치 적용
             view.TitleText.text = option.Title ?? string.Empty; // 카드 제목 적용
@@ -370,7 +399,35 @@ namespace ProjectEta.UI
             view.TitleText.color = option.Interactable ? Color.white : new Color(0.65f, 0.65f, 0.65f, 1f); // 선택 불가 문구 구분
             view.TitleText.fontSize = isBottomCard ? 38 : 34; // 모든 카드 제목을 카드 전체에서 크게 표시
             view.TitleText.alignment = TextAnchor.MiddleCenter; // 카드 중앙에 제목 정렬
-            view.DescriptionText.gameObject.SetActive(false); // 모든 카드 내부 작은 설명 숨김 유지
+            view.DescriptionText.gameObject.SetActive(option.ShowDescriptionOnCard); // 이벤트 비용·손익은 Hover 없이 표시
+            if (option.ShowDescriptionOnCard) // 상세 표시를 선택한 이벤트 카드
+            { // 조건 시작
+                SetRect(view.TitleText.rectTransform, new Vector2(0f, size.y * 0.5f - 28f), new Vector2(size.x - 56f, 36f)); // 카드 상단 제목 영역
+                view.TitleText.fontSize = 24; // 상세 공간을 확보하는 제목 크기
+                view.TitleText.resizeTextForBestFit = true; // 긴 선택 제목 크기 조정
+                view.TitleText.resizeTextMinSize = 18; // 선택 제목 최소 크기
+                view.TitleText.resizeTextMaxSize = 24; // 선택 제목 상한
+                SetRect(view.DescriptionText.rectTransform, new Vector2(0f, -20f), new Vector2(size.x - 56f, size.y - 70f)); // 제목 아래 비용·효과 영역
+                view.DescriptionText.text = option.Description; // 실제 조건·손익 문구
+                view.DescriptionText.fontSize = 18; // 읽을 수 있는 본문 크기
+                view.DescriptionText.resizeTextForBestFit = true; // 긴 손익·불가 이유 표시
+                view.DescriptionText.resizeTextMinSize = 15; // 상세 최소 가독 크기
+                view.DescriptionText.resizeTextMaxSize = 18; // 상세 크기 상한
+                view.DescriptionText.horizontalOverflow = HorizontalWrapMode.Wrap; // 긴 효과 줄바꿈
+                view.DescriptionText.verticalOverflow = VerticalWrapMode.Truncate; // 카드 밖 글자 차단
+                view.DescriptionText.color = new Color(0.94f, 0.94f, 0.9f, 1f); // 비활성 결과 카드도 읽기 가능한 색상
+            } // 조건 종료
+            else // 기존 상점·일반 선택 화면
+            { // 조건 시작
+                view.TitleText.resizeTextForBestFit = false; // 재사용 카드의 기존 큰 제목 복원
+                if (option.IsNavigation) // 작은 탐색 버튼의 한 줄 제목
+                { // 조건 시작
+                    view.TitleText.fontSize = 26; // 버튼 높이에 맞춘 글자 크기
+                    view.TitleText.resizeTextForBestFit = true; // 폰트별 긴 제목 보정
+                    view.TitleText.resizeTextMinSize = 20; // 탐색 제목 최소 크기
+                    view.TitleText.resizeTextMaxSize = 26; // 탐색 제목 상한
+                } // 조건 종료
+            } // 조건 종료
         }
 
         private void ShowHoverDescription(StageOverlayOption option)

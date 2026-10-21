@@ -5,10 +5,15 @@ namespace ProjectEta.Run
     public static class RunPhaseRouteGenerator
     {
         public static IReadOnlyList<StageNode> CreateFullRoute(int mapSeed, int phase)
+        { // 기존 생성 API 호환
+            return CreateFullRoute(mapSeed, phase, false); // 구버전 그래프 직접 생성 유지
+        } // 호환 메서드 종료
+
+        public static IReadOnlyList<StageNode> CreateFullRoute(int mapSeed, int phase, bool useExpandedRules) // 새 런 규칙 선택
         {
             int safePhase = ClampPhase(phase); // 1~5 페이즈 범위 보정
             int phaseSeed = CreatePhaseSeed(mapSeed, safePhase); // 페이즈별 독립 경로 Seed 계산
-            IReadOnlyList<StageNode> source = StageRouteGenerator.CreateFullRoute(phaseSeed); // 기존 1~10 경로 규칙 재사용
+            IReadOnlyList<StageNode> source = useExpandedRules ? Day102RouteRules.Create(phaseSeed, safePhase) : StageRouteGenerator.CreateFullRoute(phaseSeed); // 새 경로와 기존 API 구분
             var result = new List<StageNode>(source.Count); // 페이즈 전용 노드 결과 생성
             var idMap = new Dictionary<string, string>(); // 기존 ID→페이즈 ID 변환표 생성
 

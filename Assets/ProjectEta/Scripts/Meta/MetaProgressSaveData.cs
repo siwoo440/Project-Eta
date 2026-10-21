@@ -15,5 +15,6 @@ namespace ProjectEta.Meta
         public List<string> unlockedPassiveIds = new List<string>(); // 영구 해금 패시브 ID
         public List<string> claimedRunRewardIds = new List<string>(); // 이미 메타 보상을 받은 런 고유 ID
         public List<string> discoveredFusionRecipeIds = new List<string>(); // 89일차: 런을 넘어 유지되는 숨김 합성식 발견 ID
+        public List<string> eventInformationIds = new List<string>(); // 선택 단서 후보의 영구 열람 ID
     }
 }

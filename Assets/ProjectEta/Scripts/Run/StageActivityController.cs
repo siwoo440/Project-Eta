@@ -29,11 +29,9 @@ namespace ProjectEta.Run
         private RunEconomyState _economy; // 현재 런 Gold 상태
         private bool _activityActive; // Shop/Event 진행 여부
         private RunFlowPhase _activePhase; // 현재 비전투 타입
-        private StageEventScenario _eventScenario; // 현재 이벤트 시나리오
-        private StageEventChoice _pendingEventChoice; // 카드·강화 선택을 기다리는 이벤트 선택지
+        private RunEventPresenter _eventPresenter; // 102일차 이벤트 화면 흐름
         private int _removePageIndex; // 카드 제거 페이지 번호
         private int _upgradePageIndex; // 카드 강화 페이지 번호
-        private int _eventUpgradePageIndex; // 이벤트 무료 강화 페이지 번호
 
         private IEnumerator Start()
         {
@@ -377,255 +375,24 @@ namespace ProjectEta.Run
             return (itemCount + OwnedCardsPerPage - 1) / OwnedCardsPerPage; // 올림 페이지 수 계산
         }
 
-        private void BeginEvent()
-        {
-            _activityActive = true; // 이벤트 진행 상태 설정
-            _activePhase = RunFlowPhase.Event; // 현재 이벤트 타입 저장
-            _pendingEventChoice = null; // 이전 이벤트 선택 상태 초기화
-            _eventUpgradePageIndex = 0; // 이벤트 강화 페이지 초기화
-            HideLegacyPlaceholder(); // 기존 임시 UI 숨김
-            if (_cameraLock != null) _cameraLock.LockToPrimaryView(); // 이벤트 카메라 고정
-            int phase = GetCurrentPhase(); // 현재 Phase 조회
-            _eventScenario = StageEventGenerator.Create(
-                _runState.RouteMap.MapSeed,
-                phase,
-                _runState.CurrentRound,
-                _runState.RouteMap.CurrentNodeId); // Phase·Stage·Node 기반 이벤트 생성
-            ShowEventMain(); // 이벤트 메인 표시
-            Debug.Log($"72일차 Event 진입: Phase={phase} / Stage={_runState.CurrentRound} / Type={_eventScenario.EventType} / Seed={_eventScenario.Seed}"); // 이벤트 진입 로그
-        }
+        private void BeginEvent() // 기획 이벤트 35종 화면 진입
+        { // 메서드 시작
+            _activityActive = true; // 중복 화면 생성 방지
+            _activePhase = RunFlowPhase.Event; // 현재 비전투 흐름
+            HideLegacyPlaceholder(); // 구형 화면 숨김
+            if (_cameraLock != null) _cameraLock.LockToPrimaryView(); // 이벤트 입력용 카메라 고정
+            BoardInputController input = Object.FindFirstObjectByType<BoardInputController>(); // 실제 합성 데이터 연결
+            var unlocks = RunContentUnlockSnapshotService.GetOrCreate(_runState, MetaProgressService.Current); // 해당 런 고정 해금
+            _eventPresenter = new RunEventPresenter(_runState, _economy, input?.PieceDatabase?.Definitions ?? _cardCatalog?.Cards, input?.FusionRecipeDatabase?.Recipes, unlocks, MetaProgressService.Current, _overlayUI, SaveEventCheckpoint, CompleteCurrentStage); // 전체 기물 데이터와 기존 보드 오버레이 연결
+            _eventPresenter.Open(); // 고정 선택 또는 저장된 결과 표시
+        } // 메서드 종료
 
-        private void ShowEventMain()
-        {
-            if (_eventScenario == null || _eventScenario.Definition == null)
-            {
-                CompleteCurrentStage(); // 잘못된 이벤트 안전 종료
-                return; // 추가 처리 차단
-            }
-
-            _pendingEventChoice = null; // 후속 선택 상태 초기화
-            var options = new List<StageOverlayOption>(); // 이벤트 선택지 생성
-
-            for (int i = 0; i < _eventScenario.Choices.Count; i++)
-            {
-                StageEventChoice choice = _eventScenario.Choices[i]; // 현재 이벤트 선택지 조회
-                if (choice == null) continue; // 빈 선택지 제외
-                StageEventChoice captured = choice; // 버튼 콜백 선택지 고정
-                bool canChoose = StageEventService.CanChoose(_runState, _economy, choice, RunEconomyRules.PrototypeKingMaxHp); // 현재 선택 가능 여부 계산
-
-                options.Add(new StageOverlayOption(
-                    choice.Title,
-                    choice.Description,
-                    canChoose,
-                    () => SelectEventChoice(captured))); // 이벤트 선택 콜백
-            }
-
-            int phase = GetCurrentPhase(); // 현재 Phase 조회
-            string subtitle = $"{_eventScenario.Description}\nPhase {phase}/{RunPhaseProgressService.TotalPhases}   |   Gold {_economy.Currency}   |   King HP {_runState.KingHp}/{RunEconomyRules.PrototypeKingMaxHp}"; // 이벤트 상태 설명
-            _overlayUI.ShowPage(StageOverlayMode.Event, _eventScenario.Title, subtitle, options); // 이벤트 메인 표시
-        }
-
-        private void SelectEventChoice(StageEventChoice choice)
-        {
-            if (!StageEventService.TryResolveChoice(_runState, _economy, choice, RunEconomyRules.PrototypeKingMaxHp, out StageEventResolution resolution))
-            {
-                ShowEventMain(); // 선택 조건 변경 시 이벤트 메인 갱신
-                return; // 추가 처리 차단
-            }
-
-            if (resolution.Result != null) RecordResult(resolution.Result); // 즉시 적용 결과 기록
-
-            if (resolution.FollowUp == StageEventFollowUp.CardChoice)
-            {
-                _pendingEventChoice = choice; // 카드 선택 대기 이벤트 저장
-                ShowEventCardChoices(); // 이벤트 카드 선택 표시
-                return; // 후속 완료 대기
-            }
-
-            if (resolution.FollowUp == StageEventFollowUp.UpgradeChoice)
-            {
-                _pendingEventChoice = choice; // 강화 선택 대기 이벤트 저장
-                _eventUpgradePageIndex = 0; // 이벤트 강화 첫 페이지 이동
-                ShowEventUpgradePage(); // 이벤트 강화 카드 선택 표시
-                return; // 후속 완료 대기
-            }
-
-            CompleteCurrentStage(); // 즉시 완료 이벤트 종료
-        }
-
-        private void ShowEventCardChoices()
-        {
-            if (_pendingEventChoice == null)
-            {
-                ShowEventMain(); // 대기 선택지 누락 시 메인 복귀
-                return; // 추가 처리 차단
-            }
-
-            IReadOnlyList<PieceDefinition> candidates = GenerateEventCardCandidates(); // 이벤트 카드 후보 생성
-            if (candidates.Count == 0)
-            {
-                RecordResult(new StageChoiceResult(StageChoiceEffectType.None, "획득 가능한 카드 없음", 0, 0, null)); // 후보 없음 결과 기록
-                ShowEventMain(); // 다른 이벤트 선택지 사용 가능하도록 메인 복귀
-                return; // 추가 처리 차단
-            }
-
-            var options = new List<StageOverlayOption>(); // 이벤트 카드 선택지 생성
-
-            for (int i = 0; i < candidates.Count; i++)
-            {
-                PieceDefinition card = candidates[i]; // 현재 이벤트 카드 조회
-                PieceDefinition captured = card; // 버튼 콜백 카드 고정
-
-                options.Add(new StageOverlayOption(
-                    $"{card.DisplayName}  {GetStars(card)}",
-                    BuildEventCardDescription(card),
-                    true,
-                    () => TakeEventCard(captured))); // 이벤트 카드 획득 콜백
-            }
-
-            options.Add(new StageOverlayOption("취소", "이벤트 선택으로 돌아갑니다.", true, ShowEventMain)); // 이벤트 메인 복귀
-            _overlayUI.ShowPage(StageOverlayMode.Event, "카드 한 장 선택", BuildEventCardSubtitle(), options); // 이벤트 카드 선택 표시
-        }
-
-        private IReadOnlyList<PieceDefinition> GenerateEventCardCandidates()
-        {
-            if (_cardCatalog == null || _pendingEventChoice == null || _eventScenario == null) return new List<PieceDefinition>(); // 카드 후보 필수 상태 누락 방어
-            int phase = GetCurrentPhase(); // 현재 Phase 조회
-            int seed = StageEventGenerator.CreateFollowUpSeed(
-                _runState.RouteMap.MapSeed,
-                phase,
-                _runState.CurrentRound,
-                _runState.RouteMap.CurrentNodeId,
-                _eventScenario.Definition.Id,
-                _pendingEventChoice.Id); // 이벤트·선택지 기반 카드 Seed 생성
-            CardRewardProfile profile = StageEventRules.GetCardRewardProfile(phase, _runState.CurrentRound); // 진행도 기반 이벤트 카드 품질 조회
-            var candidates = CardRewardGenerator.Generate(
-                _cardCatalog.Cards,
-                _runState.Deck.OwnedCardPool,
-                _runState.Deck.DeadCardPile,
-                StageEventRules.EventCardChoiceCount,
-                seed,
-                profile); // 이벤트 카드 후보 생성
-            RunBalanceTelemetry.RecordOffers(_runState, "Event:" + _pendingEventChoice.Id, seed, candidates); // 이벤트 후보 기록
-            return candidates; // 실제 후보 반환
-        }
-
-        private string BuildEventCardDescription(PieceDefinition card)
-        {
-            if (card == null) return string.Empty; // 빈 카드 설명 없음
-
-            if (_pendingEventChoice != null && _pendingEventChoice.EffectType == StageEventChoiceEffectType.PurchaseCard)
-            {
-                return $"HP {card.BaseHp} / ATK {card.BaseAtk}   ·   {StageEventRules.TravelingMerchantCardPrice} Gold"; // 유료 카드 가격 표시
-            }
-
-            if (_pendingEventChoice != null && _pendingEventChoice.EffectType == StageEventChoiceEffectType.RiskRewardCard)
-            {
-                return $"HP {card.BaseHp} / ATK {card.BaseAtk}   ·   King HP -1 / Gold +{StageEventRules.RiskRewardCurrency}"; // 위험 계약 비용·보상 표시
-            }
-
-            return $"HP {card.BaseHp} / ATK {card.BaseAtk}"; // 무료 카드 기본 설명
-        }
-
-        private string BuildEventCardSubtitle()
-        {
-            if (_pendingEventChoice == null) return $"Gold {_economy.Currency}"; // 대기 선택지 누락 기본 상태
-
-            switch (_pendingEventChoice.EffectType)
-            {
-                case StageEventChoiceEffectType.PurchaseCard:
-                    return $"Gold {_economy.Currency} · 선택 확정 시 {StageEventRules.TravelingMerchantCardPrice} Gold 지불"; // 유료 카드 선택 안내
-                case StageEventChoiceEffectType.RiskRewardCard:
-                    return $"Gold {_economy.Currency} · King HP {_runState.KingHp} · 선택 확정 시 위험 계약 적용"; // 위험 계약 선택 안내
-                default:
-                    return "무료 카드 보상"; // 무료 카드 선택 안내
-            }
-        }
-
-        private void TakeEventCard(PieceDefinition card)
-        {
-            if (_pendingEventChoice == null)
-            {
-                ShowEventMain(); // 대기 선택지 누락 시 메인 복귀
-                return; // 추가 처리 차단
-            }
-
-            if (!StageEventService.TryTakeEventCard(_runState, _economy, card, _pendingEventChoice, out StageChoiceResult result))
-            {
-                ShowEventCardChoices(); // 카드 적용 실패 후보 재표시
-                return; // 추가 처리 차단
-            }
-
-            RecordResult(result); // 이벤트 카드 결과 기록
-            CompleteCurrentStage(); // 이벤트 완료
-        }
-
-        private void ShowEventUpgradePage()
-        {
-            if (_pendingEventChoice == null || _pendingEventChoice.EffectType != StageEventChoiceEffectType.UpgradeCard)
-            {
-                ShowEventMain(); // 강화 선택 상태 누락 시 메인 복귀
-                return; // 추가 처리 차단
-            }
-
-            IReadOnlyList<PieceDefinition> owned = ShopService.GetManageableCards(_runState); // 전체 강화 가능 카드 조회
-            if (owned.Count == 0)
-            {
-                RecordResult(new StageChoiceResult(StageChoiceEffectType.None, "강화 가능한 카드 없음", 0, 0, null)); // 강화 후보 없음 기록
-                ShowEventMain(); // 다른 이벤트 선택지 사용 가능하도록 메인 복귀
-                return; // 추가 처리 차단
-            }
-
-            int pageCount = GetPageCount(owned.Count); // 전체 이벤트 강화 페이지 수 계산
-            _eventUpgradePageIndex = Mathf.Clamp(_eventUpgradePageIndex, 0, pageCount - 1); // 이벤트 강화 페이지 범위 보정
-            int startIndex = _eventUpgradePageIndex * OwnedCardsPerPage; // 현재 이벤트 강화 시작 위치 계산
-            int endIndex = Mathf.Min(startIndex + OwnedCardsPerPage, owned.Count); // 현재 이벤트 강화 끝 위치 계산
-            var options = new List<StageOverlayOption>(); // 이벤트 강화 선택지 생성
-
-            for (int i = startIndex; i < endIndex; i++)
-            {
-                PieceDefinition card = owned[i]; // 현재 강화 카드 조회
-                PieceDefinition captured = card; // 버튼 콜백 카드 고정
-
-                options.Add(new StageOverlayOption(
-                    $"{card.DisplayName} 강화",
-                    $"{GetStars(card)}   HP {card.BaseHp}→{card.BaseHp + 1} / ATK {card.BaseAtk}→{card.BaseAtk + 1}",
-                    true,
-                    () => TakeEventUpgrade(captured))); // 무료 강화 콜백
-            }
-
-            if (_eventUpgradePageIndex > 0) options.Add(new StageOverlayOption("◀ 이전", "이전 카드 목록을 표시합니다.", true, ShowPreviousEventUpgradePage)); // 이전 강화 페이지 버튼
-            if (_eventUpgradePageIndex + 1 < pageCount) options.Add(new StageOverlayOption("다음 ▶", "다음 카드 목록을 표시합니다.", true, ShowNextEventUpgradePage)); // 다음 강화 페이지 버튼
-            options.Add(new StageOverlayOption("취소", "이벤트 선택으로 돌아갑니다.", true, ShowEventMain)); // 이벤트 메인 복귀
-
-            string subtitle = $"무료 강화 · {_eventUpgradePageIndex + 1}/{pageCount} 페이지"; // 이벤트 강화 페이지 상태 문구
-            _overlayUI.ShowPage(StageOverlayMode.Event, "훈련할 카드 선택", subtitle, options); // 이벤트 강화 페이지 표시
-        }
-
-        private void ShowPreviousEventUpgradePage()
-        {
-            _eventUpgradePageIndex--; // 이벤트 강화 페이지 감소
-            ShowEventUpgradePage(); // 이벤트 강화 페이지 갱신
-        }
-
-        private void ShowNextEventUpgradePage()
-        {
-            _eventUpgradePageIndex++; // 이벤트 강화 페이지 증가
-            ShowEventUpgradePage(); // 이벤트 강화 페이지 갱신
-        }
-
-        private void TakeEventUpgrade(PieceDefinition card)
-        {
-            if (!StageEventService.TryUpgradeEventCard(_runState, card, _pendingEventChoice, out StageChoiceResult result))
-            {
-                ShowEventUpgradePage(); // 강화 실패 카드 목록 갱신
-                return; // 추가 처리 차단
-            }
-
-            RecordResult(result); // 무료 강화 결과 기록
-            CompleteCurrentStage(); // 이벤트 완료
-        }
-
+        private bool SaveEventCheckpoint() // 선택과 결과의 안전 저장
+        { // 메서드 시작
+            if (!RunSaveSystem.IsSafeCheckpoint(_runState)) return false; // 전투 중 저장 진입 차단
+            if (!RunSaveSystem.TrySave(_runState)) return false; // 실제 저장 실패 확인
+            return MetaProgressService.Save(); // 영구 정보 열람 저장 확인
+        } // 메서드 종료
         private void HideLegacyPlaceholder()
         {
             if (_placeholderUI == null) _placeholderUI = Object.FindFirstObjectByType<StagePlaceholderUI>(); // 기존 임시 UI 지연 탐색
@@ -643,6 +410,7 @@ namespace ProjectEta.Run
             }
 
             if (_runState.CurrentFlowPhase == RunFlowPhase.Map) _routeMapBoardController.RefreshMapVisuals(); // 지도 복귀 시 시각 갱신
+            if (RunSaveSystem.IsSafeCheckpoint(_runState)) RunSaveSystem.TrySave(_runState); // 완료된 지도 체크포인트 저장
             Debug.Log($"72일차 비전투 스테이지 완료 -> {_runState.CurrentFlowPhase} / Stage={_runState.CurrentRound} / Gold={_economy.Currency}"); // 완료 결과 로그
         }
 
@@ -651,9 +419,8 @@ namespace ProjectEta.Run
             if (_overlayUI != null) _overlayUI.Hide(); // 판 위 UI 숨김
             if (_cameraLock != null) _cameraLock.RestorePreviousView(); // 이전 카메라 복원
             _activityActive = false; // 비전투 진행 상태 종료
-            _eventScenario = null; // 이벤트 상태 정리
-            _pendingEventChoice = null; // 이벤트 후속 선택 상태 정리
-            _eventUpgradePageIndex = 0; // 이벤트 강화 페이지 정리
+            _eventPresenter?.Close(); // 남은 이벤트 콜백 차단
+            _eventPresenter = null; // 이벤트 화면 소유 해제
         }
 
         private static string GetStars(PieceDefinition card)

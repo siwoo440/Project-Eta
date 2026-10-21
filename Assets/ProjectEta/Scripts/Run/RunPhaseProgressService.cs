@@ -84,7 +84,7 @@ namespace ProjectEta.Run
 
         private static bool RebuildAtPhaseStart(RunState runState, int phase, bool resetRound)
         {
-            IReadOnlyList<StageNode> phaseNodes = RunPhaseRouteGenerator.CreateFullRoute(runState.RouteMap.MapSeed, phase); // 새 페이즈 전체 그래프 생성
+            IReadOnlyList<StageNode> phaseNodes = RunPhaseRouteGenerator.CreateFullRoute(runState.RouteMap.MapSeed, phase, true); // 새 페이즈에 102일차 경로 규칙 적용
             StageNode root = FindFirstDepth(phaseNodes, RoundState.FirstRound); // 새 페이즈 시작점 조회
             if (root == null) return false; // 시작점 누락 시 기존 상태 유지
 

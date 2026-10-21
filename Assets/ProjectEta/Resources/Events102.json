@@ -1,0 +1,1684 @@
+{
+  "events": [
+    {
+      "id": "EV01",
+      "title": "버려진 기사단 야영지",
+      "phase": 0,
+      "weight": 10,
+      "description": "회복·강화",
+      "choices": [
+        {
+          "id": "A",
+          "title": "쉬어 간다",
+          "description": "왕 HP +1",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 1,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "무기를 손질한다",
+          "description": "재화 20 지불, 선택 카드 ATK +1",
+          "goldCost": 20,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 1,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "보급품을 챙긴다",
+          "description": "재화 +15",
+          "goldCost": 0,
+          "goldGain": 15,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV02",
+      "title": "떠돌이 수선공",
+      "phase": 0,
+      "weight": 10,
+      "description": "강화",
+      "choices": [
+        {
+          "id": "A",
+          "title": "갑옷 보강",
+          "description": "재화 25 지불, 선택 카드 HP +1",
+          "goldCost": 25,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 1,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "무기 보강",
+          "description": "재화 25 지불, 선택 카드 ATK +1",
+          "goldCost": 25,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 1,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "거래하지 않는다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV03",
+      "title": "봉인된 보급 상자",
+      "phase": 0,
+      "weight": 10,
+      "description": "카드·위험",
+      "choices": [
+        {
+          "id": "A",
+          "title": "봉인을 푼다",
+          "description": "재화 15 지불, 해금된 1성 무작위 1장 획득",
+          "goldCost": 15,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 1,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "강제로 연다",
+          "description": "왕 HP -1, 해금된 1성 무작위 1장과 재화 +10",
+          "goldCost": 0,
+          "goldGain": 10,
+          "kingCost": 1,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 1,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "그대로 둔다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV04",
+      "title": "기물 묘지",
+      "phase": 0,
+      "weight": 10,
+      "description": "덱 관리",
+      "choices": [
+        {
+          "id": "A",
+          "title": "기물을 묻어준다",
+          "description": "선택 1성 카드 제거, 재화 +20",
+          "goldCost": 0,
+          "goldGain": 20,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 3,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "쓸 만한 조각을 복구한다",
+          "description": "재화 15 지불, 해금된 1성 무작위 1장",
+          "goldCost": 15,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 1,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "떠난다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV05",
+      "title": "게임 마스터의 작은 내기",
+      "phase": 0,
+      "weight": 10,
+      "description": "위험·회복",
+      "choices": [
+        {
+          "id": "A",
+          "title": "왕의 체력을 건다",
+          "description": "왕 HP -1, 재화 +35",
+          "goldCost": 0,
+          "goldGain": 35,
+          "kingCost": 1,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "안전한 거래를 한다",
+          "description": "재화 20 지불, 왕 HP +1",
+          "goldCost": 20,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 1,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "내기를 거절한다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV06",
+      "title": "부서진 합성 장치",
+      "phase": 0,
+      "weight": 10,
+      "description": "합성 지원",
+      "choices": [
+        {
+          "id": "A",
+          "title": "장치를 수리한다",
+          "description": "재화 20 지불, 발견한 합성 경로와 연결되는 해금 1성 카드 1장 획득",
+          "goldCost": 20,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 2,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "분해한다",
+          "description": "재화 +15",
+          "goldCost": 0,
+          "goldGain": 15,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "손대지 않는다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV07",
+      "title": "성문의 교대 일지",
+      "phase": 1,
+      "weight": 14,
+      "description": "세계관",
+      "choices": [
+        {
+          "id": "A",
+          "title": "일지를 읽는다",
+          "description": "선택 단서 후보 확인, 재화 +5",
+          "goldCost": 0,
+          "goldGain": 5,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": true
+        },
+        {
+          "id": "B",
+          "title": "금속 인장을 떼어낸다",
+          "description": "재화 +15",
+          "goldCost": 0,
+          "goldGain": 15,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "그대로 둔다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV08",
+      "title": "기사단 훈련장",
+      "phase": 1,
+      "weight": 14,
+      "description": "강화",
+      "choices": [
+        {
+          "id": "A",
+          "title": "공격 훈련",
+          "description": "재화 15 지불, 선택 카드 ATK +1",
+          "goldCost": 15,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 1,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "방어 훈련",
+          "description": "재화 15 지불, 선택 카드 HP +1",
+          "goldCost": 15,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 1,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "훈련하지 않는다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV09",
+      "title": "무너진 성벽 틈",
+      "phase": 1,
+      "weight": 14,
+      "description": "위험·재화",
+      "choices": [
+        {
+          "id": "A",
+          "title": "좁은 틈으로 들어간다",
+          "description": "왕 HP -1, 재화 +30",
+          "goldCost": 0,
+          "goldGain": 30,
+          "kingCost": 1,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "바깥쪽 잔해만 뒤진다",
+          "description": "재화 +10",
+          "goldCost": 0,
+          "goldGain": 10,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "지나친다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV10",
+      "title": "폭풍에 묶인 마차",
+      "phase": 2,
+      "weight": 14,
+      "description": "위험·재화",
+      "choices": [
+        {
+          "id": "A",
+          "title": "마차를 붙잡고 화물을 꺼낸다",
+          "description": "왕 HP -1, 재화 +30",
+          "goldCost": 0,
+          "goldGain": 30,
+          "kingCost": 1,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "끊어진 밧줄과 부품만 챙긴다",
+          "description": "재화 +12",
+          "goldCost": 0,
+          "goldGain": 12,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "폭풍이 지나가길 기다린다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV11",
+      "title": "낙뢰석 둥지",
+      "phase": 2,
+      "weight": 14,
+      "description": "강화·위험",
+      "choices": [
+        {
+          "id": "A",
+          "title": "맨손으로 낙뢰석을 채취한다",
+          "description": "왕 HP -1, 선택 카드 ATK +1",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 1,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 1,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "접지 장비를 사용한다",
+          "description": "재화 15 지불, 선택 카드 ATK +1",
+          "goldCost": 15,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 1,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "건드리지 않는다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV12",
+      "title": "왕실 전령의 가방",
+      "phase": 2,
+      "weight": 14,
+      "description": "세계관·카드",
+      "choices": [
+        {
+          "id": "A",
+          "title": "편지를 읽는다",
+          "description": "선택 단서 후보 확인, 재화 +5",
+          "goldCost": 0,
+          "goldGain": 5,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": true
+        },
+        {
+          "id": "B",
+          "title": "봉인된 물자를 회수한다",
+          "description": "해금된 1성 무작위 1장 획득",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 1,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "가방을 남겨둔다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV13",
+      "title": "녹색 우물",
+      "phase": 3,
+      "weight": 14,
+      "description": "회복·위험",
+      "choices": [
+        {
+          "id": "A",
+          "title": "물을 정화한다",
+          "description": "재화 10 지불, 왕 HP +1",
+          "goldCost": 10,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 1,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "녹색 결정을 채취한다",
+          "description": "왕 HP -1, 재화 +30",
+          "goldCost": 0,
+          "goldGain": 30,
+          "kingCost": 1,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "물을 건드리지 않는다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV14",
+      "title": "모르비아의 폐약제실",
+      "phase": 3,
+      "weight": 14,
+      "description": "강화",
+      "choices": [
+        {
+          "id": "A",
+          "title": "회복 약제를 만든다",
+          "description": "재화 15 지불, 선택 카드 HP +1",
+          "goldCost": 15,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 1,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "강화 약제를 만든다",
+          "description": "재화 20 지불, 선택 카드 ATK +1",
+          "goldCost": 20,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 1,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "재료를 남겨둔다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV15",
+      "title": "타지 않는 기록 묶음",
+      "phase": 3,
+      "weight": 14,
+      "description": "세계관·재화",
+      "choices": [
+        {
+          "id": "A",
+          "title": "기록을 읽는다",
+          "description": "선택 단서 후보 확인, 재화 +5",
+          "goldCost": 0,
+          "goldGain": 5,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": true
+        },
+        {
+          "id": "B",
+          "title": "희귀한 종이를 판다",
+          "description": "재화 +20",
+          "goldCost": 0,
+          "goldGain": 20,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "기록을 그대로 둔다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV16",
+      "title": "황금 성소",
+      "phase": 4,
+      "weight": 14,
+      "description": "회복·위험",
+      "choices": [
+        {
+          "id": "A",
+          "title": "공물을 바친다",
+          "description": "재화 30 지불, 왕 HP +1 및 선택 카드 HP +1",
+          "goldCost": 30,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 1,
+          "hpUpgrade": 1,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "공물을 가져간다",
+          "description": "왕 HP -1, 재화 +35",
+          "goldCost": 0,
+          "goldGain": 35,
+          "kingCost": 1,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "성소를 떠난다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV17",
+      "title": "세베리온의 거울",
+      "phase": 4,
+      "weight": 14,
+      "description": "카드 교환",
+      "choices": [
+        {
+          "id": "A",
+          "title": "거울에 기물을 비춘다",
+          "description": "선택 1성 카드를 해금된 다른 1성 무작위 카드로 교환",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 4,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "거울을 깨뜨린다",
+          "description": "재화 +20",
+          "goldCost": 0,
+          "goldGain": 20,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "거울을 지나친다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV18",
+      "title": "엘레시아의 고해실",
+      "phase": 4,
+      "weight": 14,
+      "description": "덱 관리·회복",
+      "choices": [
+        {
+          "id": "A",
+          "title": "짐을 내려놓는다",
+          "description": "재화 30 지불, 선택 1성 카드 제거",
+          "goldCost": 30,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 3,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "축복을 청한다",
+          "description": "재화 20 지불, 왕 HP +1",
+          "goldCost": 20,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 1,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "아무 말 없이 나온다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV19",
+      "title": "멈춘 별의 제단",
+      "phase": 5,
+      "weight": 14,
+      "description": "최종 강화",
+      "choices": [
+        {
+          "id": "A",
+          "title": "재화를 바친다",
+          "description": "재화 30 지불, 선택 카드 HP +1 및 ATK +1",
+          "goldCost": 30,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 1,
+          "atkUpgrade": 1,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "피를 바친다",
+          "description": "왕 HP -1, 선택 카드 HP +1 및 ATK +1",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 1,
+          "kingHeal": 0,
+          "hpUpgrade": 1,
+          "atkUpgrade": 1,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "제단을 떠난다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV20",
+      "title": "검은 금고",
+      "phase": 5,
+      "weight": 14,
+      "description": "위험·재화",
+      "choices": [
+        {
+          "id": "A",
+          "title": "금고를 강제로 연다",
+          "description": "왕 HP -1, 재화 +40",
+          "goldCost": 0,
+          "goldGain": 40,
+          "kingCost": 1,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "바깥의 동전만 챙긴다",
+          "description": "재화 +15",
+          "goldCost": 0,
+          "goldGain": 15,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "금고를 건드리지 않는다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV21",
+      "title": "깨진 천문반",
+      "phase": 5,
+      "weight": 14,
+      "description": "세계관·강화",
+      "choices": [
+        {
+          "id": "A",
+          "title": "천문반을 수리한다",
+          "description": "재화 15 지불, 선택 단서 후보 확인 및 선택 카드 HP +1",
+          "goldCost": 15,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 1,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": true
+        },
+        {
+          "id": "B",
+          "title": "금속 부품을 회수한다",
+          "description": "재화 +20",
+          "goldCost": 0,
+          "goldGain": 20,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "그대로 둔다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV22",
+      "title": "길 잃은 보급관",
+      "phase": 0,
+      "weight": 10,
+      "description": "카드·재화",
+      "choices": [
+        {
+          "id": "A",
+          "title": "필요한 물자를 산다",
+          "description": "재화 20 지불, 해금된 1성 무작위 1장 획득",
+          "goldCost": 20,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 1,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "남은 짐을 정리해 준다",
+          "description": "재화 +10",
+          "goldCost": 0,
+          "goldGain": 10,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "길만 알려준다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV23",
+      "title": "떠돌이 패잔병",
+      "phase": 0,
+      "weight": 10,
+      "description": "카드 교환·재화",
+      "choices": [
+        {
+          "id": "A",
+          "title": "서로의 기물을 바꾼다",
+          "description": "선택 1성 카드를 해금된 다른 1성 무작위 카드로 교환",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 4,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "남은 장비를 사들인다",
+          "description": "재화 15 지불, 선택 카드 HP +1",
+          "goldCost": 15,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 1,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "대화를 마친다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV24",
+      "title": "이름 없는 전술판",
+      "phase": 0,
+      "weight": 10,
+      "description": "강화·세계관",
+      "choices": [
+        {
+          "id": "A",
+          "title": "공격 배치를 연구한다",
+          "description": "재화 15 지불, 선택 카드 ATK +1",
+          "goldCost": 15,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 1,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "남겨진 기록을 읽는다",
+          "description": "선택 단서 후보 확인, 재화 +5",
+          "goldCost": 0,
+          "goldGain": 5,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": true
+        },
+        {
+          "id": "C",
+          "title": "판을 덮어둔다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV25",
+      "title": "유실된 병참 장부",
+      "phase": 0,
+      "weight": 10,
+      "description": "덱 관리·재화",
+      "choices": [
+        {
+          "id": "A",
+          "title": "불필요한 기물을 정리한다",
+          "description": "재화 35 지불, 선택 1성 카드 제거",
+          "goldCost": 35,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 3,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "장부 속 비상금을 챙긴다",
+          "description": "재화 +15",
+          "goldCost": 0,
+          "goldGain": 15,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "장부를 원래 자리에 둔다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV26",
+      "title": "부서진 성문 초소",
+      "phase": 1,
+      "weight": 14,
+      "description": "카드·재화",
+      "choices": [
+        {
+          "id": "A",
+          "title": "남은 보급함을 연다",
+          "description": "해금된 1성 무작위 1장 획득",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 1,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "철제 부품을 회수한다",
+          "description": "재화 +12",
+          "goldCost": 0,
+          "goldGain": 12,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "초소를 지나친다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV27",
+      "title": "기사단의 맹세석",
+      "phase": 1,
+      "weight": 14,
+      "description": "강화·세계관",
+      "choices": [
+        {
+          "id": "A",
+          "title": "맹세문을 읽는다",
+          "description": "선택 단서 후보 확인, 재화 +5",
+          "goldCost": 0,
+          "goldGain": 5,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": true
+        },
+        {
+          "id": "B",
+          "title": "검집을 손질한다",
+          "description": "재화 15 지불, 선택 카드 ATK +1",
+          "goldCost": 15,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 1,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "돌을 건드리지 않는다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV28",
+      "title": "바람에 찢긴 비행 깃발",
+      "phase": 2,
+      "weight": 14,
+      "description": "세계관·재화",
+      "choices": [
+        {
+          "id": "A",
+          "title": "찢어진 문장을 맞춘다",
+          "description": "선택 단서 후보 확인, 재화 +5",
+          "goldCost": 0,
+          "goldGain": 5,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": true
+        },
+        {
+          "id": "B",
+          "title": "금속 고리와 천을 회수한다",
+          "description": "재화 +15",
+          "goldCost": 0,
+          "goldGain": 15,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "바람에 맡겨둔다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV29",
+      "title": "추락한 하늘안장",
+      "phase": 2,
+      "weight": 14,
+      "description": "강화·위험",
+      "choices": [
+        {
+          "id": "A",
+          "title": "마력석을 떼어낸다",
+          "description": "왕 HP -1, 선택 카드 ATK +1",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 1,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 1,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "안전하게 분해한다",
+          "description": "재화 15 지불, 선택 카드 HP +1",
+          "goldCost": 15,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 1,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "손대지 않는다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV30",
+      "title": "독버섯 재배대",
+      "phase": 3,
+      "weight": 14,
+      "description": "강화·위험",
+      "choices": [
+        {
+          "id": "A",
+          "title": "해독용 균사를 채취한다",
+          "description": "재화 15 지불, 선택 카드 HP +1",
+          "goldCost": 15,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 1,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "희귀 포자를 가져간다",
+          "description": "왕 HP -1, 재화 +30",
+          "goldCost": 0,
+          "goldGain": 30,
+          "kingCost": 1,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "재배대를 피해 간다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV31",
+      "title": "재가 남은 서고",
+      "phase": 3,
+      "weight": 14,
+      "description": "세계관·덱 관리",
+      "choices": [
+        {
+          "id": "A",
+          "title": "타지 않은 장부를 읽는다",
+          "description": "선택 단서 후보 확인, 재화 +5",
+          "goldCost": 0,
+          "goldGain": 5,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": true
+        },
+        {
+          "id": "B",
+          "title": "낡은 전투 기록을 정리한다",
+          "description": "재화 35 지불, 선택 1성 카드 제거",
+          "goldCost": 35,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 3,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "서고를 떠난다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV32",
+      "title": "버려진 장군 막사",
+      "phase": 4,
+      "weight": 14,
+      "description": "강화·카드",
+      "choices": [
+        {
+          "id": "A",
+          "title": "훈련 기록을 따라 한다",
+          "description": "재화 20 지불, 선택 카드 ATK +1",
+          "goldCost": 20,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 1,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "비축품 상자를 연다",
+          "description": "해금된 1성 무작위 1장 획득",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 1,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "막사를 나선다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV33",
+      "title": "금빛 재판대",
+      "phase": 4,
+      "weight": 14,
+      "description": "회복·위험",
+      "choices": [
+        {
+          "id": "A",
+          "title": "속죄금을 바친다",
+          "description": "재화 25 지불, 왕 HP +1",
+          "goldCost": 25,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 1,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "봉인된 헌금을 가져간다",
+          "description": "왕 HP -1, 재화 +35",
+          "goldCost": 0,
+          "goldGain": 35,
+          "kingCost": 1,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "판결을 거부한다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV34",
+      "title": "왕좌 앞의 마지막 보급실",
+      "phase": 5,
+      "weight": 14,
+      "description": "카드·덱 관리",
+      "choices": [
+        {
+          "id": "A",
+          "title": "예비 기물을 꺼낸다",
+          "description": "재화 20 지불, 해금된 1성 무작위 1장 획득",
+          "goldCost": 20,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 1,
+          "information": false
+        },
+        {
+          "id": "B",
+          "title": "짐을 가볍게 한다",
+          "description": "재화 35 지불, 선택 1성 카드 제거",
+          "goldCost": 35,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 3,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "문을 닫고 나온다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    },
+    {
+      "id": "EV35",
+      "title": "별 없는 회랑의 초상화",
+      "phase": 5,
+      "weight": 14,
+      "description": "세계관·강화",
+      "choices": [
+        {
+          "id": "A",
+          "title": "초상화를 자세히 본다",
+          "description": "선택 단서 후보 확인, 재화 +5",
+          "goldCost": 0,
+          "goldGain": 5,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": true
+        },
+        {
+          "id": "B",
+          "title": "검은 액자를 손질한다",
+          "description": "재화 20 지불, 선택 카드 HP +1",
+          "goldCost": 20,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 1,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        },
+        {
+          "id": "C",
+          "title": "시선을 거둔다",
+          "description": "변화 없음",
+          "goldCost": 0,
+          "goldGain": 0,
+          "kingCost": 0,
+          "kingHeal": 0,
+          "hpUpgrade": 0,
+          "atkUpgrade": 0,
+          "cardOperation": 0,
+          "information": false
+        }
+      ]
+    }
+  ]
+}

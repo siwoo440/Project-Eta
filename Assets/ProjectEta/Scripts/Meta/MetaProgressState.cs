@@ -9,6 +9,7 @@ namespace ProjectEta.Meta
         private readonly HashSet<string> _unlockedPassiveIds = new HashSet<string>(); // 영구 해금 패시브 ID 집합
         private readonly HashSet<string> _claimedRunRewardIds = new HashSet<string>(); // 메타 보상 지급 완료 런 ID 집합
         private readonly HashSet<string> _discoveredFusionRecipeIds = new HashSet<string>(); // 89일차: 영구 Fusion Atlas 발견 ID 집합
+        private readonly HashSet<string> _eventInformationIds = new HashSet<string>(); // 선택 단서 후보 열람 집합
 
         public int MetaTokens { get; private set; } // 런 밖에 유지되는 메타 토큰
         public IReadOnlyCollection<string> UnlockedPieceIds => _unlockedPieceIds; // 영구 해금 기물 목록
@@ -16,6 +17,9 @@ namespace ProjectEta.Meta
         public IReadOnlyCollection<string> UnlockedPassiveIds => _unlockedPassiveIds; // 영구 해금 패시브 목록
         public IReadOnlyCollection<string> ClaimedRunRewardIds => _claimedRunRewardIds; // 지급 완료 런 ID 목록
         public IReadOnlyCollection<string> DiscoveredFusionRecipeIds => _discoveredFusionRecipeIds; // 영구 발견 숨김 Recipe 목록
+        public IReadOnlyCollection<string> EventInformationIds => _eventInformationIds; // 선택 정보 열람 목록
+        public bool HasEventInformation(string id) => !string.IsNullOrWhiteSpace(id) && _eventInformationIds.Contains(id); // 기존 열람 여부
+        public bool TryReadEventInformation(string id) => !string.IsNullOrWhiteSpace(id) && _eventInformationIds.Add(id); // 첫 열람 기록
 
         public void AddTokens(int amount)
         {
@@ -89,7 +93,8 @@ namespace ProjectEta.Meta
                 unlockedKingIds = new List<string>(_unlockedKingIds),
                 unlockedPassiveIds = new List<string>(_unlockedPassiveIds),
                 claimedRunRewardIds = new List<string>(_claimedRunRewardIds),
-                discoveredFusionRecipeIds = new List<string>(_discoveredFusionRecipeIds)
+                discoveredFusionRecipeIds = new List<string>(_discoveredFusionRecipeIds), // 영구 합성 도감 저장
+                eventInformationIds = new List<string>(_eventInformationIds) // 선택 정보 열람 저장
             };
 
             data.unlockedPieceIds.Sort();
@@ -97,6 +102,7 @@ namespace ProjectEta.Meta
             data.unlockedPassiveIds.Sort();
             data.claimedRunRewardIds.Sort();
             data.discoveredFusionRecipeIds.Sort();
+            data.eventInformationIds.Sort(); // 안정적인 정보 열람 저장 순서
             return data;
         }
 
@@ -111,6 +117,7 @@ namespace ProjectEta.Meta
             RestoreSet(state._unlockedPassiveIds, data.unlockedPassiveIds);
             RestoreSet(state._claimedRunRewardIds, data.claimedRunRewardIds);
             RestoreSet(state._discoveredFusionRecipeIds, data.discoveredFusionRecipeIds); // v1·v2에서는 null이므로 빈 도감으로 호환 복원
+            RestoreSet(state._eventInformationIds, data.eventInformationIds); // 기존 저장은 빈 열람 이력으로 복원
             return state;
         }
 
