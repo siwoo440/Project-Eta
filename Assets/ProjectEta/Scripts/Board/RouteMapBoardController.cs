@@ -1,4 +1,4 @@
-using System.Collections; // 초기화·킹 이동 코루틴 사용
+﻿using System.Collections; // 초기화·킹 이동 코루틴 사용
 using System.Collections.Generic; // List<T>·Dictionary<T>·HashSet<T> 사용
 using UnityEngine; // MonoBehaviour·GameObject·Material·Color·Physics 사용
 using UnityEngine.EventSystems; // UI 위 클릭 차단
@@ -265,7 +265,7 @@ namespace ProjectEta.Board // 보드 경로 지도 런타임 네임스페이스
 
         private void HandleMapInput() // MapMode 전용 노드 마우스 선택 처리
         {
-            if (ProjectEta.Environment.RoomWalkingController.BlocksTableInput) // 이동 중 지도 조작 확인
+            if (!ProjectEta.UI.Day69UiPresentationRules.CanUseTableInput()) // 이동·모달·전환 프레임 지도 조작 차단
             { // 조건 시작
                 SetHoveredNode(null); // 이전 노드 강조 해제
                 return; // 노드 클릭·시점 입력 차단

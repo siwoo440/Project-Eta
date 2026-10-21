@@ -1,4 +1,4 @@
-using System.Text; // Console 출력 문자열 조립
+﻿using System.Text; // Console 출력 문자열 조립
 using UnityEngine; // MonoBehaviour·IMGUI·화면 좌표 사용
 using UnityEngine.InputSystem; // F1·마우스 입력 사용
 using UnityEngine.SceneManagement; // 현재 씬 확인
@@ -14,6 +14,7 @@ using ProjectEta.UI; // 개발 빌드 표시 정책 사용
 
 namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
 { // 네임스페이스 범위
+    [DefaultExecutionOrder(-600)] // 시스템 패널을 걷기·보드보다 먼저 처리
     public sealed class ProjectEtaDebugWindow : MonoBehaviour // F1 공통 디버그 패널
     { // 클래스 범위
         private const int StatusPage = 0; // 상태 페이지 번호
@@ -146,6 +147,7 @@ namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
             if (Keyboard.current != null && Keyboard.current.f1Key.wasPressedThisFrame) // F1 입력 확인
             { // 조건 범위
                 _isOpen = !_isOpen; // 열림 상태 전환
+                Day69UiPresentationRules.ConsumeCurrentFrame(); // 패널 열기·닫기 입력 관통 차단
 
                 if (_isOpen) // 새로 열린 상태 확인
                 { // 조건 범위
@@ -242,7 +244,11 @@ namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
             GUILayout.Label("F1 열기 / 닫기", _mutedLabelStyle); // 단축키 안내
             GUILayout.FlexibleSpace(); // 닫기 버튼 오른쪽 정렬
 
-            if (GUILayout.Button("닫기", GUILayout.Width(54f), GUILayout.Height(22f))) _isOpen = false; // 패널 닫기 처리
+            if (GUILayout.Button("닫기", GUILayout.Width(54f), GUILayout.Height(22f))) // 닫기 포인터 입력
+            { // 조건 시작
+                _isOpen = false; // 패널 소유 해제
+                Day69UiPresentationRules.ConsumeCurrentFrame(); // 닫기 클릭의 뒤 화면 전달 차단
+            } // 조건 종료
 
             GUILayout.EndHorizontal(); // 상단 가로 영역 종료
             GUILayout.Label(BuildHeaderSummary(), _mutedLabelStyle); // 현재 씬·흐름 요약 출력

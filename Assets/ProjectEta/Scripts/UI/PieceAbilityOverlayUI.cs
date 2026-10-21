@@ -1,4 +1,4 @@
-using System.Collections; // 초기 연결 대기
+﻿using System.Collections; // 초기 연결 대기
 using System.Collections.Generic; // 버튼 목록
 using System.Text; // 설명 문구 구성
 using UnityEngine; // UI 오브젝트 생성
@@ -48,6 +48,7 @@ namespace ProjectEta.UI // 기물 능력 UI 영역
 
         private void Update() // 행동 권한과 형태 변경 감지
         { // 범위 시작
+            if (!Day69UiPresentationRules.CanUseTableInput()) return; // 일시적 모달 중 버튼·기물 선택 보존
             if (_boardInput == null) // 보드 미연결 확인
             { // 범위 시작
                 return; // 갱신 대기

@@ -1,4 +1,4 @@
-using UnityEngine; // 카메라·Transform·수학 기능
+﻿using UnityEngine; // 카메라·Transform·수학 기능
 using UnityEngine.InputSystem; // 키보드·마우스 입력
 using ProjectEta.Board; // 기존 TableCameraRig 호환
 using ProjectEta.Debugging; // F1 패널 카메라 입력 관통 차단
@@ -53,7 +53,7 @@ namespace ProjectEta.Environment // 전투 공간 프레젠테이션 네임스�
 
         private void Update() // 매 프레임 입력 처리
         {
-            if (_externalPoseLocked || Time.timeScale <= 0f || ProjectEtaDebugWindow.IsOpen || !ProjectEta.UI.Day69UiPresentationRules.CanShowSystemToast(ProjectEta.UI.Day69UiPresentationRules.CaptureCurrent())) return; // 다른 화면의 카메라 입력 소유 보호
+            if (_externalPoseLocked || !ProjectEta.UI.Day69UiPresentationRules.CanUseWorldInput()) return; // 시스템 키·모달·전환 프레임 카메라 입력 보호
             HandleViewInput(); // F2·F3·F4 뷰 전환 처리
             HandleOpponentLookInput(); // 상대 시점 자유 회전 처리
             HandleZoomInput(); // 상대 시점 제한 줌 처리

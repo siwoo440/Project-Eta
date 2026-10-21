@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic; // 옵션 목록 사용
 using UnityEngine; // 보드 위 3D 오버레이 생성
 using UnityEngine.EventSystems; // EventSystem 사용
+using UnityEngine.InputSystem; // 선택 화면 키보드 이동
 using UnityEngine.InputSystem.UI; // 새 Input System UI 입력 모듈 사용
 using UnityEngine.UI; // World Space Canvas UI 사용
 using ProjectEta.Board; // BoardView 사용
@@ -45,6 +46,9 @@ namespace ProjectEta.UI
         }
 
         private readonly List<OptionView> _optionViews = new List<OptionView>(); // 카드형 선택지 뷰 목록
+        private int _pageVersion; // 이전 페이지 콜백 무효화
+        private int _keyboardFocus = -1; // 마우스와 분리한 키보드 선택
+        private IReadOnlyList<StageOverlayOption> _pageOptions; // 현재 페이지의 효과 설명
         private BoardView _boardView; // 오버레이 기준 보드
         private GameObject _overlayRoot; // 전체 판 위 오버레이 루트
         private GameObject _matPlane; // 돗자리 본체
@@ -78,6 +82,9 @@ namespace ProjectEta.UI
             EnsureBuilt(); // UI 생성 보장
             if (_overlayRoot == null) return; // 오버레이 생성 실패 방어
 
+            _pageVersion++; // 이전 페이지 입력 무효화
+            _keyboardFocus = -1; // 새 페이지 키보드 선택 초기화
+            _pageOptions = options != null ? new List<StageOverlayOption>(options) : null; // 외부 목록 변경과 분리
             HideRouteMapVisuals(); // 돗자리 아래 지도 노드·킹 숨김
             ApplyModeVisual(mode); // Shop/Event 돗자리 색상 적용
             _titleText.text = title ?? string.Empty; // 페이지 제목 적용
@@ -90,10 +97,55 @@ namespace ProjectEta.UI
 
         public void Hide()
         {
+            _pageVersion++; // 숨긴 페이지의 입력 무효화
+            _keyboardFocus = -1; // 숨긴 선택 해제
             HideHoverDescription(); // 남은 마우스 오버 설명 제거
             if (_overlayRoot != null) _overlayRoot.SetActive(false); // 돗자리·UI 숨김
             RestoreRouteMapVisuals(); // 기존 지도 시각 복원
         }
+
+        private void Update() // 상점·이벤트의 키보드 선택
+        { // 메서드 시작
+            if (!isActiveAndEnabled || !IsVisible || !Day69UiPresentationRules.CanUseActivityInput()) return; // 다른 화면 입력 소유 보호
+            Keyboard keyboard = Keyboard.current; // 현재 키보드
+            if (keyboard == null) return; // 장치 미연결 제외
+            if (keyboard.tabKey.wasPressedThisFrame || keyboard.rightArrowKey.wasPressedThisFrame || keyboard.downArrowKey.wasPressedThisFrame) MoveKeyboardFocus(keyboard.tabKey.wasPressedThisFrame && keyboard.shiftKey.isPressed ? -1 : 1); // Shift는 Tab 역방향만 적용
+            else if (keyboard.leftArrowKey.wasPressedThisFrame || keyboard.upArrowKey.wasPressedThisFrame) MoveKeyboardFocus(-1); // 이전 활성 선택
+            if (keyboard.backspaceKey.wasPressedThisFrame && _pageOptions != null) // 선택 취소의 별도 키
+            { // 조건 시작
+                for (int index = _pageOptions.Count - 1; index >= 0; index--) // 마지막 뒤로가기 우선
+                { // 반복 시작
+                    string title = _pageOptions[index].Title; // 실제 버튼 의미
+                    if (title != "취소" && title != "뒤로" && title != "나가기") continue; // 진행·구매 버튼 제외
+                    if (index < _optionViews.Count && _optionViews[index].Button.IsInteractable()) _optionViews[index].Button.onClick.Invoke(); // 실제 취소 콜백
+                    return; // 같은 키 중복 처리 차단
+                } // 반복 종료
+            } // 조건 종료
+            if (keyboard.enterKey.wasPressedThisFrame || keyboard.numpadEnterKey.wasPressedThisFrame) // 포커스 선택 확정
+            { // 조건 시작
+                if (_keyboardFocus < 0) MoveKeyboardFocus(1); // 첫 확정은 첫 활성 선택
+                if (_keyboardFocus >= 0) _optionViews[_keyboardFocus].Button.onClick.Invoke(); // 같은 실제 버튼 실행 경로
+            } // 조건 종료
+        } // 메서드 종료
+        private void MoveKeyboardFocus(int direction) // 비활성 선택을 제외한 순환 이동
+        { // 메서드 시작
+            int count = _pageOptions != null ? Mathf.Min(_pageOptions.Count, _optionViews.Count) : 0; // 실제 표시 개수
+            int next = _keyboardFocus; // 현재 선택 기준
+            for (int attempt = 0; attempt < count; attempt++) // 전체 후보 한 번씩 확인
+            { // 반복 시작
+                next = next < 0 ? (direction > 0 ? 0 : count - 1) : (next + direction + count) % count; // 양방향 순환
+                if (!_optionViews[next].Button.IsInteractable()) continue; // 선택 불가 건너뛰기
+                _keyboardFocus = next; // 새 선택 보관
+                for (int index = 0; index < count; index++) _optionViews[index].SelectionImage.gameObject.SetActive(index == next); // 키보드 선택 강조
+                ShowHoverDescription(_pageOptions[next]); // 키보드에서도 상세 안내
+                return; // 한 번 이동 완료
+            } // 반복 종료
+            _keyboardFocus = -1; // 활성 선택 없음
+        } // 메서드 종료
+        private void OnDisable() // 관리자 비활성화 후 잔존 화면 정리
+        { // 메서드 시작
+            Hide(); // 지도 시각·입력 소유 복원
+        } // 메서드 종료
 
         private void EnsureBuilt()
         {
@@ -223,7 +275,7 @@ namespace ProjectEta.UI
 
         private OptionView CreateOptionView(Transform parent, int index)
         {
-            var rootObject = new GameObject($"Option_{index}", typeof(RectTransform), typeof(Image), typeof(Button)); // 카드 루트 생성
+            var rootObject = new GameObject($"Option_{index}", typeof(RectTransform), typeof(Image), typeof(StageOverlayButton)); // 포인터와 키 확정을 분리한 카드 버튼
             rootObject.transform.SetParent(parent, false); // Canvas 자식 연결
             RectTransform rootRect = rootObject.GetComponent<RectTransform>(); // 카드 루트 RectTransform 확보
             SetRect(rootRect, Vector2.zero, new Vector2(NormalCardWidth, NormalCardHeight)); // 기본 카드 크기 적용
@@ -294,7 +346,7 @@ namespace ProjectEta.UI
             for (int i = 0; i < _optionViews.Count; i++)
             {
                 OptionView view = _optionViews[i]; // 현재 카드형 선택지 조회
-                view.Button.onClick.RemoveAllListeners(); // 이전 페이지 콜백 제거
+                view.Button.onClick = new Button.ButtonClickedEvent(); // 이전 이벤트 객체와 새 페이지 분리
                 if (view.HoverRelay != null) view.HoverRelay.Clear(); // 이전 마우스 오버 콜백 제거
                 view.Button.gameObject.SetActive(false); // 기본 숨김 처리
                 view.RootRect.localRotation = Quaternion.identity; // 이전 회전 초기화
@@ -359,7 +411,13 @@ namespace ProjectEta.UI
             view.TitleText.text = option.Title ?? string.Empty; // 카드 제목 적용
             view.DescriptionText.text = string.Empty; // 카드 내부 작은 설명은 사용하지 않고 Hover 하단 설명만 사용
             view.Button.interactable = option.Interactable; // 카드 선택 가능 여부 적용
-            view.Button.onClick.AddListener(() => option.Callback?.Invoke()); // 카드 선택 콜백 연결
+            int version = _pageVersion; // 이 페이지에서 생성한 입력 소유
+            view.Button.onClick.AddListener(() => // 실제 선택 확정
+            { // 콜백 시작
+                if (!isActiveAndEnabled || !IsVisible || version != _pageVersion || !view.Button.interactable || !Day69UiPresentationRules.CanUseActivityInput()) return; // 숨김·이전·상위 모달 입력 차단
+                option.Callback?.Invoke(); // 현재 페이지 효과 한 번 실행
+                Day69UiPresentationRules.ConsumeCurrentFrame(); // 같은 Enter·클릭의 추가 실행 차단
+            }); // 현재 페이지 콜백 연결
             view.SelectionImage.gameObject.SetActive(false); // 페이지 변경 시 강조 초기화
             if (view.HoverRelay != null) // 마우스 입력 연결기 확인
             { // 조건 시작

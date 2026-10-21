@@ -1,4 +1,4 @@
-using UnityEngine; // MonoBehaviour·GameObject·Time 사용
+﻿using UnityEngine; // MonoBehaviour·GameObject·Time 사용
 using UnityEngine.EventSystems; // EventSystem 사용
 using UnityEngine.InputSystem.UI; // InputSystemUIInputModule 사용
 using UnityEngine.UI; // Canvas·CanvasScaler·Button·Image·Text 사용
@@ -8,7 +8,7 @@ using ProjectEta.UI; // 최초 튜토리얼 사용
 
 namespace ProjectEta.Settings
 {
-    [DefaultExecutionOrder(1400)]
+    [DefaultExecutionOrder(-500)] // 걷기·보드·일반 UI보다 먼저 일시정지 처리
     public sealed class BattleSettingsOverlayController : MonoBehaviour
     {
         private static readonly Color BackdropColor = new Color(0f, 0f, 0f, 0.76f); // Pause 전체 배경 색상
@@ -30,6 +30,9 @@ namespace ProjectEta.Settings
         private bool _boardInputWasEnabled; // Pause 열기 전 전투 입력 상태
         private bool _routeMapWasEnabled; // Pause 열기 전 지도 입력 상태
         private float _previousTimeScale = 1f; // Pause 열기 전 TimeScale
+        private CursorLockMode _previousCursorLock; // 열기 전 커서 잠금
+        private bool _previousCursorVisible; // 열기 전 커서 표시
+        private GameObject _previousSelection; // 열기 전 UI 포커스
         private bool _runtimeSuspended; // Pause 런타임 중단 적용 여부
         private static Font _runtimeFont; // 한글 런타임 폰트 캐시
 
@@ -46,6 +49,7 @@ namespace ProjectEta.Settings
 
         private void Update()
         {
+            if (Day69UiPresentationRules.IsCurrentFrameConsumed) return; // 다른 화면에서 처리한 입력 재사용 차단
             if (!GameInputBindingService.WasPressedThisFrame(GameInputAction.Pause)) return; // 저장된 Pause·뒤로가기 키 입력 없으면 처리 종료
             if (!_navigation.IsOpen && !Day69UiPresentationRules.CanOpenPause(Day69UiPresentationRules.CaptureCurrent())) return; // 닫힌 상태에서만 튜토리얼·런 결과 위 Pause 진입 차단
 
@@ -57,6 +61,7 @@ namespace ProjectEta.Settings
 
             bool wasOpen = _navigation.IsOpen; // 뒤로가기 전 열림 상태 저장
             if (!_navigation.TryBack()) return; // 현재 화면 뒤로가기 처리
+            Day69UiPresentationRules.ConsumeCurrentFrame(); // 뒤로가기의 보드 관통 차단
             ApplyPanelState(); // 변경 화면 표시 적용
 
             if (wasOpen && !_navigation.IsOpen)
@@ -67,9 +72,10 @@ namespace ProjectEta.Settings
 
         public void OpenPanel()
         {
-            if (_navigation.IsOpen || _pauseRoot == null) return; // 중복 열기·UI 준비 전 차단
+            if (!isActiveAndEnabled || _navigation.IsOpen || _pauseRoot == null) return; // 중복 열기·UI 준비 전 차단
             if (!Day69UiPresentationRules.CanOpenPause(Day69UiPresentationRules.CaptureCurrent())) return; // 현재 모달 상태에서 Pause 진입 가능 여부 확인
 
+            Day69UiPresentationRules.ConsumeCurrentFrame(); // 열기 프레임의 중복 동작 차단
             SuspendRuntime(); // 게임 시간·입력 중단
             _navigation.OpenPause(); // Pause 기본 화면 상태 진입
             RefreshBindingLabels(); // 현재 저장 조작키 문구 갱신
@@ -80,6 +86,7 @@ namespace ProjectEta.Settings
         {
             if (!_navigation.IsOpen) return; // 중복 닫기 차단
 
+            Day69UiPresentationRules.ConsumeCurrentFrame(); // 닫기 입력의 뒤 화면 전달 차단
             _navigation.Close(); // Pause 계층 전체 닫기
             ApplyPanelState(); // 모든 Pause 화면 숨김
             ResumeRuntime(); // 게임 시간·입력 복원
@@ -137,6 +144,11 @@ namespace ProjectEta.Settings
             if (_boardInputController != null) _boardInputController.enabled = false; // Pause 중 보드 입력 차단
             if (_routeMapBoardController != null) _routeMapBoardController.enabled = false; // Pause 중 지도 노드 입력 차단
 
+            _previousCursorLock = Cursor.lockState; // 커서 소유 이전 상태 저장
+            _previousCursorVisible = Cursor.visible; // 커서 표시 이전 상태 저장
+            _previousSelection = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null; // 기존 UI 선택 보관
+            Cursor.lockState = CursorLockMode.None; // 모달 표시 순간 잠금 해제
+            Cursor.visible = true; // 모달 클릭 포인터 즉시 표시
             _previousTimeScale = Time.timeScale; // 기존 TimeScale 저장
             Time.timeScale = 0f; // Pause 중 런타임 진행 중단
             _runtimeSuspended = true; // 런타임 중단 상태 기록
@@ -149,6 +161,10 @@ namespace ProjectEta.Settings
             if (_boardInputController != null) _boardInputController.enabled = _boardInputWasEnabled; // 전투 입력 기존 상태 복원
             if (_routeMapBoardController != null) _routeMapBoardController.enabled = _routeMapWasEnabled; // 지도 입력 기존 상태 복원
             Time.timeScale = _previousTimeScale; // 기존 TimeScale 복원
+            Cursor.lockState = _previousCursorLock; // 원래 잠금 소유 복원
+            Cursor.visible = _previousCursorVisible; // 원래 표시 상태 복원
+            if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(_previousSelection != null && _previousSelection.activeInHierarchy ? _previousSelection : null); // 유효한 이전 포커스만 복원
+            _previousSelection = null; // 지난 화면 참조 해제
             _runtimeSuspended = false; // 런타임 중단 상태 해제
         }
 
@@ -179,6 +195,7 @@ namespace ProjectEta.Settings
             _pauseRoot = CreateScreenRoot("PauseRoot_Day68", parent); // Pause 기본 화면 루트 생성
             GameObject panel = CreateImage("PausePanel", _pauseRoot.transform, Vector2.zero, new Vector2(660f, 820f), PanelColor); // Pause 중앙 패널 생성
 
+            UiPanelViewportFit.Attach(panel.GetComponent<RectTransform>()); // 해상도·UI 배율 변경 시 화면 안 맞춤
             Text section = CreateText("Section", panel.transform, 18, FontStyle.Bold, TextAnchor.MiddleCenter); // Pause 상단 분류 문구 생성
             section.text = "SYSTEM"; // Pause 상단 분류 문구 적용
             section.color = AccentColor; // 강조 색상 적용
@@ -215,6 +232,7 @@ namespace ProjectEta.Settings
             _controlsRoot = CreateScreenRoot("ControlsRoot_Day68", parent); // 조작법 화면 루트 생성
             GameObject panel = CreateImage("ControlsPanel", _controlsRoot.transform, Vector2.zero, new Vector2(980f, 860f), PanelColor); // 조작법 중앙 패널 생성
 
+            UiPanelViewportFit.Attach(panel.GetComponent<RectTransform>()); // 해상도·UI 배율 변경 시 화면 안 맞춤
             Text section = CreateText("Section", panel.transform, 18, FontStyle.Bold, TextAnchor.MiddleLeft); // 조작법 상단 분류 문구 생성
             section.text = "CONTROLS"; // 조작법 분류 문구 적용
             section.color = AccentColor; // 강조 색상 적용
@@ -297,6 +315,9 @@ namespace ProjectEta.Settings
             if (_pauseRoot != null) _pauseRoot.SetActive(_navigation.CurrentPanel == BattlePausePanel.Pause); // Pause 화면 표시 상태 적용
             if (_controlsRoot != null) _controlsRoot.SetActive(_navigation.CurrentPanel == BattlePausePanel.Controls); // 조작법 화면 표시 상태 적용
             if (_settingsRoot != null) _settingsRoot.SetActive(_navigation.CurrentPanel == BattlePausePanel.Settings); // 설정 화면 표시 상태 적용
+            GameObject activeRoot = _navigation.CurrentPanel == BattlePausePanel.Pause ? _pauseRoot : (_navigation.CurrentPanel == BattlePausePanel.Controls ? _controlsRoot : _settingsRoot); // 열린 하위 화면
+            Button first = _navigation.IsOpen && activeRoot != null ? activeRoot.GetComponentInChildren<Button>() : null; // 키보드 첫 선택
+            if (first != null && EventSystem.current != null) EventSystem.current.SetSelectedGameObject(first.gameObject); // 상위 화면의 키보드 포커스 확보
         }
 
         private static GameObject CreateScreenRoot(string name, Transform parent)
@@ -390,6 +411,11 @@ namespace ProjectEta.Settings
             rect.offsetMin = new Vector2(padding, padding); // 좌하단 여백 적용
             rect.offsetMax = new Vector2(-padding, -padding); // 우상단 여백 적용
         }
+
+        private void OnDisable() // 관리자 비활성화의 남은 모달 정리
+        { // 메서드 시작
+            ClosePanel(); // 화면·시간·입력·커서 소유 해제
+        } // 메서드 종료
 
         private void OnDestroy()
         {

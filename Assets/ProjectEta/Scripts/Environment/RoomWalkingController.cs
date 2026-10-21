@@ -1,4 +1,4 @@
-using UnityEngine; // 이동·충돌·카메라 기능
+﻿using UnityEngine; // 이동·충돌·카메라 기능
 using UnityEngine.InputSystem; // 키보드·마우스 입력
 using ProjectEta.Debugging; // 디버그 패널 상태
 using ProjectEta.UI; // 모달 화면 상태
@@ -145,7 +145,7 @@ namespace ProjectEta.Environment // 전투 방 이동 영역
         } // 메서드 종료
         private static bool IsInputBlocked() // 다른 화면의 입력 소유 확인
         { // 메서드 시작
-            return Time.timeScale <= 0f || ProjectEtaDebugWindow.IsOpen || !Day69UiPresentationRules.CanShowSystemToast(Day69UiPresentationRules.CaptureCurrent()); // 일시정지·디버그·모달 이동 차단
+            return !Day69UiPresentationRules.CanUseWorldInput(); // 시스템 키를 누른 프레임부터 이동 차단
         } // 메서드 종료
         private static void SetWalkingCursor(bool locked) // 걷기와 모달 커서 전환
         { // 메서드 시작

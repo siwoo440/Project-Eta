@@ -1,4 +1,4 @@
-using System; // Action 이벤트와 Math를 사용하기 위한 네임스페이스
+﻿using System; // Action 이벤트와 Math를 사용하기 위한 네임스페이스
 using System.Collections.Generic; // Dictionary를 사용하기 위한 네임스페이스
 using System.Linq; // IReadOnlyList에 대한 Contains 확장 메서드를 사용하기 위한 네임스페이스
 using UnityEngine; // MonoBehaviour, Physics 등을 사용하기 위한 네임스페이스
@@ -37,11 +37,11 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
         public TurnManager TurnManager => _turnManager; // 현재 입력 권한을 판단하는 실제 턴 매니저
         public BattleHooks BattleHooks => _battleHooks; // 31일차: 정보 패널 UI 등이 피해·턴 훅을 구독할 수 있도록 공개하는 접근자
         public bool IsBound => _runState != null && _handState != null && _boardView != null && _boardView.IsBound; // 전투 상태 연결 여부
-        public bool CanReceivePlayerInput => !ProjectEta.Environment.RoomWalkingController.BlocksTableInput && IsBound && (_turnManager == null || _turnManager.CanPlayerInput); // 이동 외 플레이어 입력 권한
-        public bool CanUseCombatInput => !ProjectEta.Environment.RoomWalkingController.BlocksTableInput && IsBound && (_turnManager == null || _turnManager.CanPlayerAct); // 이동 외 전투 입력 권한
-        public bool CanUseDeploymentInput => !ProjectEta.Environment.RoomWalkingController.BlocksTableInput && IsBound && (_turnManager == null || _turnManager.CanDeploy); // 이동 외 배치 입력 권한
-        public bool CanUseCardSummonInput => !ProjectEta.Environment.RoomWalkingController.BlocksTableInput && IsBound && (_turnManager == null || _turnManager.CurrentState == TurnState.DeploymentTurn || _turnManager.CanPlayerAct); // 이동 외 카드 소환 권한
-        public bool CanUseFusionInput => !ProjectEta.Environment.RoomWalkingController.BlocksTableInput && IsBound && (_turnManager == null || _turnManager.CanDeploy); // 이동 외 배치 턴 합성 권한
+        public bool CanReceivePlayerInput => ProjectEta.UI.Day69UiPresentationRules.CanUseTableInput() && IsBound && (_turnManager == null || _turnManager.CanPlayerInput); // 이동 외 플레이어 입력 권한
+        public bool CanUseCombatInput => ProjectEta.UI.Day69UiPresentationRules.CanUseTableInput() && IsBound && (_turnManager == null || _turnManager.CanPlayerAct); // 이동 외 전투 입력 권한
+        public bool CanUseDeploymentInput => ProjectEta.UI.Day69UiPresentationRules.CanUseTableInput() && IsBound && (_turnManager == null || _turnManager.CanDeploy); // 이동 외 배치 입력 권한
+        public bool CanUseCardSummonInput => ProjectEta.UI.Day69UiPresentationRules.CanUseTableInput() && IsBound && (_turnManager == null || _turnManager.CurrentState == TurnState.DeploymentTurn || _turnManager.CanPlayerAct); // 이동 외 카드 소환 권한
+        public bool CanUseFusionInput => ProjectEta.UI.Day69UiPresentationRules.CanUseTableInput() && IsBound && (_turnManager == null || _turnManager.CanDeploy); // 이동 외 배치 턴 합성 권한
         public bool IsFusionModeActive => _isFusionModeActive; // 21일차: 합성 버튼으로 진입한 재료 선택 모드인지 여부
         public IReadOnlyList<PieceDefinition> FusionMaterials => _fusionMaterials; // 21일차: 현재 합성 재료로 선택된 손패 카드 목록(최대 2장)
         public FusionRecipe CurrentFusionRecipe => _currentFusionRecipe; // 21일차: 현재 선택된 재료 2장으로 미리 계산된 합성 결과 레시피(없으면 null)
@@ -541,6 +541,7 @@ namespace ProjectEta.Board // 보드 관련 타입을 모아두는 네임스페�
 
         private void Update() // 매 프레임 자동 호출되는 메서드
         {
+            if (!ProjectEta.UI.Day69UiPresentationRules.CanUseTableInput()) return; // 모달 중 선택 상태를 보존하며 입력만 차단
             if (!IsBound) // 실제 런 상태가 아직 연결되지 않았으면
             {
                 return; // 입력으로 임시 데이터를 만들지 않고 기다림

@@ -1,4 +1,4 @@
-using System; // Enum 파싱 사용
+﻿using System; // Enum 파싱 사용
 using UnityEngine.InputSystem; // Keyboard·Key 사용
 
 namespace ProjectEta.Settings
@@ -100,6 +100,7 @@ namespace ProjectEta.Settings
         {
             Keyboard keyboard = Keyboard.current; // 현재 키보드 장치 조회
             if (keyboard == null) return false; // 키보드 미연결 상태 차단
+            if (action == GameInputAction.CompleteAction && !ProjectEta.UI.Day69UiPresentationRules.CanUseTableInput()) return false; // 모달 아래 행동 완료 차단
             Key key = GetKey(action); // 현재 행동에 연결된 키 조회
             return keyboard[key].wasPressedThisFrame; // 현재 프레임 입력 여부 반환
         }

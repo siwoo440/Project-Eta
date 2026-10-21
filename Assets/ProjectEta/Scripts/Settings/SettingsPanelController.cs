@@ -1,4 +1,4 @@
-using System; // Action·Array 사용
+﻿using System; // Action·Array 사용
 using System.Collections.Generic; // List<T>·Dictionary<T> 사용
 using UnityEngine; // MonoBehaviour·Screen·Color·Vector2 사용
 using UnityEngine.UI; // Button·Image·Slider·Text 사용
@@ -111,6 +111,7 @@ namespace ProjectEta.Settings
 
             GameObject panel = CreateImage("SettingsPanel_Day57", transform, Vector2.zero, new Vector2(1240f, 920f), PanelColor); // 카테고리형 중앙 설정 패널 생성
 
+            ProjectEta.UI.UiPanelViewportFit.Attach(panel.GetComponent<RectTransform>()); // 최대 UI 배율에서도 하단 버튼 접근 보장
             Text section = CreateText("Section", panel.transform, 18, FontStyle.Bold, TextAnchor.MiddleLeft); // 설정 상단 분류 문구 생성
             section.text = "OPTIONS"; // 설정 상단 분류 문구 적용
             section.color = AccentColor; // 강조 색상 적용
@@ -472,7 +473,7 @@ namespace ProjectEta.Settings
 
         private static string FormatPercent(float value)
         {
-            return $"{Mathf.RoundToInt(Mathf.Clamp01(value) * 100f)}%"; // 0~1 값을 퍼센트 문구로 변환
+            return $"{Mathf.RoundToInt(Mathf.Max(0f, value) * 100f)}%"; // 정규화된 볼륨·UI 배율의 실제 퍼센트 표시
         }
 
         private static GameObject CreateImage(string name, Transform parent, Vector2 position, Vector2 size, Color color)

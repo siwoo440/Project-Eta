@@ -1,4 +1,4 @@
-using System.Collections.Generic; // List<T>·IReadOnlyList<T> 사용
+﻿using System.Collections.Generic; // List<T>·IReadOnlyList<T> 사용
 using UnityEngine; // MonoBehaviour·GameObject·Color·Vector2 사용
 using UnityEngine.EventSystems; // EventSystem 사용
 using UnityEngine.InputSystem.UI; // 새 Input System UI 입력 모듈 사용
@@ -296,6 +296,7 @@ namespace ProjectEta.UI // 카드 보상 UI 네임스페이스
 
         private void HandleCardClicked(PieceDefinition definition) // 후보 카드 클릭 시 미리 선택 상태만 변경
         {
+            if (!isActiveAndEnabled || !IsVisible || !Day69UiPresentationRules.CanUseRewardInput()) return; // 가려진 보상 화면 입력 차단
             if (definition == null || _selectionCallback == null) // 잘못된 선택 상태 확인
             {
                 return; // 선택 처리 차단
@@ -309,6 +310,7 @@ namespace ProjectEta.UI // 카드 보상 UI 네임스페이스
 
         private void HandleConfirmClicked() // 현재 선택 카드 실제 획득 확정
         {
+            if (!isActiveAndEnabled || !IsVisible || !Day69UiPresentationRules.CanUseRewardInput()) return; // 일시정지·디버그 아래 보상 확정 차단
             if (_selectedDefinition == null || _selectionCallback == null) // 선택 카드·콜백 확인
             {
                 return; // 빈 확정 입력 차단

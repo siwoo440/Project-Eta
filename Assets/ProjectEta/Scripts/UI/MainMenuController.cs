@@ -1,4 +1,4 @@
-using System.Collections.Generic; // IReadOnlyList<T> 사용
+﻿using System.Collections.Generic; // IReadOnlyList<T> 사용
 using UnityEngine; // MonoBehaviour·GameObject·Color·Vector2 사용
 using UnityEngine.EventSystems; // EventSystem 사용
 using UnityEngine.InputSystem; // Keyboard 입력 사용
@@ -103,6 +103,7 @@ namespace ProjectEta.UI
             _mainRoot = new GameObject("MainMenuRoot", typeof(RectTransform)); // 메인 메뉴 전체 루트 생성
             _mainRoot.transform.SetParent(parent, false); // Canvas 자식 연결
             Stretch(_mainRoot.GetComponent<RectTransform>(), 0f); // 전체 화면 기준 배치
+            UiPanelViewportFit.Attach(_mainRoot.GetComponent<RectTransform>(), new Vector2(1620f, 820f)); // 좌우 패널 전체를 화면 안에 균일 맞춤
 
             GameObject brandPanel = CreatePanel("BrandPanel", _mainRoot.transform, new Vector2(-430f, 0f), new Vector2(760f, 820f), PanelSecondaryColor); // 좌측 브랜드 패널 생성
             GameObject menuPanel = CreatePanel("MenuPanel", _mainRoot.transform, new Vector2(430f, 0f), new Vector2(620f, 820f), PanelColor); // 우측 메뉴 패널 생성

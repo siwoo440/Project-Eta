@@ -1,4 +1,4 @@
-using System.Collections.Generic; // 카드 입력 오버레이 목록 사용
+﻿using System.Collections.Generic; // 카드 입력 오버레이 목록 사용
 using UnityEngine; // MonoBehaviour·GameObject·Color·Vector2 사용
 using UnityEngine.EventSystems; // 포인터 클릭·EventSystem 사용
 using UnityEngine.InputSystem.UI; // 새 Input System UI 입력 모듈 사용
@@ -50,6 +50,7 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 네임스페이스
 
         private void Update() // 전투 상태와 손패 UI 동기화
         {
+            if (!Day69UiPresentationRules.CanUseTableInput()) return; // 일시적 입력 차단 중 합성 모드·재료 보존
             ResolveBindings(); // BoardInputController 연결 보장
             SuppressLegacyFusionUI(); // 구형 Fusion Canvas 중복 표시 차단
             UpdateDiscoveryNotice(); // Recipe 발견 알림 시간 갱신
@@ -96,6 +97,7 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 네임스페이스
 
         private void OnToggleButtonClicked() // 64일차 합성 모드 버튼 처리
         {
+            if (!Day69UiPresentationRules.CanUseTableInput()) return; // 가려진 합성 토글의 모드 변경 차단
             if (_boardInput == null) // 입력 컨트롤러 연결 확인
             {
                 return; // 연결 전 클릭 무시
@@ -311,6 +313,7 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 네임스페이스
 
         private void RefreshToggleState() // 합성 진입 버튼 상태 갱신
         {
+            if (!Day69UiPresentationRules.CanUseTableInput()) return; // 모달을 실제 턴 변경으로 해석하지 않는 보호
             if (_toggleButton == null) // 버튼 생성 여부 확인
             {
                 return; // 생성 전 갱신 차단
