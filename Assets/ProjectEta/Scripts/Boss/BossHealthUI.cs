@@ -199,10 +199,10 @@ namespace ProjectEta.Boss // 보스 전투 관련 타입을 모아두는 네임�
             panelRect.anchorMax = new Vector2(0.5f, 1f); // 화면 상단 중앙 앵커
             panelRect.pivot = new Vector2(0.5f, 1f); // 윗중앙 기준 배치
             panelRect.anchoredPosition = new Vector2(0f, -18f); // 화면 상단에서 18픽셀 떨어진 위치 적용
-            panelRect.sizeDelta = new Vector2(620f, 54f); // 이름·HP·체력바가 들어가는 폭과 높이
+            panelRect.sizeDelta = new Vector2(680f, 112f); // 보석 아래 이름과 체력바를 나눌 표시 영역
 
             var panelImage = panelObject.GetComponent<Image>(); // 패널 배경 이미지 조회
-            bool bossFrameApplied = ProjectEta.UI.Day98UiSkin.TryApplyResource(panelImage, ProjectEta.UI.Day98UiSkin.BossBarResourcePath); // 보스 체력바 프레임 적용
+            bool bossFrameApplied = ProjectEta.UI.Day98UiSkin.TryApplyResource(panelImage, ProjectEta.UI.Day98UiSkin.BossBarResourcePath, false); // 중앙 보석을 늘리지 않는 단순 프레임 표시
             if (!bossFrameApplied) // 보스 프레임 누락 확인
             { // 조건 시작
                 panelImage.color = new Color(0.12f, 0.015f, 0.015f, 0.94f); // 기존 보스 배경 유지
@@ -212,8 +212,8 @@ namespace ProjectEta.Boss // 보스 전투 관련 타입을 모아두는 네임�
             var barBackgroundObject = new GameObject("BossHealthBarBackground", typeof(RectTransform), typeof(Image)); // 체력바 배경 생성
             barBackgroundObject.transform.SetParent(panelObject.transform, false); // 패널 자식 연결
             var barBackgroundRect = barBackgroundObject.GetComponent<RectTransform>(); // 배경 바 RectTransform 조회
-            barBackgroundRect.anchorMin = new Vector2(0.03f, 0.10f); // 좌측 3%, 하단 10%
-            barBackgroundRect.anchorMax = new Vector2(0.97f, 0.34f); // 우측 97%, 높이 34%까지
+            barBackgroundRect.anchorMin = new Vector2(0.08f, 0.20f); // 프레임 내부 하단 체력바 시작
+            barBackgroundRect.anchorMax = new Vector2(0.92f, 0.31f); // 프레임 내부 체력바 끝
             barBackgroundRect.offsetMin = Vector2.zero; // 앵커 그대로 사용
             barBackgroundRect.offsetMax = Vector2.zero; // 앵커 그대로 사용
             var barBackgroundImage = barBackgroundObject.GetComponent<Image>(); // 체력바 배경 Image 조회
@@ -238,14 +238,19 @@ namespace ProjectEta.Boss // 보스 전투 관련 타입을 모아두는 네임�
             var textObject = new GameObject("BossHealthText", typeof(RectTransform), typeof(Text), typeof(Shadow)); // 보스 이름·HP 숫자 텍스트 생성
             textObject.transform.SetParent(panelObject.transform, false); // 패널 자식 연결
             var textRect = textObject.GetComponent<RectTransform>(); // 텍스트 RectTransform 조회
-            textRect.anchorMin = new Vector2(0f, 0.34f); // 체력바 위 영역부터 시작
-            textRect.anchorMax = Vector2.one; // 패널 상단까지 사용
-            textRect.offsetMin = new Vector2(12f, 0f); // 좌측 여백
-            textRect.offsetMax = new Vector2(-12f, 0f); // 우측 여백
+            textRect.anchorMin = new Vector2(0.08f, 0.36f); // 체력바 위 이름 영역 시작
+            textRect.anchorMax = new Vector2(0.92f, 0.61f); // 중앙 보석 아래 이름 영역 끝
+            textRect.offsetMin = Vector2.zero; // 정규화된 내부 여백 사용
+            textRect.offsetMax = Vector2.zero; // 정규화된 내부 여백 사용
 
             _label = textObject.GetComponent<Text>(); // 실제 Text 컴포넌트 저장
             _label.font = CreateRuntimeFont(); // 한글 지원 시스템 폰트 우선 사용
             _label.fontSize = 20; // 전투 중 빠르게 읽을 수 있는 크기
+            _label.resizeTextForBestFit = true; // 긴 보스 이름의 프레임 이탈 방지
+            _label.resizeTextMinSize = 14; // 긴 이름 최소 가독 크기
+            _label.resizeTextMaxSize = 20; // 기본 글자 크기 상한
+            _label.horizontalOverflow = HorizontalWrapMode.Wrap; // 이름의 가로 영역 제한
+            _label.verticalOverflow = VerticalWrapMode.Truncate; // 이름과 체력바 영역 분리
             _label.fontStyle = FontStyle.Bold; // 보스 UI 강조
             _label.alignment = TextAnchor.MiddleCenter; // 상단 중앙 한 줄 정렬
             _label.color = new Color(1f, 0.91f, 0.84f, 1f); // 어두운 배경 위 밝은 글자

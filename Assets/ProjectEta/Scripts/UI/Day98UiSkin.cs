@@ -199,7 +199,7 @@ namespace ProjectEta.UI // 프로젝트 UI 네임스페이스
                 ResourceSprites[cacheKey] = sprite; // 재사용 Sprite 저장
             } // 조건 종료
             image.sprite = sprite; // 캐시 Sprite 연결
-            float referenceSide = resourcePath == AbilityTagResourcePath ? 20f : (sprite.rect.width > sprite.rect.height * 2f ? 64f : 200f); // 작은 태그와 가로 명패 테두리 기준
+            float referenceSide = resourcePath == AbilityTagResourcePath ? 20f : (resourcePath == BattleStatusResourcePath ? 200f : (sprite.rect.width > sprite.rect.height * 2f ? 64f : 200f)); // 상태창 모서리와 작은 가로 명패별 테두리 기준
             image.pixelsPerUnitMultiplier = Mathf.Max(1f, Mathf.Min(sprite.rect.width, sprite.rect.height) / referenceSide); // 고해상도 테두리 표시 배율 보정
             image.type = sliced ? Image.Type.Sliced : Image.Type.Simple; // 표시 방식 적용
             image.color = Color.white; // 원본 이미지 색상 유지
@@ -242,7 +242,28 @@ namespace ProjectEta.UI // 프로젝트 UI 네임스페이스
         { // 메서드 시작
             Rect area = new Rect(0f, 0f, 1f, 1f); // 원본 전체 영역 설정
             bool horizontal = false; // 가로 명패 여부 초기화
-            if (path == RouteSidePanelResourcePath) // 지도 세로 패널의 투명 여백 확인
+            if (path == BattleStatusResourcePath) // 전투 상태창의 바깥 투명 여백 제외
+            { // 조건 시작
+                area = new Rect(0.018f, 0.15f, 0.964f, 0.715f); // 금색 외곽선 전체를 포함한 상태창 영역
+            } // 조건 종료
+            else if (path == BattleSidePanelResourcePath) // 세로 보조 패널의 넓은 좌우 여백 제외
+            { // 조건 시작
+                area = new Rect(0.25f, 0.025f, 0.5f, 0.95f); // 보조 패널 본체 영역
+            } // 조건 종료
+            else if (path == BossBarResourcePath) // 보스 프레임의 위아래 투명 여백 제외
+            { // 조건 시작
+                area = new Rect(0.018f, 0.18f, 0.964f, 0.72f); // 중앙 보석과 네 모서리를 포함한 프레임 영역
+            } // 조건 종료
+            else if (path == BattleLogTabResourcePath) // 전투 로그 탭의 바깥 투명 여백 제외
+            { // 조건 시작
+                area = new Rect(0.075f, 0.22f, 0.85f, 0.56f); // 로그 명패의 실제 표시 영역
+                horizontal = true; // 가로 명패 모서리 보존
+            } // 조건 종료
+            else if (path == PileButtonResourcePath) // 카드 더미 버튼의 바깥 투명 여백 제외
+            { // 조건 시작
+                area = new Rect(0.115f, 0.17f, 0.75f, 0.72f); // 원형 글자 영역과 네 모서리 보존
+            } // 조건 종료
+            else if (path == RouteSidePanelResourcePath) // 지도 세로 패널의 투명 여백 확인
             { // 조건 시작
                 area = new Rect(0.183f, 0.035f, 0.635f, 0.945f); // 원본 패널 테두리를 포함한 표시 영역
             } // 조건 종료
@@ -286,7 +307,8 @@ namespace ProjectEta.UI // 프로젝트 UI 네임스페이스
                 horizontal = true; // 가로 트랙 표시
             } // 조건 종료
             Rect rect = new Rect(area.x * texture.width, area.y * texture.height, area.width * texture.width, area.height * texture.height); // Sprite 사용 영역 계산
-            float border = sliced ? Mathf.Floor(Mathf.Min(rect.width, rect.height) * (horizontal ? 0.28f : PanelBorderRatio)) : 0f; // 자산 모서리 보존 길이
+            float borderRatio = path == BattleStatusResourcePath ? 0.34f : (horizontal ? 0.28f : PanelBorderRatio); // 비스듬한 상태창 모서리 전체 보존
+            float border = sliced ? Mathf.Floor(Mathf.Min(rect.width, rect.height) * borderRatio) : 0f; // 자산 모서리 보존 길이
             Vector4 borders = new Vector4(border, border, border, border); // 자산 테두리 구성
             Sprite sprite = Sprite.Create(texture, rect, new Vector2(0.5f, 0.5f), SpritePixelsPerUnit, 0u, SpriteMeshType.FullRect, borders); // 사용 영역 Sprite 생성
             sprite.name = texture.name + (sliced ? "_Day98SlicedSprite" : "_Day98SimpleSprite"); // Sprite 이름 지정

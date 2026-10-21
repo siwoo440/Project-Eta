@@ -18,7 +18,8 @@ namespace ProjectEta.Run // 지도 안내 영역
             if (rules != null) // 전투 규칙 존재 확인
             { // 조건 시작
                 string reward = definition.StageType == StageType.FinalBoss ? "최종 승리 · 런 종료" : "1성 기물 · 카드 1장 선택"; // 실제 완료 보상 안내
-                return $"제한 {rules.turnLimit}턴\n증원 {GetReinforcementTurns(rules.reinforcements)}\n승리 보상 {rules.victoryGold} Gold\n{reward}\n상태: {status}"; // 전투 안내 반환
+                string boss = rules.bossSelection != null ? rules.bossSelection.displayName + " · 공통 임시패턴\n" : string.Empty; // 전용 패턴 완료로 오해하지 않는 보스 안내
+                return boss + $"제한 {rules.turnLimit}턴\n증원 {GetReinforcementTurns(rules.reinforcements)}\n승리 보상 {rules.victoryGold} Gold\n{reward}\n상태: {status}"; // 전투 안내 반환
             } // 조건 종료
             string detail = GetActivityDescription(definition != null ? definition.StageType : StageType.Battle); // 비전투 활동 안내
             return $"{detail}\n상태: {status}"; // 비전투 안내 반환

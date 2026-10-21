@@ -17,6 +17,7 @@ namespace ProjectEta.Run // 스테이지 규칙 영역
         public bool isBossRound; // 보스 전투 여부
         public string bossResourceName; // 보스 리소스 이름
         public Vector2Int bossAnchor; // 보스 시작 좌표
+        public ProjectEta.Boss.BossSelectionSnapshot bossSelection; // 신규 런의 보스 선택·수치 고정
         public List<EnemySpawnDefinition> initialEnemies = new List<EnemySpawnDefinition>(); // 시작 적 배치
         public List<EnemySpawnDefinition> reinforcements = new List<EnemySpawnDefinition>(); // 증원 배치
         public bool IsValid => phase >= 1 && phase <= 5 && !string.IsNullOrWhiteSpace(stageDefinitionId) && turnLimit > 0 && victoryGold >= 0 && initialEnemies != null && reinforcements != null; // 복원 규칙 유효성

@@ -27,6 +27,7 @@ namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이
         private PieceDatabase _pieceDatabase; // 일반·정예 적 후보 전체 기물 DB
         private bool _ownsRoundDefinition; // 독립 런타임 라운드 정리 여부
         private bool _configured; // 중복 설정 방지 상태
+        private StageRuleSnapshot _stageRules; // 실제 보스 선택을 포함한 저장 규칙
 
         public StageDefinition StageDefinition => _stageDefinition; // 현재 적용 중인 StageDefinition 공개
         public RoundDefinition RoundDefinition => _roundDefinition; // 현재 적용 중인 RoundDefinition 공개
@@ -67,6 +68,7 @@ namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이
             }
 
             StageRuleSnapshot rules = RunStageRuleService.GetOrCreate(_runState, stageDefinition, RunPhaseProgressService.GetCurrentPhase(_runState)); // 저장된 전투 규칙 조회
+            _stageRules = rules; // 보스 스폰과 같은 규칙 참조
             _roundDefinition = rules.CreateRuntimeRound(); // 이번 런의 독립 라운드 적용
             _ownsRoundDefinition = true; // 런타임 객체 정리 표시
             ApplyTurnLimit(); // StageDefinition의 RoundDefinition 턴 제한을 기존 BattleController에 적용
@@ -214,7 +216,7 @@ namespace ProjectEta.Run // 선택 스테이지 전투 런타임 네임스페이
         {
             if (!_roundDefinition.HasBossConfiguration) return; // 보스 설정 없는 일반 전투 제외
 
-            PieceDefinition bossDefinition = Resources.Load<PieceDefinition>(_roundDefinition.BossResourceName); // 보스 PieceDefinition 로드
+            PieceDefinition bossDefinition = _stageRules?.bossSelection != null ? BossRuntimeDefinitionFactory.Resolve(_stageRules.bossSelection) : Resources.Load<PieceDefinition>(_roundDefinition.BossResourceName); // 신규 선택·구버전 리소스 각각 복원
             if (bossDefinition == null) // 보스 리소스 누락 확인
             {
                 Debug.LogError($"45일차 보스 생성 실패: Resources/{_roundDefinition.BossResourceName}를 찾지 못했습니다."); // 보스 리소스 누락 기록

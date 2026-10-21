@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f99807ab25c49fa879f3011d101b055, type: 3}
+  m_Name: mordrain
+  m_EditorClassIdentifier: ProjectEta.Runtime::ProjectEta.Boss.BossDefinition
+  bossId: mordrain
+  displayName: "황혼의 흑왕 모르드레인"
+  phase: 5
+  size: {x: 1, y: 1}
+  baseHp: 36
+  baseAtk: 5
+  templateResource: FinalBoss74
+  plannedMovement: "직선 압박·도약형 기동"
+  plannedSpecial: "상태 이상·증원·칸 봉쇄 순차 예고"
+  plannedEnhanced: "HP 50% 이하 패턴 조합 전환"
+  provisional: 1
+  bespokePatternsImplemented: 0

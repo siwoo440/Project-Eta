@@ -389,6 +389,13 @@ namespace ProjectEta.Debugging // 런타임 디버그 도구 네임스페이스
                 DrawKeyValue("제한 턴", rules.turnLimit.ToString()); // 저장된 턴 제한 표시
                 DrawKeyValue("증원", StagePreviewFormatter.GetReinforcementTurns(rules.reinforcements)); // 실제 증원 턴 표시
                 DrawKeyValue("승리 Gold", rules.victoryGold.ToString()); // 실제 승리 보상 표시
+                if (rules.bossSelection != null) // 선택된 보스 확인
+                { // 조건 시작
+                    DrawKeyValue("보스 ID", rules.bossSelection.bossId); // 재현 가능한 ID 표시
+                    DrawKeyValue("형태·크기", rules.bossSelection.VariantLabel + " · " + rules.bossSelection.size); // 실제 점유 형태 표시
+                    DrawKeyValue("HP / ATK", rules.bossSelection.maxHp + " / " + rules.bossSelection.attack); // 저장된 전투 수치 표시
+                    GUILayout.Label("임시 수치·공통 보스 패턴 사용 / 전용 패턴 후속 구현", _mutedLabelStyle); // 현재 구현 수준 표시
+                } // 조건 종료
                 GUILayout.Label("진행 중인 런의 규칙은 저장 후에도 유지", _mutedLabelStyle); // 이어하기 정책 안내
             } // 조건 종료
             else // 비전투 노드 확인

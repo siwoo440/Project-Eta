@@ -259,7 +259,7 @@ namespace ProjectEta.Run
                 {
                     if (pieceData == null) continue; // 잘못된 항목 제외
 
-                    var definition = FindDefinition(database, pieceData.pieceId); // PieceDatabase·Resources 정의 조회
+                    var definition = ProjectEta.Boss.BossRuntimeDefinitionFactory.ResolveSavedPiece(runState, pieceData.pieceId) ?? FindDefinition(database, pieceData.pieceId); // 보스 고정 수치 우선 복원
                     if (definition == null) continue; // 정의 누락 기물 제외
 
                     var boardPosition = new Vector2Int(pieceData.x, pieceData.y); // 저장 기준 좌표 생성

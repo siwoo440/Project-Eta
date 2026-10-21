@@ -55,6 +55,20 @@ namespace ProjectEta.Pieces // 기물 관련 타입을 모아두는 네임스페
         }
 
         public string PieceId => _pieceId; // 외부에서 읽는 기물 식별자
+        public void ConfigureBossRuntime(string id, string title, int hp, int attack, Vector2Int size, StatusEffectType immunities) // 저장된 보스 전용 복제 설정
+        { // 메서드 시작
+            _pieceId = id; // 복원 가능한 형태별 ID
+            _displayName = title; // 선택 당시 이름
+            _category = PieceCategory.Boss; // 카드 획득 후보 제외
+            _baseHp = Mathf.Max(1, hp); // 선택 당시 체력
+            _baseAtk = Mathf.Max(0, attack); // 선택 당시 공격력
+            _occupancySize = size; // 선택 당시 점유 크기
+            _immuneStatusTags = immunities; // 선택 당시 면역
+            _movementType = PieceMovementType.Custom; // 공통 보스 행동 경로 사용
+            _movementRules = Array.Empty<MovementRuleData>(); // 원형에 남은 일반 이동 규칙 제외
+            _abilities = Array.Empty<PieceAbilityDefinition>(); // 미구현 전용 능력의 오표시 차단
+            _description = "101일차 보스 선택 기반 · 임시 수치 · 공통 보스 패턴 사용 · 전용 패턴은 후속 구현"; // 실제 구현 상태 설명
+        } // 메서드 종료
         public string DisplayName => _displayName; // 외부에서 읽는 표시 이름
         public string RequiredMetaUnlockId => _requiredMetaUnlockId; // 59일차: 런 Snapshot에서 요구하는 영구 해금 ID
         public PieceCategory Category => _category; // 외부에서 읽는 분류

@@ -11,12 +11,13 @@ namespace ProjectEta.Environment // 전투 방 이동 영역
     { // 타입 시작
         public const float EyeHeight = 5.25f; // 바닥 기준 선 눈높이
         public const float ChairReach = 3.4f; // 의자 접근 거리
-        public const float WalkSpeed = 4f; // 초당 이동 거리
+        public const float WalkSpeed = 8f; // 실제 초당 이동 거리
         private static RoomWalkingController _activeWalker; // 현재 이동 중인 플레이어
         private Day41SeatedCameraRig _rig; // 기존 좌석 카메라
         private CharacterController _body; // 실제 이동 충돌체
         private GameObject _collisionRoot; // 보드 레이에서 제외할 환경 충돌체
         private RoomWalkingUI _ui; // 조작·앉기 안내
+        private RoomWalkingHudVisibility _hudVisibility; // 걷기 전용 화면 표시 소유
         private Vector2 _lookAngles; // 좌우·상하 회전
         private float _verticalSpeed; // 중력 속도
         private CursorLockMode _previousCursorLock; // 일어나기 전 커서 잠금
@@ -51,6 +52,7 @@ namespace ProjectEta.Environment // 전투 방 이동 영역
             _body.enabled = false; // 앉은 상태 충돌 해제
             _ui = gameObject.AddComponent<RoomWalkingUI>(); // 자동 안내 화면 연결
             _ui.Configure(this); // 이동 상태 연결
+            _hudVisibility = gameObject.AddComponent<RoomWalkingHudVisibility>(); // 게임 진행과 독립된 화면 표시 연결
         } // 메서드 종료
         private void Update() // 실제 조작 입력 처리
         { // 메서드 시작
@@ -73,7 +75,7 @@ namespace ProjectEta.Environment // 전투 방 이동 영역
             SetWalkingCursor(true); // 이동 중 마우스 잠금
             if (keyboard != null && keyboard.fKey.wasPressedThisFrame && TrySit()) return; // 의자 접근 후 F 복귀
             Vector2 look = Mouse.current != null ? Mouse.current.delta.ReadValue() : Vector2.zero; // 마우스 시선 입력
-            Move(movement, Time.deltaTime, look); // 실제 충돌 이동 적용
+            Move(movement, Time.unscaledDeltaTime, look); // 게임 배속과 독립된 실제 충돌 이동
         } // 메서드 종료
         public bool TryStand() // 의자에서 일어나기
         { // 메서드 시작
@@ -85,6 +87,7 @@ namespace ProjectEta.Environment // 전투 방 이동 영역
             _body.enabled = true; // 이동 충돌 활성화
             IsWalking = true; // 의자 이탈 상태 기록
             _activeWalker = this; // 보드 입력 차단 소유
+            _hudVisibility.SetWalking(true); // 전투·지도·손패 화면 표시 억제
             _previousCursorLock = Cursor.lockState; // 기존 커서 잠금 저장
             _previousCursorVisible = Cursor.visible; // 기존 커서 표시 저장
             _ownsCursor = true; // 커서 복원 책임 기록
@@ -101,6 +104,7 @@ namespace ProjectEta.Environment // 전투 방 이동 영역
         public void ReturnToSeat() // 좌석 복귀와 입력 자원 해제
         { // 메서드 시작
             IsWalking = false; // 이동 상태 해제
+            if (_hudVisibility != null) _hudVisibility.SetWalking(false); // 이전 표시 소유자의 상태 복원
             if (_activeWalker == this) _activeWalker = null; // 보드 입력 차단 해제
             if (_body != null) _body.enabled = false; // 좌석 내부 충돌 해제
             if (_ownsCursor) // 저장된 커서 상태 확인
@@ -114,13 +118,18 @@ namespace ProjectEta.Environment // 전투 방 이동 영역
         public void Move(Vector2 input, float deltaTime, Vector2 lookDelta) // 프레임 독립 이동과 자유 시선
         { // 메서드 시작
             if (!IsWalking || _body == null || !_body.enabled || IsInputBlocked()) return; // 이동 가능 상태 확인
-            float step = Mathf.Clamp(deltaTime, 0f, 0.1f); // 긴 프레임 충돌 관통 방지
+            float remaining = Mathf.Max(0f, deltaTime); // 실제 경과 시간 보존
             _lookAngles.x = Mathf.Repeat(_lookAngles.x + lookDelta.x * 0.12f, 360f); // 좌우 전체 회전
             _lookAngles.y = Mathf.Clamp(_lookAngles.y - lookDelta.y * 0.12f, -85f, 85f); // 상하 시선 제한
             Vector2 normalized = Vector2.ClampMagnitude(input, 1f); // 대각선 속도 증가 차단
             Vector3 horizontal = Quaternion.Euler(0f, _lookAngles.x, 0f) * new Vector3(normalized.x, 0f, normalized.y); // 바라보는 방향 기준 이동
-            _verticalSpeed = _body.isGrounded ? -2f : Mathf.Max(-30f, _verticalSpeed - 9.81f * step); // 바닥 접지와 중력 속도
-            _body.Move((horizontal * WalkSpeed + Vector3.up * _verticalSpeed) * step); // 실제 환경 충돌·미끄러짐 적용
+            while (remaining > 0f) // 긴 프레임을 짧은 충돌 이동으로 분할
+            { // 반복 시작
+                float step = Mathf.Min(remaining, 0.05f); // 한 번의 물리 이동 시간 제한
+                _verticalSpeed = _body.isGrounded ? -2f : Mathf.Max(-30f, _verticalSpeed - 9.81f * step); // 바닥 접지와 중력 속도
+                _body.Move((horizontal * WalkSpeed + Vector3.up * _verticalSpeed) * step); // 실제 환경 충돌·미끄러짐 적용
+                remaining -= step; // 처리한 실제 경과 시간 차감
+            } // 반복 종료
         } // 메서드 종료
         public static bool IsWithinChairReach(Vector3 feet) // 의자 접근 거리 판정
         { // 메서드 시작
@@ -173,6 +182,7 @@ namespace ProjectEta.Environment // 전투 방 이동 영역
             ReturnToSeat(); // 남은 입력 소유 해제
             if (_collisionRoot != null) Destroy(_collisionRoot); // 독립 몸체·환경 충돌 제거
             if (_ui != null) Destroy(_ui); // 안내 컴포넌트 정리
+            if (_hudVisibility != null) Destroy(_hudVisibility); // 전용 화면 표시 소유자 정리
         } // 메서드 종료
     } // 타입 종료
 } // 영역 종료

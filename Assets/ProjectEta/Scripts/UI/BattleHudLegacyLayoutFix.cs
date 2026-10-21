@@ -59,14 +59,14 @@ namespace ProjectEta.UI
             rootRect.anchorMax = TopLeftAnchor; // HUD 좌측 상단 앵커 끝 적용
             rootRect.pivot = TopLeftAnchor; // HUD 좌측 상단 피벗 적용
             rootRect.anchoredPosition = new Vector2(18f, -18f); // 화면 좌측 상단 여백 적용
-            rootRect.sizeDelta = new Vector2(400f, 164f); // 좌측 상단 세로형 HUD 크기 적용
+            rootRect.sizeDelta = new Vector2(400f, 180f); // 네 줄 글자와 프레임 내부 여백 확보
 
-            ApplyTextLayout(hudRoot.transform, "StageText", new Vector2(14f, -8f), new Vector2(218f, 34f), TextAnchor.MiddleLeft, 22, HorizontalWrapMode.Overflow); // Stage 문구 좌상단 배치
-            ApplyTextLayout(hudRoot.transform, "GoldText", new Vector2(236f, -8f), new Vector2(150f, 34f), TextAnchor.MiddleRight, 22, HorizontalWrapMode.Overflow); // Gold 문구 우측 배치
-            ApplyTextLayout(hudRoot.transform, "BattleText", new Vector2(14f, -44f), new Vector2(96f, 28f), TextAnchor.MiddleLeft, 16, HorizontalWrapMode.Overflow); // Battle 문구 두 번째 줄 배치
-            ApplyTextLayout(hudRoot.transform, "TurnStateText", new Vector2(112f, -44f), new Vector2(274f, 28f), TextAnchor.MiddleLeft, 20, HorizontalWrapMode.Overflow); // 턴 상태 두 번째 줄 배치
-            ApplyTextLayout(hudRoot.transform, "TurnNumberText", new Vector2(14f, -76f), new Vector2(372f, 28f), TextAnchor.MiddleLeft, 18, HorizontalWrapMode.Overflow); // 턴 번호 세 번째 줄 배치
-            ApplyTextLayout(hudRoot.transform, "DeploymentText", new Vector2(14f, -106f), new Vector2(372f, 46f), TextAnchor.MiddleLeft, 15, HorizontalWrapMode.Wrap); // 배치 안내 네 번째 줄 배치
+            ApplyTextLayout(hudRoot.transform, "StageText", new Vector2(64f, -20f), new Vector2(170f, 30f), TextAnchor.MiddleLeft, 22, HorizontalWrapMode.Wrap); // 비스듬한 좌상단 장식 안쪽 Stage 배치
+            ApplyTextLayout(hudRoot.transform, "GoldText", new Vector2(236f, -20f), new Vector2(138f, 30f), TextAnchor.MiddleRight, 22, HorizontalWrapMode.Wrap); // 우측 장식 안쪽 Gold 배치
+            ApplyTextLayout(hudRoot.transform, "BattleText", new Vector2(26f, -56f), new Vector2(82f, 28f), TextAnchor.MiddleLeft, 16, HorizontalWrapMode.Wrap); // 두 번째 줄 왼쪽 여백
+            ApplyTextLayout(hudRoot.transform, "TurnStateText", new Vector2(112f, -56f), new Vector2(262f, 28f), TextAnchor.MiddleLeft, 20, HorizontalWrapMode.Wrap); // 두 번째 줄 턴 상태 영역
+            ApplyTextLayout(hudRoot.transform, "TurnNumberText", new Vector2(26f, -88f), new Vector2(348f, 28f), TextAnchor.MiddleLeft, 18, HorizontalWrapMode.Wrap); // 세 번째 줄 턴 정보 영역
+            ApplyTextLayout(hudRoot.transform, "DeploymentText", new Vector2(26f, -120f), new Vector2(348f, 40f), TextAnchor.MiddleLeft, 15, HorizontalWrapMode.Wrap); // 하단 테두리 위 배치 안내
         }
 
         private static void ApplyKingPlacementLayout()
@@ -88,7 +88,7 @@ namespace ProjectEta.UI
             rect.anchorMin = TopLeftAnchor; // King 안내 좌측 상단 앵커 시작 적용
             rect.anchorMax = TopLeftAnchor; // King 안내 좌측 상단 앵커 끝 적용
             rect.pivot = TopLeftAnchor; // King 안내 좌측 상단 피벗 적용
-            rect.anchoredPosition = new Vector2(18f, -194f); // Battle HUD 아래 12픽셀 간격 적용
+            rect.anchoredPosition = new Vector2(18f, -210f); // 높아진 상태창 아래 12픽셀 간격
             rect.sizeDelta = new Vector2(400f, 56f); // Battle HUD와 동일한 폭 적용
 
             Text placementText = placementRoot.GetComponentInChildren<Text>(true); // King 배치 안내 Text 조회
@@ -128,8 +128,8 @@ namespace ProjectEta.UI
             panelRect.anchorMin = TopLeftAnchor; // 행동 안내 좌측 상단 앵커 시작 적용
             panelRect.anchorMax = TopLeftAnchor; // 행동 안내 좌측 상단 앵커 끝 적용
             panelRect.pivot = TopLeftAnchor; // 행동 안내 좌측 상단 피벗 적용
-            panelRect.anchoredPosition = new Vector2(18f, -262f); // King 안내 아래 12픽셀 간격 적용
-            panelRect.sizeDelta = new Vector2(400f, 58f); // 좌측 상단 정보 열 폭 적용
+            panelRect.anchoredPosition = new Vector2(18f, GameObject.Find(KingPlacementRootName) != null ? -278f : -210f); // 표시 중인 안내 다음에 연속 배치
+            panelRect.sizeDelta = new Vector2(400f, 94f); // 장식 안쪽에 두 줄 안내 공간 확보
 
             Transform instructionTransform = interactionPanel.transform.Find("InstructionText"); // 행동 안내 Text 자식 조회
 
@@ -142,10 +142,13 @@ namespace ProjectEta.UI
                     RectTransform instructionRect = instructionText.rectTransform; // 행동 안내 RectTransform 조회
                     instructionRect.anchorMin = Vector2.zero; // 행동 안내 전체 영역 시작 앵커 적용
                     instructionRect.anchorMax = Vector2.one; // 행동 안내 전체 영역 끝 앵커 적용
-                    instructionRect.offsetMin = new Vector2(12f, 6f); // 행동 안내 좌하단 내부 여백 적용
-                    instructionRect.offsetMax = new Vector2(-12f, -6f); // 행동 안내 우상단 내부 여백 적용
+                    instructionRect.offsetMin = new Vector2(26f, 20f); // 좌하단 프레임 장식 회피
+                    instructionRect.offsetMax = new Vector2(-26f, -20f); // 우상단 프레임 장식 회피
                     instructionText.alignment = TextAnchor.MiddleLeft; // 행동 안내 좌측 정렬 적용
                     instructionText.fontSize = 15; // 좁은 패널에 맞는 글자 크기 적용
+                    instructionText.resizeTextForBestFit = true; // 긴 상태 안내의 내부 표시 유지
+                    instructionText.resizeTextMinSize = 14; // 안내 글자의 최소 가독 크기
+                    instructionText.resizeTextMaxSize = 15; // 기존 안내 글자 크기 상한
                     instructionText.horizontalOverflow = HorizontalWrapMode.Wrap; // 긴 행동 안내 줄바꿈 허용
                     instructionText.verticalOverflow = VerticalWrapMode.Truncate; // 패널 높이 밖 문구 차단
                 }
@@ -183,6 +186,9 @@ namespace ProjectEta.UI
             rect.sizeDelta = size; // Text 지정 크기 적용
             text.alignment = alignment; // Text 지정 정렬 적용
             text.fontSize = fontSize; // Text 지정 글자 크기 적용
+            text.resizeTextForBestFit = true; // 긴 상태 값의 테두리 이탈 방지
+            text.resizeTextMinSize = Mathf.Max(12, fontSize - 4); // 기본 글자 크기별 축소 하한
+            text.resizeTextMaxSize = fontSize; // 지정 글자 크기 상한
             text.horizontalOverflow = horizontalOverflow; // Text 지정 가로 흐름 적용
             text.verticalOverflow = VerticalWrapMode.Truncate; // Text 영역 밖 문구 차단
         }

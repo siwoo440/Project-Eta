@@ -170,7 +170,7 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             rect.anchorMax = new Vector2(0f, 0f); // 좌하단 앵커
             rect.pivot = new Vector2(0f, 0f); // 좌하단 피벗
             rect.anchoredPosition = new Vector2(24f, 106f); // 뽑을 카드 버튼(높이 74, y=24) 바로 위에 배치
-            rect.sizeDelta = new Vector2(220f, 36f); // 채팅창처럼 얇고 긴 한 줄 크기
+            rect.sizeDelta = new Vector2(220f, 44f); // 한 줄 글자 위아래 장식 여백 확보
 
             var image = barObject.GetComponent<Image>(); // 배경 Image 확보
             bool logTabApplied = Day98UiSkin.TryApplyResource(image, Day98UiSkin.BattleLogTabResourcePath); // 전투 로그 탭 이미지 적용
@@ -196,7 +196,7 @@ namespace ProjectEta.UI // 프로젝트 η 런타임 UI 타입을 모아두는 �
             rect.anchorMin = new Vector2(0f, 0f); // 로그 바와 같은 좌하단 기준 앵커
             rect.anchorMax = new Vector2(0f, 0f); // 좌하단 앵커
             rect.pivot = new Vector2(0f, 0f); // 좌하단 피벗
-            rect.anchoredPosition = new Vector2(24f, 146f); // 로그 바(y=106, 높이 36) 바로 위에서부터 위로 펼쳐짐
+            rect.anchoredPosition = new Vector2(24f, 154f); // 높아진 로그 바 위 4픽셀 간격
             rect.sizeDelta = new Vector2(340f, 420f); // 여러 줄을 볼 수 있는 세로로 긴 패널 크기
 
             var image = panelObject.GetComponent<Image>(); // 배경 Image 확보

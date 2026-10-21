@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f99807ab25c49fa879f3011d101b055, type: 3}
+  m_Name: serpana
+  m_EditorClassIdentifier: ProjectEta.Runtime::ProjectEta.Boss.BossDefinition
+  bossId: serpana
+  displayName: "독안개 히드라 세르파나"
+  phase: 3
+  size: {x: 2, y: 2}
+  baseHp: 26
+  baseAtk: 3
+  templateResource: MidBoss74
+  plannedMovement: "여러 방향 짧은 원거리 이동"
+  plannedSpecial: "독·속박 교대 공격"
+  plannedEnhanced: "머리별 위험 칸 예고"
+  provisional: 1
+  bespokePatternsImplemented: 0

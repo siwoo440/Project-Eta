@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f99807ab25c49fa879f3011d101b055, type: 3}
+  m_Name: nerva
+  m_EditorClassIdentifier: ProjectEta.Runtime::ProjectEta.Boss.BossDefinition
+  bossId: nerva
+  displayName: "월광 와이번 네르바"
+  phase: 2
+  size: {x: 2, y: 2}
+  baseHp: 18
+  baseAtk: 3
+  templateResource: MidBoss74
+  plannedMovement: "대각선 장거리 도약"
+  plannedSpecial: "착지 후 인접 공격"
+  plannedEnhanced: "착지 후보 두 곳 예고 후 급습"
+  provisional: 1
+  bespokePatternsImplemented: 0

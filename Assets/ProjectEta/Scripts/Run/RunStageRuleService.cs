@@ -2,6 +2,7 @@ using System; // ID 비교
 using System.Collections.Generic; // 적 배치 복사
 using ProjectEta.Round; // 라운드 규칙
 using UnityEngine; // 페이즈 보정
+using ProjectEta.Boss; // 페이즈 보스 선택
 
 namespace ProjectEta.Run // 런 규칙 영역
 { // 영역 시작
@@ -41,6 +42,17 @@ namespace ProjectEta.Run // 런 규칙 영역
                 initialEnemies = CopySpawns(round.InitialEnemies), // 시작 적 독립 복사
                 reinforcements = CopySpawns(round.Reinforcements) // 증원 독립 복사
             }; // 객체 종료
+            if (round.IsBossRound && (definition.StageType == StageType.MidBoss || definition.StageType == StageType.FinalBoss)) // 새 보스 규칙만 선택 연결
+            { // 조건 시작
+                string[] parts = definition.StageId.Split('_'); // 표준 스테이지 ID의 깊이 조회
+                int depth = parts.Length > 1 && int.TryParse(parts[1], out int parsedDepth) ? parsedDepth : run?.CurrentRound ?? 0; // 사용자 정의 ID는 현재 깊이 사용
+                snapshot.bossSelection = BossSelectionService.Select(run, safePhase, depth); // 선택 당시 데이터 저장
+                if (snapshot.bossSelection != null) // 실제 보스 선택 존재 확인
+                { // 조건 시작
+                    snapshot.displayName = snapshot.bossSelection.displayName; // 지도와 전투 공통 이름
+                    if (snapshot.bossSelection.variant == BossVariant.Enhanced) AddEnhancedReinforcement(snapshot); // 수치 외 강화형 증원 차이
+                } // 조건 종료
+            } // 조건 종료
             if (run?.BalanceData != null) // 저장 가능한 런 확인
             { // 조건 시작
                 run.BalanceData.stageRuleSnapshots = storedRules ?? new List<StageRuleSnapshot>(); // 구버전 저장 목록 보정
@@ -64,6 +76,27 @@ namespace ProjectEta.Run // 런 규칙 영역
                 } // 조건 종료
             } // 반복 종료
             return result; // 독립 목록 반환
+        } // 메서드 종료
+        private static void AddEnhancedReinforcement(StageRuleSnapshot rules) // 강화형 추가 병사 배치
+        { // 메서드 시작
+            var occupied = new HashSet<Vector2Int>(); // 초기·예약 증원 칸 보호
+            foreach (EnemySpawnDefinition spawn in rules.initialEnemies) occupied.Add(spawn.Position); // 시작 병사 칸 예약
+            foreach (EnemySpawnDefinition spawn in rules.reinforcements) occupied.Add(spawn.Position); // 기존 증원 칸 예약
+            Vector2Int size = rules.bossSelection.size; // 실제 보스 점유 크기
+            for (int x = 0; x < size.x; x++) // 보스 가로 점유 순회
+            { // 반복 시작
+                for (int y = 0; y < size.y; y++) occupied.Add(rules.bossAnchor + new Vector2Int(x, y)); // 보스 점유 칸 보호
+            } // 반복 종료
+            for (int y = 7; y < 10; y++) // 적 진영 빈 칸 순회
+            { // 반복 시작
+                for (int x = 9; x >= 0; x--) // 오른쪽부터 안정적인 위치 선택
+                { // 반복 시작
+                    var cell = new Vector2Int(x, y); // 증원 후보 칸
+                    if (occupied.Contains(cell)) continue; // 충돌 예약 제외
+                    rules.reinforcements.Add(new EnemySpawnDefinition("pawn", cell, 4)); // 강화형 4턴 추가 병사
+                    return; // 한 번만 추가
+                } // 반복 종료
+            } // 반복 종료
         } // 메서드 종료
     } // 타입 종료
 } // 영역 종료

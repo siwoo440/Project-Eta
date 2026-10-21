@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f99807ab25c49fa879f3011d101b055, type: 3}
+  m_Name: astragon
+  m_EditorClassIdentifier: ProjectEta.Runtime::ProjectEta.Boss.BossDefinition
+  bossId: astragon
+  displayName: "별먹는 고룡 아스트라곤"
+  phase: 5
+  size: {x: 2, y: 2}
+  baseHp: 32
+  baseAtk: 4
+  templateResource: FinalBoss74
+  plannedMovement: "제한적인 전장 규칙 변경"
+  plannedSpecial: "한 턴 전 행·열 봉쇄 예고"
+  plannedEnhanced: "증원 위치 변경"
+  provisional: 1
+  bespokePatternsImplemented: 0

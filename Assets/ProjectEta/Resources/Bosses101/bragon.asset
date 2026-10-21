@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f99807ab25c49fa879f3011d101b055, type: 3}
+  m_Name: bragon
+  m_EditorClassIdentifier: ProjectEta.Runtime::ProjectEta.Boss.BossDefinition
+  bossId: bragon
+  displayName: "성벽 거인 브라곤"
+  phase: 1
+  size: {x: 2, y: 2}
+  baseHp: 20
+  baseAtk: 2
+  templateResource: MidBoss74
+  plannedMovement: "짧은 상하좌우 이동"
+  plannedSpecial: "행·열 내려치기 예고"
+  plannedEnhanced: "성벽 조각 장애물"
+  provisional: 1
+  bespokePatternsImplemented: 0
