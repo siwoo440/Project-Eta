@@ -265,6 +265,11 @@ namespace ProjectEta.Board // 보드 경로 지도 런타임 네임스페이스
 
         private void HandleMapInput() // MapMode 전용 노드 마우스 선택 처리
         {
+            if (ProjectEta.Environment.RoomWalkingController.BlocksTableInput) // 이동 중 지도 조작 확인
+            { // 조건 시작
+                SetHoveredNode(null); // 이전 노드 강조 해제
+                return; // 노드 클릭·시점 입력 차단
+            } // 조건 종료
             if (_runState == null || _runState.RouteMap.HasSelectedNode || _kingMoving) // 선택 완료·이동 중 입력 차단
             {
                 SetHoveredNode(null); // 오버 표시 해제

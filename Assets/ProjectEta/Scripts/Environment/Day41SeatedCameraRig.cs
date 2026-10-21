@@ -27,8 +27,13 @@ namespace ProjectEta.Environment // 전투 공간 프레젠테이션 네임스�
         private Vector2 _opponentLookAngles; // 상대 시점 yaw·pitch 누적값
         private GameObject _topViewOccluders; // 맨 위 시점에서 숨길 천장 구조 루트
         private bool _snapPose; // 즉시 위치 적용 여부
+        private RoomWalkingController _walking; // 추가 100일차 방 이동 연결
+        private bool _externalPoseLocked; // 상점·이벤트 고정 시점 소유
 
         public Day41CameraView CurrentView => _currentView; // 현재 뷰 외부 조회
+        public bool IsWalking => _walking != null && _walking.IsWalking; // 의자 이탈 상태 조회
+        public Quaternion CameraRotation => _camera != null ? _camera.transform.rotation : Quaternion.identity; // 현재 시선 방향 조회
+        public bool IsPoseLocked => _externalPoseLocked; // 다른 화면의 카메라 소유 조회
 
         private void Awake() // 런타임 카메라 참조 초기화
         {
@@ -38,18 +43,18 @@ namespace ProjectEta.Environment // 전투 공간 프레젠테이션 네임스�
         private void OnEnable() // 세 뷰 리그 활성화
         {
             ResolveCamera(); // 카메라 참조 보정
+            ConfigureWalking(); // 방 이동과 조작 안내 자동 연결
             DisableLegacyRig(); // 기존 W/S 카메라 제어 비활성화
-            _currentView = Day41CameraView.Basic; // 기존 기본 뷰로 시작
-            _opponentLookAngles = Vector2.zero; // 상대 시점 회전값 초기화
             ResolveTopViewOccluders(); // 맨 위 시점 가림 구조 탐색
-            ApplyTopViewOccluderVisibility(); // 기본 뷰에서 천장 구조 활성화
+            ApplyTopViewOccluderVisibility(); // 선택한 뷰의 천장 표시 복원
             _snapPose = true; // 첫 프레임 즉시 배치 예약
             ApplyCameraPose(); // 즉시 기본 시점 적용
         }
 
         private void Update() // 매 프레임 입력 처리
         {
-            HandleViewInput(); // W/S 뷰 전환 처리
+            if (_externalPoseLocked || Time.timeScale <= 0f || ProjectEtaDebugWindow.IsOpen || !ProjectEta.UI.Day69UiPresentationRules.CanShowSystemToast(ProjectEta.UI.Day69UiPresentationRules.CaptureCurrent())) return; // 다른 화면의 카메라 입력 소유 보호
+            HandleViewInput(); // F2·F3·F4 뷰 전환 처리
             HandleOpponentLookInput(); // 상대 시점 자유 회전 처리
             HandleZoomInput(); // 상대 시점 제한 줌 처리
         }
@@ -62,6 +67,7 @@ namespace ProjectEta.Environment // 전투 공간 프레젠테이션 네임스�
         public void Configure(Camera targetCamera) // 런타임 부트스트랩 카메라 주입
         {
             _camera = targetCamera; // 대상 카메라 저장
+            ConfigureWalking(); // 주입 카메라의 방 이동 연결
             _currentView = Day41CameraView.Basic; // 기본 시점 선택
             _fieldOfView = Day41BattleRoomLayout.SeatedCameraFieldOfView; // 기본 시야각 복원
             _opponentLookAngles = Vector2.zero; // 상대 시점 회전 초기화
@@ -80,6 +86,28 @@ namespace ProjectEta.Environment // 전투 공간 프레젠테이션 네임스�
             if (_camera == null) _camera = Object.FindFirstObjectByType<Camera>(); // 씬 전체 카메라 최종 탐색
         }
 
+        private void ConfigureWalking() // 이동 컴포넌트 자동 연결
+        { // 메서드 시작
+            if (_walking == null) _walking = GetComponent<RoomWalkingController>(); // 기존 이동기 재사용
+            if (_walking == null) _walking = gameObject.AddComponent<RoomWalkingController>(); // 이동기 생성
+            _walking.Configure(this); // 기존 좌석 리그 연결
+        } // 메서드 종료
+
+        public void SnapToCurrentView() // 의자 이탈·복귀 포즈 적용
+        { // 메서드 시작
+            _snapPose = true; // 위치 즉시 적용 예약
+            ApplyTopViewOccluderVisibility(); // 이동·좌석 상태의 천장 표시 복원
+            ApplyCameraPose(); // 현재 이동·좌석 위치 적용
+        } // 메서드 종료
+
+        public void SetExternalPoseLock(bool locked) // 상점·이벤트 카메라 고정 연결
+        { // 메서드 시작
+            _externalPoseLocked = locked; // 외부 시점 소유 저장
+            if (locked && _walking != null) _walking.ReturnToSeat(); // 이동 상태 안전 종료
+            ApplyTopViewOccluderVisibility(); // 고정 화면의 천장 표시 동기화
+            if (!locked) SnapToCurrentView(); // 선택한 좌석 시점 복원
+        } // 메서드 종료
+
         private void DisableLegacyRig() // 기존 TableCameraRig 제어 차단
         {
             if (_legacyRig == null) _legacyRig = GetComponent<TableCameraRig>(); // 동일 리그 기존 카메라 탐색
@@ -91,20 +119,20 @@ namespace ProjectEta.Environment // 전투 공간 프레젠테이션 네임스�
             _ownsLegacyDisable = true; // 비활성화 소유 기록
         }
 
-        private void HandleViewInput() // W/S 세 뷰 전환 처리
+        private void HandleViewInput() // F2·F3·F4 세 뷰 전환 처리
         {
-            if (Keyboard.current == null) return; // 키보드 누락 제외
+            if (Keyboard.current == null || IsWalking || Time.timeScale <= 0f || ProjectEtaDebugWindow.IsOpen) return; // 이동·일시정지·디버그 입력 충돌 차단
 
-            if (Keyboard.current.wKey.wasPressedThisFrame) // W 입력 확인
+            if (Keyboard.current.f2Key.wasPressedThisFrame) // 맨 위 시점 입력 확인
             {
-                _currentView = ResolveWView(_currentView); // 기존 맨 위·기본 뷰 전환
+                _currentView = Day41CameraView.Top; // 맨 위 시점 선택
                 _opponentLookAngles = Vector2.zero; // 상대 회전값 초기화
                 ApplyTopViewOccluderVisibility(); // 변경된 뷰에 맞춰 천장 구조 표시 갱신
             }
 
-            if (Keyboard.current.sKey.wasPressedThisFrame) // S 입력 확인
+            if (Keyboard.current.f3Key.wasPressedThisFrame || Keyboard.current.f4Key.wasPressedThisFrame) // 기본·좌석 시점 입력 확인
             {
-                _currentView = ResolveSView(_currentView); // 상대 좌석 시점 선택
+                _currentView = Keyboard.current.f4Key.wasPressedThisFrame ? Day41CameraView.Opponent : Day41CameraView.Basic; // 요청한 시점 선택
                 _opponentLookAngles = Vector2.zero; // 상대 정면으로 시선 초기화
                 ApplyTopViewOccluderVisibility(); // 상대 시점에서 천장 구조 다시 활성화
             }
@@ -123,14 +151,14 @@ namespace ProjectEta.Environment // 전투 공간 프레젠테이션 네임스�
         {
             ResolveTopViewOccluders(); // 지연 생성 환경까지 다시 탐색
             if (_topViewOccluders == null) return; // 가림 구조가 없으면 종료
-            bool shouldBeVisible = ShouldShowTopViewOccluders(_currentView); // 현재 뷰 표시 여부 계산
+            bool shouldBeVisible = _externalPoseLocked || IsWalking || ShouldShowTopViewOccluders(_currentView); // 고정·걷기·좌석 시점별 천장 표시
             if (_topViewOccluders.activeSelf == shouldBeVisible) return; // 동일 상태면 변경 생략
             _topViewOccluders.SetActive(shouldBeVisible); // 맨 위에서 숨기고 다른 뷰에서 복원
         }
 
         private void HandleOpponentLookInput() // 상대 시점 마우스 자유 회전 처리
         {
-            if (_currentView != Day41CameraView.Opponent) return; // 상대 시점 외 입력 제외
+            if (IsWalking || _currentView != Day41CameraView.Opponent) return; // 이동 상태·상대 시점 외 입력 제외
             if (ProjectEtaDebugWindow.IsPointerOverPanel) return; // F1 패널 위 우클릭 드래그 차단
             if (Mouse.current == null || !Mouse.current.rightButton.isPressed) return; // 우클릭 드래그 외 입력 제외
 
@@ -142,7 +170,7 @@ namespace ProjectEta.Environment // 전투 공간 프레젠테이션 네임스�
 
         private void HandleZoomInput() // 상대 좌석을 벗어나지 않는 시야각 줌
         {
-            if (_currentView != Day41CameraView.Opponent) return; // 상대 시점 외 줌 제외
+            if (IsWalking || _currentView != Day41CameraView.Opponent) return; // 이동 상태·상대 시점 외 줌 제외
             if (ProjectEtaDebugWindow.IsPointerOverPanel) return; // F1 패널 위 마우스 휠 차단
             if (_camera == null || Mouse.current == null) return; // 입력 장치·카메라 누락 제외
 
@@ -155,10 +183,11 @@ namespace ProjectEta.Environment // 전투 공간 프레젠테이션 네임스�
 
         private void ApplyCameraPose() // 현재 뷰의 카메라 위치·회전·렌즈 적용
         {
+            if (_externalPoseLocked) return; // 상점·이벤트 고정 위치 덮어쓰기 차단
             if (_camera == null) return; // 카메라 누락 제외
 
             ResolveTargetPose(out Vector3 targetPosition, out Quaternion targetRotation); // 현재 뷰 목표 포즈 계산
-            float blend = _snapPose ? 1f : 1f - Mathf.Exp(-_transitionSpeed * Time.unscaledDeltaTime); // 프레임 독립 보간값 계산
+            float blend = IsWalking || _snapPose ? 1f : 1f - Mathf.Exp(-_transitionSpeed * Time.unscaledDeltaTime); // 이동 중 충돌 몸체와 카메라 위치 일치
 
             _camera.orthographic = false; // 원근 시점 강제
             _camera.fieldOfView = _fieldOfView; // 현재 시야각 적용
@@ -171,6 +200,12 @@ namespace ProjectEta.Environment // 전투 공간 프레젠테이션 네임스�
 
         private void ResolveTargetPose(out Vector3 targetPosition, out Quaternion targetRotation) // 현재 뷰 목표 포즈 계산
         {
+            if (IsWalking) // 의자 이탈 시점 확인
+            { // 조건 시작
+                targetPosition = _walking.EyePosition; // 충돌 이동 몸체의 선 눈높이
+                targetRotation = _walking.LookRotation; // 자유 시선 회전
+                return; // 좌석 시점 적용 차단
+            } // 조건 종료
             if (_currentView == Day41CameraView.Top) // 맨 위 시점 분기
             {
                 targetPosition = Day41BattleRoomLayout.TopCameraPosition; // 기존 60도 위치 적용
@@ -224,6 +259,7 @@ namespace ProjectEta.Environment // 전투 공간 프레젠테이션 네임스�
 
         private void OnDisable() // 세 뷰 리그 해제 처리
         {
+            if (_walking != null) _walking.ReturnToSeat(); // 이동 상태·커서 소유 정리
             if (!_ownsLegacyDisable || _legacyRig == null) return; // 기존 리그 복원 불필요 상태 제외
 
             _legacyRig.enabled = _legacyRigWasEnabled; // 기존 활성 상태 복원

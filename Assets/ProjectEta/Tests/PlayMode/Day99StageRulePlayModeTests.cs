@@ -50,6 +50,12 @@ namespace ProjectEta.Tests.PlayMode // 99일차 런타임 검사 영역
             StageDefinition definition = StageDefinitionCatalog.Resolve("stage_2_elite", 2); // 정예 정의 조회
             StageRuleSnapshot rules = RunStageRuleService.GetOrCreate(_run, definition, 1); // 안내 규칙 저장
             rules.turnLimit = 23; // 에셋과 다른 저장 제한 재현
+            Assert.That(rules.reinforcements.Count, Is.EqualTo(2)); // 정예 증원 계약 확인
+            for (int index = 0; index < rules.reinforcements.Count; index++) // 초기 무작위 편성과 검사 조건 분리
+            { // 반복 시작
+                var spawn = rules.reinforcements[index]; // 실제 증원 기물·턴 보존
+                rules.reinforcements[index] = new ProjectEta.Round.EnemySpawnDefinition(spawn.PieceId, new Vector2Int(index * 9, 6), spawn.SpawnTurn); // 초기 편성이 없는 행에 시험 증원 배치
+            } // 반복 종료
             Assert.That(_runtime.Configure(_battle, definition), Is.True); // 실제 전투 구성 실행
             Assert.That(_runtime.RoundDefinition, Is.Not.SameAs(definition.RoundDefinition)); // 원본 에셋 보호 확인
             Assert.That(_runtime.TurnLimit, Is.EqualTo(23)); // 저장된 제한 적용 확인

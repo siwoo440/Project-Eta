@@ -224,14 +224,16 @@ namespace ProjectEta.Settings
             title.text = "조작법"; // 조작법 제목 적용
             SetRect(title.rectTransform, new Vector2(0f, 295f), new Vector2(740f, 60f)); // 조작법 제목 위치 적용
 
-            CreateControlSection(panel.transform, "[전투]", 145f); // 전투 조작법 구역 제목 생성
-            CreateControlRow(panel.transform, "좌클릭", "카드 / 기물 선택", 95f); // 고정 전투 선택 조작 생성
-            _completeActionKeyText = CreateControlRow(panel.transform, string.Empty, "배치 턴 종료 / 플레이어 행동 완료", 50f); // 변경 가능한 행동 완료 조작 생성
-            _pauseKeyText = CreateControlRow(panel.transform, string.Empty, "일시정지", 5f); // 변경 가능한 Pause 조작 생성
+            CreateControlSection(panel.transform, "[전투·지도]", 205f); // 보드 조작 구역 제목
+            CreateControlRow(panel.transform, "좌클릭", "카드 / 기물 / 다음 노드 선택", 160f); // 보드 선택 안내
+            _completeActionKeyText = CreateControlRow(panel.transform, string.Empty, "배치 턴 종료 / 플레이어 행동 완료", 115f); // 행동 완료 키 안내
+            _pauseKeyText = CreateControlRow(panel.transform, string.Empty, "일시정지", 70f); // 일시정지 키 안내
 
-            CreateControlSection(panel.transform, "[Route Map]", -65f); // Route Map 조작법 구역 제목 생성
-            CreateControlRow(panel.transform, "마우스 이동", "선택 가능한 노드 정보 확인", -115f); // 지도 Hover 조작 생성
-            CreateControlRow(panel.transform, "좌클릭", "다음 Stage 선택", -160f); // 지도 선택 조작 생성
+            CreateControlSection(panel.transform, "[주변 둘러보기·이동]", 15f); // 의자 이동 구역 제목
+            CreateControlRow(panel.transform, "F2 / F3 / F4", "맨 위 / 기본 / 앉은 시점", -30f); // 좌석 카메라 키 안내
+            CreateControlRow(panel.transform, "WASD / F", "일어나 이동 / 의자 가까이에서 앉기", -75f); // 일어나기·복귀 안내
+            CreateControlRow(panel.transform, "마우스", "이동 중 둘러보기 / 앉은 시점 우클릭", -120f); // 자유 시선 안내
+            CreateControlRow(panel.transform, "마우스 이동", "지도 노드 정보 확인", -165f); // 지도 안내 유지
 
             CreateControlSection(panel.transform, "[UI]", -220f); // UI 조작법 구역 제목 생성
             _uiBackKeyText = CreateControlRow(panel.transform, string.Empty, "뒤로가기 / 닫기", -270f); // 변경 가능한 UI 뒤로가기 조작 생성

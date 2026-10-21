@@ -76,6 +76,7 @@ namespace ProjectEta.Battle
 
         private void Update()
         {
+            if (ProjectEta.Environment.RoomWalkingController.BlocksTableInput) return; // 이동 중 행동 완료 키 차단
             if (_turnManager == null)
             {
                 return; // 턴 매니저 누락 시 입력 처리 차단
@@ -120,6 +121,7 @@ namespace ProjectEta.Battle
 
         public bool TryCompletePlayerAction()
         {
+            if (ProjectEta.Environment.RoomWalkingController.BlocksTableInput) return false; // 이동 중 UI 행동 완료 차단
             if (_turnManager == null)
             {
                 return false; // 턴 매니저 준비 전 행동 완료 차단

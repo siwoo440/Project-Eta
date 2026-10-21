@@ -142,6 +142,7 @@ namespace ProjectEta.UI // 프로젝트 UI 네임스페이스
 
         private StageNode ResolveHoveredNode() // 화면 포인터 노드 조회
         { // 메서드 범위 시작
+            if (ProjectEta.Environment.RoomWalkingController.BlocksTableInput) return null; // 이동 중 지도 안내 조회 차단
             if (Mouse.current == null || _runState == null) // 입력과 런 상태 확인
             { // 조건 범위 시작
                 return null; // 조회 불가 반환

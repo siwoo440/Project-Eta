@@ -50,6 +50,7 @@ namespace ProjectEta.UI
         private BoardView _boardView; // 고정 자세 기준 보드
         private Camera _targetCamera; // 실제 Main Camera
         private MonoBehaviour _cameraInputController; // W/S 등 기존 카메라 조작 컴포넌트
+        private ProjectEta.Environment.Day41SeatedCameraRig _seatedCameraRig; // 현재 좌석 카메라 고정 대상
         private Vector3 _previousPosition; // Shop/Event 진입 전 카메라 위치
         private Quaternion _previousRotation; // Shop/Event 진입 전 카메라 회전
         private bool _cameraInputWasEnabled; // 기존 카메라 조작 활성 상태
@@ -73,7 +74,9 @@ namespace ProjectEta.UI
 
             _previousPosition = _targetCamera.transform.position; // 기존 카메라 위치 저장
             _previousRotation = _targetCamera.transform.rotation; // 기존 카메라 회전 저장
-            _cameraInputController = FindCameraInputController(_targetCamera); // 기존 W/S 카메라 조작기 탐색
+            _seatedCameraRig = _targetCamera.GetComponentInParent<ProjectEta.Environment.Day41SeatedCameraRig>(); // 현재 좌석 리그 조회
+            if (_seatedCameraRig != null) _seatedCameraRig.SetExternalPoseLock(true); // 기존 리그 비활성 없이 시점 소유 잠금
+            _cameraInputController = _seatedCameraRig == null ? FindCameraInputController(_targetCamera) : null; // 구형 카메라에만 비활성 방식 적용
 
             if (_cameraInputController != null)
             {
@@ -98,8 +101,10 @@ namespace ProjectEta.UI
             }
 
             if (_cameraInputController != null) _cameraInputController.enabled = _cameraInputWasEnabled; // 기존 카메라 입력 상태 복원
+            if (_seatedCameraRig != null) _seatedCameraRig.SetExternalPoseLock(false); // 선택한 좌석 시점과 입력 복원
 
             _cameraInputController = null; // 카메라 조작기 참조 정리
+            _seatedCameraRig = null; // 좌석 카메라 소유 참조 정리
             _targetCamera = null; // 카메라 참조 정리
             _isLocked = false; // 고정 상태 해제
         }
