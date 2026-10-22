@@ -10,6 +10,7 @@ namespace ProjectEta.UI
 {
     public struct Day69UiModalState
     {
+        public bool InvestigationOpen { get; } // 방 조사 모달 표시
         public bool PauseOpen { get; } // Pause 표시 여부
         public bool TutorialOpen { get; } // 튜토리얼 표시 여부
         public bool RewardOpen { get; } // Reward 표시 여부
@@ -17,8 +18,9 @@ namespace ProjectEta.UI
         public bool RunResultOpen { get; } // Run Result 표시 여부
         public bool BattleAnnouncementBusy { get; } // 전투 알림 재생·대기 여부
 
-        public Day69UiModalState(bool pauseOpen, bool tutorialOpen, bool rewardOpen, bool activityOpen, bool runResultOpen, bool battleAnnouncementBusy = false)
+        public Day69UiModalState(bool pauseOpen, bool tutorialOpen, bool rewardOpen, bool activityOpen, bool runResultOpen, bool battleAnnouncementBusy = false, bool investigationOpen = false) // 기존 인자와 호환되는 조사 상태 추가
         {
+            InvestigationOpen = investigationOpen; // 조사 모달 상태 저장
             PauseOpen = pauseOpen; // Pause 상태 저장
             TutorialOpen = tutorialOpen; // 튜토리얼 상태 저장
             RewardOpen = rewardOpen; // Reward 상태 저장
@@ -52,12 +54,17 @@ namespace ProjectEta.UI
         public static bool CanUseActivityInput() // 상점·이벤트 자신의 선택 허용
         { // 메서드 시작
             Day69UiModalState state = CaptureCurrent(); // 현재 화면 우선순위
-            return !IsGameplayInputBlocked() && !RoomWalkingController.BlocksTableInput && !state.PauseOpen && !state.TutorialOpen && !state.RewardOpen && !state.RunResultOpen && !state.BattleAnnouncementBusy; // 자신보다 위의 화면 차단
+            return !IsGameplayInputBlocked() && !RoomWalkingController.BlocksTableInput && !state.PauseOpen && !state.TutorialOpen && !state.RewardOpen && !state.RunResultOpen && !state.BattleAnnouncementBusy && !state.InvestigationOpen; // 자신보다 위의 화면 차단
         } // 메서드 종료
         public static bool CanUseRewardInput() // 카드 보상 자신의 선택 허용
         { // 메서드 시작
             Day69UiModalState state = CaptureCurrent(); // 현재 화면 우선순위
-            return !IsGameplayInputBlocked() && !RoomWalkingController.BlocksTableInput && !state.PauseOpen && !state.TutorialOpen && !state.ActivityOpen && !state.RunResultOpen && !state.BattleAnnouncementBusy; // 보상 위 모달 입력 차단
+            return !IsGameplayInputBlocked() && !RoomWalkingController.BlocksTableInput && !state.PauseOpen && !state.TutorialOpen && !state.ActivityOpen && !state.RunResultOpen && !state.BattleAnnouncementBusy && !state.InvestigationOpen; // 보상 위 모달 입력 차단
+        } // 메서드 종료
+        public static bool CanUseInvestigationInput() // 조사 자신의 닫기 입력 허용
+        { // 메서드 시작
+            Day69UiModalState state = CaptureCurrent(); // 상위 화면 상태
+            return !IsGameplayInputBlocked() && !state.PauseOpen && !state.TutorialOpen && !state.RewardOpen && !state.ActivityOpen && !state.RunResultOpen && !state.BattleAnnouncementBusy; // 조사보다 우선인 진행 화면 보호
         } // 메서드 종료
         private static bool IsGameplayInputBlocked() // 실행 순서와 독립된 전환 프레임 차단
         { // 메서드 시작
@@ -73,7 +80,8 @@ namespace ProjectEta.UI
                 && !state.RewardOpen
                 && !state.ActivityOpen
                 && !state.RunResultOpen
-                && !state.BattleAnnouncementBusy; // 주요 모달·전투 알림이 없을 때만 시스템 Toast 허용
+                && !state.BattleAnnouncementBusy // 전투 순간 알림 제외
+                && !state.InvestigationOpen; // 주요 모달·조사·전투 알림이 없을 때만 시스템 Toast 허용
         }
 
         public static bool CanOpenPause(Day69UiModalState state)
@@ -100,7 +108,8 @@ namespace ProjectEta.UI
                 reward != null && reward.IsVisible,
                 activity != null && activity.IsVisible,
                 runResult != null && runResult.IsVisible,
-                announcement != null && announcement.IsBusy); // 현재 화면 모달·전투 알림 상태 묶음 반환
+                announcement != null && announcement.IsBusy, // 전투 알림 상태
+                RoomInvestigationController.IsAnyOpen); // 현재 조사·진행 모달 상태 묶음 반환
         }
     }
 }

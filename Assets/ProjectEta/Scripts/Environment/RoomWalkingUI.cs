@@ -9,6 +9,7 @@ namespace ProjectEta.Environment // 방 조작 안내 영역
     { // 타입 시작
         private RoomWalkingController _walker; // 이동 상태 참조
         private GameObject _root; // 생성한 안내 화면
+        private Image _reticle; // 현재 바라보기 중심
         private Text _text; // 조작 안내 글자
         private string _previousText; // 중복 글자 변경 방지
         private Font _runtimeFont; // 한글 안내 글꼴
@@ -40,7 +41,7 @@ namespace ProjectEta.Environment // 방 조작 안내 영역
             rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f); // 하단 중앙 정렬
             rect.pivot = new Vector2(0.5f, 0f); // 하단 기준 높이
             rect.anchoredPosition = new Vector2(0f, 24f); // 화면 아래 간격
-            rect.sizeDelta = new Vector2(700f, 84f); // 두 줄 안내 공간
+            rect.sizeDelta = new Vector2(700f, 112f); // 프레임 안 두 줄 안내와 충분한 여백
             panel.GetComponent<Image>().color = new Color(0.025f, 0.055f, 0.055f, 0.92f); // 어두운 청록 배경
             Day98UiSkin.TryApplyDarkPanel(panel.GetComponent<Image>()); // 기존 금속 패널 이미지 재사용
             var label = new GameObject("WalkingHintText", typeof(RectTransform), typeof(Text)); // 안내 글자 생성
@@ -48,26 +49,42 @@ namespace ProjectEta.Environment // 방 조작 안내 영역
             RectTransform labelRect = label.GetComponent<RectTransform>(); // 글자 영역 조회
             labelRect.anchorMin = Vector2.zero; // 전체 배경 사용
             labelRect.anchorMax = Vector2.one; // 전체 배경 사용
-            labelRect.offsetMin = new Vector2(12f, 6f); // 글자 하단 여백
-            labelRect.offsetMax = new Vector2(-12f, -6f); // 글자 상단 여백
+            labelRect.offsetMin = new Vector2(20f, 16f); // 프레임 안 글자 하단 여백
+            labelRect.offsetMax = new Vector2(-20f, -16f); // 프레임 안 글자 상단 여백
             _text = label.GetComponent<Text>(); // 안내 글자 저장
             _runtimeFont = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "Apple SD Gothic Neo", "Arial" }, 22); // 기존 UI와 동일한 한글 글꼴 생성
             _ownsFont = _runtimeFont != null; // 생성 글꼴 정리 소유 기록
             _text.font = _runtimeFont != null ? _runtimeFont : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); // 한글 글꼴과 기본 대체 연결
             _text.fontSize = 22; // 조작 안내 크기
+            _text.resizeTextForBestFit = true; // 구역·물건 이름의 두 줄 맞춤
+            _text.resizeTextMinSize = 16; // 안내 최소 크기
+            _text.resizeTextMaxSize = 22; // 안내 상한
             _text.alignment = TextAnchor.MiddleCenter; // 두 줄 가운데 정렬
             _text.color = new Color(1f, 0.86f, 0.45f); // 금빛 안내색
             _text.raycastTarget = false; // 글자 클릭 판정 제외
+            var reticle = new GameObject("WalkingReticle", typeof(RectTransform), typeof(Image)); // 조사 시선 중심점
+            reticle.transform.SetParent(_root.transform, false); // 걷기 화면과 수명 연결
+            RectTransform reticleRect = reticle.GetComponent<RectTransform>(); // 중심점 위치
+            reticleRect.anchorMin = reticleRect.anchorMax = reticleRect.pivot = new Vector2(0.5f, 0.5f); // 화면 중앙
+            reticleRect.anchoredPosition = Vector2.zero; // 시선 중심
+            reticleRect.sizeDelta = new Vector2(6f, 6f); // 작은 조사 조준점
+            _reticle = reticle.GetComponent<Image>(); // 중심점 참조
+            _reticle.raycastTarget = false; // 버튼 입력 간섭 제외
             _root.SetActive(false); // 처음에는 이동 안내 숨김
         } // 메서드 종료
         private void LateUpdate() // 이동 안내 갱신
         { // 메서드 시작
             if (_root == null || _walker == null) return; // 미연결 화면 제외
-            bool walking = _walker.IsWalking; // 현재 이동 상태 조회
+            RoomInvestigationController investigation = _walker.GetComponent<RoomInvestigationController>(); // 실제 조사 대상 상태
+            bool walking = _walker.IsWalking && !RoomInvestigationController.IsAnyOpen; // 조사 중 중복 안내 숨김
             if (_root.activeSelf != walking) _root.SetActive(walking); // 이동 중에만 클릭 차단과 안내 표시
             if (!walking) return; // 앉은 상태 글자 변경 생략
             string pauseKey = GameInputBindingService.GetDisplayName(GameInputAction.Pause); // 저장된 일시정지 키 조회
-            string text = $"WASD 이동  ·  마우스 둘러보기  ·  {pauseKey} 일시정지\n" + (_walker.CanSit ? "F : 의자에 앉기" : "의자 가까이에서 F키로 앉을 수 있습니다."); // 거리별 앉기 안내
+            RoomInvestigationTarget target = investigation != null && investigation.isActiveAndEnabled ? investigation.FocusTarget : null; // 현재 조사 가능 대상
+            string area = RoomInvestigationLayout.AreaName(_walker.FeetPosition); // 현재 통로 안내
+            string action = _walker.CanSit ? "F : 의자에 앉기" : (target != null ? "F : " + target.Definition.Title + " 조사" + (investigation.HasViewed(target) ? " · 확인한 물건" : string.Empty) : "가까운 물건을 바라보면 F키로 조사할 수 있습니다."); // 의자 우선 조작 안내
+            string text = $"WASD 이동 · 마우스 둘러보기 · {pauseKey} 일시정지\n{area} · {action}"; // 실제 구역과 상호작용 안내
+            if (_reticle != null) _reticle.color = target != null ? new Color(1f, 0.78f, 0.18f) : new Color(1f, 1f, 1f, 0.65f); // 유효 대상 금빛 중심점
             if (_previousText == text) return; // 같은 안내 재배치 생략
             _text.text = text; // 새 조작 안내 적용
             _previousText = text; // 표시 글자 저장

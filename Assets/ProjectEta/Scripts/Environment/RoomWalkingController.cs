@@ -1,4 +1,4 @@
-﻿using UnityEngine; // 이동·충돌·카메라 기능
+using UnityEngine; // 이동·충돌·카메라 기능
 using UnityEngine.InputSystem; // 키보드·마우스 입력
 using ProjectEta.Debugging; // 디버그 패널 상태
 using ProjectEta.UI; // 모달 화면 상태
@@ -53,16 +53,20 @@ namespace ProjectEta.Environment // 전투 방 이동 영역
             _ui = gameObject.AddComponent<RoomWalkingUI>(); // 자동 안내 화면 연결
             _ui.Configure(this); // 이동 상태 연결
             _hudVisibility = gameObject.AddComponent<RoomWalkingHudVisibility>(); // 게임 진행과 독립된 화면 표시 연결
+            RoomInvestigationController investigation = GetComponent<RoomInvestigationController>(); // 기존 조사 담당자 재사용
+            if (investigation == null) investigation = gameObject.AddComponent<RoomInvestigationController>(); // Inspector 없는 조사 자동 설치
+            investigation.Configure(this); // 현재 이동기와 방 조사 연결
         } // 메서드 종료
         private void Update() // 실제 조작 입력 처리
         { // 메서드 시작
-            if (_rig == null || !_rig.isActiveAndEnabled || _rig.IsPoseLocked || _body == null) return; // 카메라 고정·비활성·미연결 제외
+            if (_rig == null || !_rig.isActiveAndEnabled || _body == null) return; // 비활성·미연결 제외
             Day69UiModalState modal = Day69UiPresentationRules.CaptureCurrent(); // 필수 진행 화면 상태 조회
             if (IsWalking && (modal.RewardOpen || modal.ActivityOpen || modal.RunResultOpen || modal.TutorialOpen)) // 이동 중 필수 선택 화면 확인
             { // 조건 시작
                 ReturnToSeat(); // 진행 화면의 클릭과 좌석 시점 복원
                 return; // 해당 프레임 이동 중단
             } // 조건 종료
+            if (_rig.IsPoseLocked) return; // 필수 모달 좌석 복귀 후 외부 시점 고정 보호
             if (IsInputBlocked()) // 모달·일시정지 상태 확인
             { // 조건 시작
                 if (IsWalking) SetWalkingCursor(false); // 모달 화면 커서 해제
@@ -103,6 +107,8 @@ namespace ProjectEta.Environment // 전투 방 이동 영역
         } // 메서드 종료
         public void ReturnToSeat() // 좌석 복귀와 입력 자원 해제
         { // 메서드 시작
+            RoomInvestigationController investigation = GetComponent<RoomInvestigationController>(); // 조사 모달 소유 확인
+            if (investigation != null) investigation.ForceClose(); // 강제 좌석 복귀 전 조사 입력 해제
             IsWalking = false; // 이동 상태 해제
             if (_hudVisibility != null) _hudVisibility.SetWalking(false); // 이전 표시 소유자의 상태 복원
             if (_activeWalker == this) _activeWalker = null; // 보드 입력 차단 해제
@@ -180,6 +186,8 @@ namespace ProjectEta.Environment // 전투 방 이동 영역
         private void OnDestroy() // 씬 종료 자원 정리
         { // 메서드 시작
             ReturnToSeat(); // 남은 입력 소유 해제
+            RoomInvestigationController investigation = GetComponent<RoomInvestigationController>(); // 자동 조사 생성물 소유
+            if (investigation != null) Destroy(investigation); // 이동기 단독 제거의 조사 자원 정리
             if (_collisionRoot != null) Destroy(_collisionRoot); // 독립 몸체·환경 충돌 제거
             if (_ui != null) Destroy(_ui); // 안내 컴포넌트 정리
             if (_hudVisibility != null) Destroy(_hudVisibility); // 전용 화면 표시 소유자 정리
